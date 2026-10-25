@@ -2,25 +2,30 @@
 <html lang="ru" data-theme="light">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F4EBDD" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171614" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Садик">
+<meta name="format-detection" content="telephone=no">
 <title>Адаптация к садику · «Ещё одна галочка»</title>
 <script>
   try {
-    var s = JSON.parse(localStorage.getItem('eog-sad-v1') || '{}');
+    var s = JSON.parse(localStorage.getItem('eog-sad-v2') || '{}');
     if (s.theme) document.documentElement.dataset.theme = s.theme;
     else if (matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.dataset.theme = 'dark';
   } catch (e) {}
 </script>
 <style>
 :root{
-  /* бренд */
   --lime:#DCEB32; --coral:#F27691; --sage:#687B59;
-  /* семантика — светлая тема */
   --bg:#F4EBDD; --surface:#fffaf1; --ink:#292724; --muted:#756f65; --line:#dfd4c4;
   --cell:#fffaf1; --cell-line:#e3d9c9;
   --sick-bg:#FBE2E2; --sick-line:#EFB3BF;
   --dot-nose:#687B59; --dot-cough:#A9BA18; --dot-fever:#F27691; --dot-tummy:#5a544c; --dot-rash:#E8A0B4;
   --shadow:0 1px 2px #0000000a;
+  --pad: 12px;
 }
 [data-theme="dark"]{
   --bg:#171614; --surface:#232120; --ink:#F1E8DA; --muted:#a49c90; --line:#3a3530;
@@ -29,188 +34,309 @@
   --dot-nose:#93AC80; --dot-cough:#DCEB32; --dot-fever:#F27691; --dot-tummy:#C9C0B1; --dot-rash:#F2A7BC;
   --shadow:0 1px 2px #00000040;
 }
-*{box-sizing:border-box}
+*{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+html{ -webkit-text-size-adjust:100%; }
 html,body{margin:0}
 body{
   background:var(--bg); color:var(--ink);
   font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   -webkit-font-smoothing:antialiased;
   transition:background .2s ease, color .2s ease;
+  overscroll-behavior-y: none;
 }
-main{width:min(1080px,100% - 22px); margin:0 auto; padding:18px 0 56px;}
+body.no-scroll{ overflow:hidden; }
+main{
+  width:min(1080px, 100% - 20px);
+  margin:0 auto;
+  padding:12px 0 calc(40px + env(safe-area-inset-bottom));
+}
 h1,h2,h3{margin:0; line-height:1.15; letter-spacing:-.02em}
 
 /* ---------- hero ---------- */
 .hero{
-  border:2px solid var(--ink); border-radius:18px; background:var(--surface);
-  padding:clamp(16px,4vw,30px);
-  display:flex; gap:16px; justify-content:space-between; align-items:flex-start; flex-wrap:wrap;
+  border:2px solid var(--ink); border-radius:16px; background:var(--surface);
+  padding:14px 16px;
+  display:flex; gap:12px; justify-content:space-between; align-items:flex-start; flex-wrap:wrap;
 }
-.hero-main{max-width:640px}
-.eyebrow{text-transform:uppercase; letter-spacing:.12em; font-size:.7rem; font-weight:800; color:var(--muted)}
-h1{font-size:clamp(1.7rem,5vw,2.7rem); margin:8px 0 10px}
-.mark{background:var(--lime); color:#292724; padding:0 .16em; box-decoration-break:clone; -webkit-box-decoration-break:clone}
-.lead{margin:0; font-size:1rem; color:var(--muted)}
-.hero-actions{display:flex; gap:8px; flex-wrap:wrap}
+.hero-main{min-width:0; flex:1 1 240px}
+.eyebrow{text-transform:uppercase; letter-spacing:.12em; font-size:.66rem; font-weight:800; color:var(--muted)}
+h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px}
+.mark{background:var(--lime); color:#292724; padding:0 .14em; box-decoration-break:clone; -webkit-box-decoration-break:clone}
+.lead{margin:0; font-size:.9rem; color:var(--muted); line-height:1.45}
+.hero-actions{display:flex; gap:6px; flex-wrap:wrap}
+@media (max-width:520px){
+  .hero{padding:12px 14px}
+  .lead{display:none}
+  .hero-actions{width:100%}
+  .hero-actions .btn{flex:1}
+}
 
 /* ---------- buttons ---------- */
 .btn{
   font:inherit; font-size:.88rem; font-weight:700; cursor:pointer;
   background:var(--surface); color:var(--ink);
-  border:1.5px solid var(--ink); border-radius:999px; padding:8px 16px;
+  border:1.5px solid var(--ink); border-radius:999px; padding:9px 16px;
+  min-height:40px; display:inline-flex; align-items:center; justify-content:center; gap:6px;
   transition:background .15s, transform .06s;
+  touch-action:manipulation;
 }
 .btn:hover{background:var(--lime); color:#292724}
-.btn:active{transform:translateY(1px)}
-.btn.primary{background:var(--ink); color:var(--surface); padding:8px 14px}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--ink); color:var(--surface); padding:9px 14px}
 .btn.primary:hover{background:var(--lime); color:#292724; border-color:var(--ink)}
 .navbtn{
-  width:34px; height:34px; border-radius:50%; display:grid; place-items:center;
+  width:44px; height:44px; border-radius:50%; display:grid; place-items:center;
   border:1.5px solid var(--line); background:var(--surface); color:var(--ink);
-  cursor:pointer; font-size:1rem; line-height:1; transition:background .15s;
+  cursor:pointer; font-size:1.05rem; line-height:1; transition:background .15s;
+  touch-action:manipulation;
 }
 .navbtn:hover{background:var(--lime); color:#292724; border-color:var(--ink)}
+.navbtn:active{transform:scale(.94)}
 .iconbtn{
-  width:26px; height:26px; border-radius:50%; display:grid; place-items:center;
+  width:34px; height:34px; border-radius:50%; display:grid; place-items:center;
   border:1.5px solid var(--line); background:transparent; color:var(--muted);
-  cursor:pointer; font-size:1rem; line-height:1; flex:none;
+  cursor:pointer; font-size:1.1rem; line-height:1; flex:none;
+  touch-action:manipulation;
 }
 .iconbtn:hover{border-color:var(--coral); color:var(--coral)}
-.iconbtn.tiny{width:22px; height:22px; font-size:.9rem}
-.link{background:none; border:0; padding:0; font:inherit; color:var(--ink); text-decoration:underline; text-underline-offset:2px; cursor:pointer}
+.iconbtn.tiny{width:28px; height:28px; font-size:1rem}
+.link{
+  background:none; border:0; padding:4px 2px; font:inherit; color:var(--ink);
+  text-decoration:underline; text-underline-offset:3px; cursor:pointer;
+  touch-action:manipulation;
+}
 .link:hover{color:var(--sage)}
+.link.danger{color:var(--coral)}
 
 /* ---------- layout ---------- */
 .layout{
-  display:grid; gap:14px; margin-top:14px;
-  grid-template-columns:minmax(0,1.35fr) minmax(310px,1fr);
-  align-items:start;
+  display:grid; gap:12px; margin-top:12px;
+  grid-template-columns:minmax(0,1fr);
 }
-@media (max-width:880px){ .layout{grid-template-columns:1fr} }
-.card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:16px; box-shadow:var(--shadow)}
-@media (min-width:881px){
-  .panel{position:sticky; top:14px; max-height:calc(100vh - 28px); overflow-y:auto}
+@media (min-width:880px){
+  .layout{
+    grid-template-columns:minmax(0,1.35fr) minmax(340px,1fr);
+    align-items:start;
+  }
 }
+.card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:var(--pad); box-shadow:var(--shadow)}
 
 /* ---------- calendar ---------- */
-.cal-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px}
-.cal-title{font-weight:800; font-size:1.12rem; letter-spacing:-.01em; text-transform:capitalize}
-.weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-bottom:6px}
-.weekdays span{text-align:center; font-size:.66rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:800}
-.days{display:grid; grid-template-columns:repeat(7,1fr); gap:5px}
+.cal-head{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px}
+.cal-title{font-weight:800; font-size:1.05rem; letter-spacing:-.01em; text-transform:capitalize; flex:1; text-align:center}
+.weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:4px}
+.weekdays span{text-align:center; font-size:.62rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:800}
+.days{display:grid; grid-template-columns:repeat(7,1fr); gap:4px}
 .day{
-  position:relative; aspect-ratio:1/1; min-height:46px; padding:5px 6px;
-  display:flex; flex-direction:column; align-items:flex-start; justify-content:space-between;
-  background:var(--cell); border:1.5px solid var(--cell-line); border-radius:10px;
+  position:relative; min-height:52px; padding:4px 5px;
+  display:flex; flex-direction:column; justify-content:space-between;
+  background:var(--cell); border:1.5px solid var(--cell-line); border-radius:9px;
   color:var(--ink); font:inherit; text-align:left; cursor:pointer;
   transition:border-color .12s, transform .06s;
+  touch-action:manipulation;
+  -webkit-user-select:none; user-select:none;
+  overflow:hidden;
 }
 .day:hover{border-color:var(--ink)}
-.day:active{transform:scale(.97)}
+.day:active{transform:scale(.96)}
 .day.blank{background:transparent; border-color:transparent; cursor:default; pointer-events:none}
 .day.sick{background:var(--sick-bg); border-color:var(--sick-line)}
-.day.sel{border-color:var(--ink); border-width:2px}
-.dnum{font-size:.82rem; font-weight:800; line-height:1}
-.day.today .dnum{background:var(--lime); color:#292724; border-radius:5px; padding:1px 5px; margin-left:-4px}
-.dtemp{font-size:.6rem; font-weight:800; color:var(--coral); line-height:1; letter-spacing:-.02em}
+.day.sel{border-color:var(--ink); border-width:2px; padding:3px 4px}
+.day-top{display:flex; justify-content:space-between; align-items:baseline; gap:2px; width:100%}
+.dnum{font-size:.8rem; font-weight:800; line-height:1}
+.day.today .dnum{background:var(--lime); color:#292724; border-radius:4px; padding:1px 4px; margin-left:-4px}
+.dtemp{font-size:.58rem; font-weight:800; color:var(--coral); line-height:1; font-variant-numeric:tabular-nums; flex:none}
 [data-theme="dark"] .dtemp{color:#F9A2B5}
 .dots{display:flex; gap:3px; min-height:6px; align-items:center}
-.dot{width:6px; height:6px; border-radius:50%; display:block}
+.dot{width:5px; height:5px; border-radius:50%; display:block; flex:none}
 .dot.nose{background:var(--dot-nose)} .dot.cough{background:var(--dot-cough)}
 .dot.fever{background:var(--dot-fever)} .dot.tummy{background:var(--dot-tummy)}
 .dot.rash{background:var(--dot-rash)}
-.gdot{position:absolute; top:6px; right:6px; width:5px; height:5px; border-radius:50%; background:var(--lime); box-shadow:0 0 0 1px #29272430}
-@media (max-width:520px){
-  .day{aspect-ratio:auto; min-height:52px; padding:4px}
-  .dnum{font-size:.74rem}
-  .dtemp{font-size:.55rem}
+.gdot{position:absolute; top:5px; right:5px; width:5px; height:5px; border-radius:50%; background:var(--lime); box-shadow:0 0 0 1px #29272440}
+.dtemp ~ .gdot { display:none }
+@media (min-width:880px){
+  .day{aspect-ratio:1/1; min-height:0; padding:6px 7px; border-radius:10px}
+  .dnum{font-size:.88rem}
+  .dtemp{font-size:.66rem}
+  .dot{width:6px; height:6px}
+  .days{gap:5px}
 }
 
-.legend{display:flex; flex-wrap:wrap; gap:10px 14px; margin-top:14px; font-size:.76rem; color:var(--muted); align-items:center}
+.legend{display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:12px; font-size:.72rem; color:var(--muted); align-items:center}
 .legend b{display:inline-flex; align-items:center; gap:5px; font-weight:600}
-.legend i{width:10px; height:10px; border-radius:3px; display:inline-block}
+.legend i{width:10px; height:10px; border-radius:3px; display:inline-block; flex:none}
 .legend .r{border-radius:50%; width:7px; height:7px}
 
-/* ---------- panel ---------- */
-.panel-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:14px}
-.panel-date{font-size:1.3rem; font-weight:800; letter-spacing:-.02em; text-transform:capitalize; margin-top:2px}
+/* ---------- dose bar ---------- */
+.dose-bar{
+  display:none;
+  margin-top:10px; padding:9px 12px;
+  border-radius:10px; border-left:5px solid var(--sage);
+  background:var(--bg); font-size:.84rem;
+  align-items:center; gap:10px;
+  cursor:pointer; touch-action:manipulation;
+}
+.dose-bar.show{display:flex}
+.dose-bar.wait{border-left-color:var(--lime)}
+.dose-bar.ready{border-left-color:var(--coral)}
+.dose-bar .dose-ico{font-size:1.05rem; flex:none}
+.dose-bar .dose-text{flex:1; line-height:1.35}
+.dose-bar strong{font-weight:800}
+
+/* ---------- sheet (bottom on mobile, panel on desktop) ---------- */
+.sheet-backdrop{
+  position:fixed; inset:0;
+  background:#00000066;
+  opacity:0; pointer-events:none;
+  transition:opacity .25s ease;
+  z-index:100;
+  touch-action:none;
+}
+.sheet-backdrop.open{opacity:1; pointer-events:auto}
+
+.sheet{
+  position:fixed; left:0; right:0; bottom:0;
+  background:var(--surface);
+  border-radius:22px 22px 0 0;
+  box-shadow:0 -10px 40px #00000030;
+  max-height:92vh; max-height:92dvh;
+  overflow-y:auto; overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:max(16px, env(safe-area-inset-bottom));
+  transform:translateY(105%);
+  visibility:hidden;
+  transition:transform .3s cubic-bezier(.32,.72,0,1), visibility 0s linear .3s;
+  z-index:101;
+  will-change:transform;
+}
+.sheet.open{
+  transform:translateY(0);
+  visibility:visible;
+  transition:transform .3s cubic-bezier(.32,.72,0,1), visibility 0s;
+}
+.sheet-head{
+  position:sticky; top:0; z-index:1;
+  background:var(--surface);
+  padding:8px 16px 4px;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:22px 22px 0 0;
+}
+.sheet-grip{width:40px; height:4px; border-radius:2px; background:var(--line)}
+.sheet-close{
+  position:absolute; top:6px; right:8px;
+  width:36px; height:36px; border-radius:50%; border:0;
+  background:var(--bg); color:var(--muted); font-size:1.4rem; line-height:1;
+  cursor:pointer; display:grid; place-items:center;
+  touch-action:manipulation;
+}
+.sheet-close:hover{color:var(--ink)}
+.sheet-body{padding:4px 16px 8px}
+
+@media (min-width:880px){
+  .sheet-backdrop{display:none !important}
+  .sheet{
+    position:relative; left:auto; right:auto; bottom:auto; top:auto;
+    transform:none !important; visibility:visible !important;
+    max-height:none; overflow:visible;
+    border-radius:16px;
+    border:1px solid var(--line);
+    box-shadow:var(--shadow);
+    padding-bottom:0;
+    transition:none;
+    background:var(--surface);
+  }
+  .sheet-head{display:none}
+  .sheet-body{padding:16px}
+}
+
+/* ---------- panel content ---------- */
+.panel-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:12px}
+.panel-date{font-size:1.25rem; font-weight:800; letter-spacing:-.02em; text-transform:capitalize; margin-top:2px}
 .panel-head-right{display:flex; align-items:center; gap:8px}
 .tag{font-size:.66rem; font-weight:800; text-transform:uppercase; letter-spacing:.07em; padding:3px 9px; border-radius:999px; border:1px solid var(--line); color:var(--muted)}
 .tag.lime{background:var(--lime); border-color:var(--lime); color:#292724}
 
-.seg{display:flex; gap:5px; background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:4px}
+.seg{display:flex; gap:4px; background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:4px}
 .seg button{
-  flex:1; border:0; background:transparent; padding:9px 6px; border-radius:9px;
-  font:inherit; font-size:.88rem; font-weight:700; color:var(--muted); cursor:pointer;
-  transition:background .15s, color .15s;
+  flex:1; border:0; background:transparent; padding:11px 6px; border-radius:9px;
+  font:inherit; font-size:.9rem; font-weight:700; color:var(--muted); cursor:pointer;
+  transition:background .15s, color .15s; min-height:44px;
+  touch-action:manipulation;
 }
 .seg button.on.ok{background:var(--lime); color:#292724}
 .seg button.on.sick{background:var(--coral); color:#292724}
 
-.check{display:flex; align-items:center; gap:9px; margin-top:12px; font-size:.9rem; cursor:pointer; user-select:none}
-.check input{width:18px; height:18px; accent-color:#687B59; cursor:pointer; margin:0}
+.check{display:flex; align-items:center; gap:10px; margin-top:12px; font-size:.92rem; cursor:pointer; user-select:none; min-height:36px}
+.check input{width:20px; height:20px; accent-color:#687B59; cursor:pointer; margin:0; flex:none}
 
 .section-label{font-size:.68rem; text-transform:uppercase; letter-spacing:.09em; font-weight:800; color:var(--muted); margin:16px 0 8px}
 
 .chips{display:flex; flex-wrap:wrap; gap:6px}
 .chip{
-  font:inherit; font-size:.8rem; padding:6px 11px; border-radius:999px;
+  font:inherit; font-size:.82rem; padding:8px 12px; border-radius:999px;
   border:1.5px solid var(--line); background:var(--surface); color:var(--ink);
-  cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+  cursor:pointer; display:inline-flex; align-items:center; gap:7px;
   transition:background .12s, border-color .12s, transform .06s;
+  min-height:36px; touch-action:manipulation; -webkit-user-select:none; user-select:none;
 }
-.chip:active{transform:scale(.97)}
-.chip::before{content:''; width:7px; height:7px; border-radius:50%; background:var(--dotc,var(--line)); flex:none}
+.chip:active{transform:scale(.96)}
+.chip::before{content:''; width:8px; height:8px; border-radius:50%; background:var(--dotc,var(--line)); flex:none}
 .chip:hover{border-color:var(--ink)}
 .chip.on{background:var(--lime); border-color:#292724; color:#292724; font-weight:600}
 .chip.on::before{background:#292724}
 
 .addform{display:flex; flex-direction:column; gap:6px}
 .row{display:flex; gap:6px}
-.row > *{flex:1; min-width:0}
+.row > *{flex:1 1 0; min-width:0}
 .inp{
-  font:inherit; font-size:.88rem; padding:8px 10px; border-radius:10px;
+  font:inherit; font-size:16px; padding:10px 12px; border-radius:10px;
   border:1.5px solid var(--line); background:var(--surface); color:var(--ink);
-  min-width:0; width:100%;
+  min-width:0; width:100%; min-height:44px;
 }
 .inp:focus{outline:2px solid var(--lime); outline-offset:1px; border-color:var(--ink)}
-textarea.inp{resize:vertical; min-height:54px; line-height:1.45; font-family:inherit}
-.err{color:var(--coral); font-size:.8rem; margin-top:6px}
+textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inherit; font-size:16px}
+.err{color:var(--coral); font-size:.82rem; margin-top:6px}
 
-.nextdose{margin-top:10px; padding:10px 12px; border-radius:0 12px 12px 0; border-left:5px solid var(--sage); background:var(--bg); font-size:.86rem}
+.nextdose{margin-top:10px; padding:10px 12px; border-radius:0 12px 12px 0; border-left:5px solid var(--sage); background:var(--bg); font-size:.85rem}
 .nextdose.wait{border-left-color:var(--lime)}
 .nextdose.ready{border-left-color:var(--coral)}
-.nd-top{color:var(--muted); font-size:.78rem; margin-bottom:3px}
-.nd-main{font-weight:600}
+.nd-top{color:var(--muted); font-size:.76rem; margin-bottom:3px}
+.nd-main{font-weight:600; line-height:1.4}
 .nd-main strong{font-weight:800}
 
 .tlist{display:flex; flex-direction:column; gap:6px; margin-top:10px}
-.trow{display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:10px; background:var(--bg); border:1px solid var(--line); font-size:.84rem}
+.trow{display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:10px; background:var(--bg); border:1px solid var(--line); font-size:.85rem}
 .ttime{font-weight:800; font-variant-numeric:tabular-nums}
-.tval{font-weight:800; color:var(--coral); font-variant-numeric:tabular-nums}
+.tval{font-weight:800; color:var(--coral); font-variant-numeric:tabular-nums; min-width:3.2em}
 [data-theme="dark"] .tval{color:#F9A2B5}
 .tmed{flex:1; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.thelp{font-size:.72rem; padding:2px 7px; border-radius:999px; border:1px solid var(--line); color:var(--muted); flex:none}
+.thelp{font-size:.7rem; padding:2px 7px; border-radius:999px; border:1px solid var(--line); color:var(--muted); flex:none}
 .thelp.yes{background:#687B5922; border-color:#687B5966; color:var(--ink)}
 .thelp.no{background:#F2769122; border-color:#F2769166; color:var(--ink)}
 .thelp.partly{background:#DCEB3244; border-color:#A9BA1866; color:var(--ink)}
 .muted{color:var(--muted)}
 .small{font-size:.82rem}
 
+.panel-footer{margin-top:20px; padding-top:12px; border-top:1px solid var(--line); display:flex; justify-content:flex-start}
+
 /* ---------- stats ---------- */
-.stats-wrap{margin-top:14px; display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
-.stat{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px 16px; box-shadow:var(--shadow)}
+.stats-wrap{margin-top:12px; display:grid; gap:10px; grid-template-columns:repeat(2,1fr)}
+@media (min-width:880px){
+  .stats-wrap{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+}
+.stat{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px 14px; box-shadow:var(--shadow)}
 .stat.wide{grid-column:1/-1}
-.sval{display:block; font-size:1.9rem; font-weight:800; letter-spacing:-.04em; line-height:1.1; font-variant-numeric:tabular-nums}
-.slab{font-size:.8rem; color:var(--muted)}
+.sval{display:block; font-size:1.5rem; font-weight:800; letter-spacing:-.04em; line-height:1.1; font-variant-numeric:tabular-nums}
+@media (min-width:880px){ .sval{font-size:1.9rem} }
+.slab{font-size:.78rem; color:var(--muted)}
 .bar{height:10px; border-radius:999px; background:var(--bg); border:1px solid var(--line); overflow:hidden}
 .bar i{display:block; height:100%; background:var(--coral); border-radius:999px; transition:width .35s ease}
 .pill{display:inline-block; padding:4px 11px; border:1px solid var(--line); border-radius:999px; font-size:.78rem; color:var(--ink); background:var(--bg)}
 
 /* ---------- footer ---------- */
-footer{margin-top:26px; border-top:1px solid var(--line); padding-top:14px}
+footer{margin-top:22px; border-top:1px solid var(--line); padding-top:12px}
 footer p{margin:6px 0}
-.note{border-left:5px solid var(--lime); padding:10px 14px; background:var(--surface); border-radius:0 12px 12px 0; font-size:.86rem; margin-top:14px}
+footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86rem}
 </style>
 </head>
 <body>
@@ -218,9 +344,9 @@ footer p{margin:6px 0}
 
   <header class="hero">
     <div class="hero-main">
-      <div class="eyebrow">Трекер здоровья · «Ещё одна галочка»</div>
+      <div class="eyebrow">Трекер · «Ещё одна галочка»</div>
       <h1>Адаптация к <span class="mark">садику</span></h1>
-      <p class="lead">Календарь болезни и симптомов, журнал температуры и таймер до следующей дозы жаропонижающего. Всё живёт только в этом браузере.</p>
+      <p class="lead">Болезни, симптомы, температура и таймер до следующей дозы жаропонижающего.</p>
     </div>
     <div class="hero-actions">
       <button class="btn" id="themeBtn" type="button">Тёмная тема</button>
@@ -241,30 +367,36 @@ footer p{margin:6px 0}
       <div class="days" id="days"></div>
       <div class="legend">
         <b><i style="background:var(--sick-bg); border:1.5px solid var(--sick-line)"></i>болеет</b>
-        <b><i class="r" style="background:var(--lime)"></i>был в садике</b>
+        <b><i class="r" style="background:var(--lime)"></i>в садике</b>
         <b><i class="r" style="background:var(--dot-nose)"></i>нос</b>
         <b><i class="r" style="background:var(--dot-cough)"></i>кашель</b>
         <b><i class="r" style="background:var(--dot-fever)"></i>температура</b>
         <b><i class="r" style="background:var(--dot-tummy)"></i>живот</b>
         <b><i class="r" style="background:var(--dot-rash)"></i>сыпь</b>
       </div>
+      <div class="dose-bar" id="doseBar" role="button" tabindex="0"></div>
     </section>
 
-    <aside class="card panel" id="panel"></aside>
+    <div class="sheet-backdrop" id="backdrop"></div>
+    <aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Детали дня">
+      <div class="sheet-head">
+        <div class="sheet-grip" id="grip"></div>
+        <button class="sheet-close" id="sheetClose" type="button" aria-label="Закрыть">×</button>
+      </div>
+      <div class="sheet-body" id="panel"></div>
+    </aside>
   </div>
 
   <section class="stats-wrap" id="stats"></section>
 
   <footer>
-    <p class="small muted">
-      Данные хранятся только в этом браузере (localStorage).
-      <button class="link" id="exportBtn" type="button">Экспорт</button> ·
-      <button class="link" id="importBtn" type="button">Импорт</button> ·
-      <button class="link" id="resetBtn" type="button">Сброс</button>
-    </p>
-    <p class="small muted">
-      Трекер не заменяет врача. Интервалы между приёмами жаропонижающих — ориентировочные:
-      всегда сверяйся с инструкцией к препарату и рекомендациями педиатра.
+    <div class="foot-actions">
+      <button class="link" id="exportBtn" type="button">Экспорт</button>
+      <button class="link" id="importBtn" type="button">Импорт</button>
+      <button class="link danger" id="resetBtn" type="button">Сброс</button>
+    </div>
+    <p class="small muted" style="margin-top:10px">
+      Данные хранятся только в этом браузере. Трекер не заменяет врача: интервалы между дозами ориентировочные — сверяйся с инструкцией и педиатром.
     </p>
   </footer>
 </main>
@@ -273,7 +405,7 @@ footer p{margin:6px 0}
 
 <script>
 /* ============================ ДАННЫЕ ============================ */
-const STORE = 'eog-sad-v1';
+const STORE = 'eog-sad-v2';
 
 const SYMPTOMS = [
   {id:'runny',  label:'Жидкие сопли',   cat:'nose'},
@@ -320,11 +452,17 @@ const parseK = k => { const [y,m,d] = k.split('-').map(Number); return new Date(
 const fmtT   = v => (Math.round(v*10)/10).toFixed(1).replace('.', ',');
 const uid    = () => Math.random().toString(36).slice(2,9);
 const esc    = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const isMobile = () => matchMedia('(max-width: 879px)').matches;
 
 function dur(ms){
   const total = Math.max(0, Math.round(ms/60000));
   const h = Math.floor(total/60), m = total % 60;
   return h ? `${h} ч ${pad(m)} мин` : `${m} мин`;
+}
+
+function medInterval(medId){
+  const m = MEDS.find(x => x.id === medId);
+  return m ? m.interval : 0;
 }
 
 /* ============================ СОСТОЯНИЕ ============================ */
@@ -370,16 +508,22 @@ function prune(k){
   if (empty) delete state.days[k];
 }
 
-/* ============================ ВИД ============================ */
-const now0 = new Date();
-let view = { y: now0.getFullYear(), m: now0.getMonth() };
-let selected = keyOf(now0);
-
+/* ============================ ЭЛЕМЕНТЫ ============================ */
 const daysEl     = document.getElementById('days');
 const panelEl    = document.getElementById('panel');
 const statsEl    = document.getElementById('stats');
 const monthTitle = document.getElementById('monthTitle');
 const themeBtn   = document.getElementById('themeBtn');
+const doseBar    = document.getElementById('doseBar');
+const sheet      = document.getElementById('sheet');
+const backdrop   = document.getElementById('backdrop');
+const sheetClose = document.getElementById('sheetClose');
+const grip       = document.getElementById('grip');
+
+/* ============================ ВИД ============================ */
+const now0 = new Date();
+let view = { y: now0.getFullYear(), m: now0.getMonth() };
+let selected = keyOf(now0);
 
 /* ============================ ТЕМА ============================ */
 function applyTheme(){
@@ -426,8 +570,10 @@ function renderCalendar(){
     if (k === selected) cls.push('sel');
 
     html += `<button type="button" class="${cls.join(' ')}" data-key="${k}" aria-label="${d} ${MONTHS_G[m]}">
-      <span class="dnum">${d}</span>
-      ${maxT !== null ? `<span class="dtemp">${fmtT(maxT)}°</span>` : ''}
+      <span class="day-top">
+        <span class="dnum">${d}</span>
+        ${maxT !== null ? `<span class="dtemp">${fmtT(maxT)}°</span>` : ''}
+      </span>
       <span class="dots">${cats.map(c => `<i class="dot ${c}"></i>`).join('')}</span>
       ${rec && rec.garden ? '<i class="gdot" title="был в садике"></i>' : ''}
     </button>`;
@@ -439,15 +585,62 @@ daysEl.addEventListener('click', e => {
   const btn = e.target.closest('.day');
   if (!btn || btn.classList.contains('blank')) return;
   selected = btn.dataset.key;
-  render();
+  renderCalendar();
+  renderPanel();
+  if (isMobile()) openSheet();
+});
+
+/* ============================ ПОЛОСКА «СЛЕДУЮЩАЯ ДОЗА» ============================ */
+function todayDoseInfo(){
+  const k = keyOf(new Date());
+  const rec = state.days[k];
+  if (!rec || !rec.temps || !rec.temps.length) return null;
+  const list = rec.temps
+    .filter(t => medInterval(t.med) > 0)
+    .slice()
+    .sort((a,b) => a.time.localeCompare(b.time));
+  if (!list.length) return null;
+
+  const last = list[list.length - 1];
+  const med  = MEDS.find(x => x.id === last.med);
+  const d    = parseK(k);
+  const [h, mi] = last.time.split(':').map(Number);
+  const at   = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, mi);
+  const next = new Date(at.getTime() + med.interval * 60000);
+  const diff = next - Date.now();
+
+  // показываем, только если следующая доза ещё впереди или прошла не больше 30 мин назад
+  if (diff < -30 * 60000) return null;
+
+  return { med, last, next, diff };
+}
+
+function renderDoseBar(){
+  const info = todayDoseInfo();
+  if (!info){ doseBar.classList.remove('show','wait','ready'); doseBar.innerHTML=''; return; }
+
+  const hhmm = pad(info.next.getHours()) + ':' + pad(info.next.getMinutes());
+  let text, cls;
+  if (info.diff > 0){
+    cls = 'wait';
+    text = `<strong>${info.med.label}</strong> · следующая доза не раньше <strong>${hhmm}</strong> · через <strong>${dur(info.diff)}</strong>`;
+  } else {
+    cls = 'ready';
+    text = `<strong>${info.med.label}</strong> · интервал выдержан, можно давать`;
+  }
+  doseBar.className = 'dose-bar show ' + cls;
+  doseBar.innerHTML = `<span class="dose-ico">💊</span><span class="dose-text">${text}</span>`;
+}
+
+doseBar.addEventListener('click', () => {
+  selected = keyOf(new Date());
+  if (isMobile()){ renderCalendar(); renderPanel(); openSheet(); }
+  else { renderCalendar(); renderPanel(); }
 });
 
 /* ============================ ПАНЕЛЬ ДНЯ ============================ */
 function nextDoseHtml(temps, key){
-  const list = temps.filter(t => {
-    const m = MEDS.find(x => x.id === t.med);
-    return m && m.interval > 0;
-  });
+  const list = temps.filter(t => medInterval(t.med) > 0);
   if (!list.length) return '';
 
   const last = list[list.length - 1];
@@ -490,7 +683,7 @@ function tempRow(t){
 function renderPanel(){
   if (!selected){
     panelEl.innerHTML = `<h3>Выбери день</h3>
-      <p class="muted small">Нажми на любую дату в календаре, чтобы отметить здоровье, симптомы и температуру.</p>`;
+      <p class="muted small">Нажми на любую дату в календаре.</p>`;
     return;
   }
 
@@ -511,7 +704,6 @@ function renderPanel(){
       </div>
       <div class="panel-head-right">
         ${isToday ? '<span class="tag lime">сегодня</span>' : ''}
-        <button class="iconbtn" type="button" data-act="clear" title="Очистить день">×</button>
       </div>
     </div>
 
@@ -534,13 +726,13 @@ function renderPanel(){
     <div class="section-label">Температура и жаропонижающее</div>
     <div class="addform">
       <div class="row">
-        <input class="inp" type="time" id="tTime" value="${isToday ? nowTime : '09:00'}">
-        <input class="inp" type="text" inputmode="decimal" id="tVal" placeholder="38,5" autocomplete="off">
-        <button class="btn primary" type="button" data-act="addtemp" style="flex:0 0 auto">+</button>
+        <input class="inp" type="time" id="tTime" value="${isToday ? nowTime : '09:00'}" aria-label="Время">
+        <input class="inp" type="text" inputmode="decimal" id="tVal" placeholder="38,5" autocomplete="off" aria-label="Температура">
+        <button class="btn primary" type="button" data-act="addtemp" style="flex:0 0 auto; min-width:52px">+</button>
       </div>
       <div class="row">
-        <select class="inp" id="tMed">${MEDS.map(x => `<option value="${x.id}">${x.label}</option>`).join('')}</select>
-        <select class="inp" id="tHelp">${HELP.map(x => `<option value="${x.id}">${x.label}</option>`).join('')}</select>
+        <select class="inp" id="tMed" aria-label="Лекарство">${MEDS.map(x => `<option value="${x.id}">${x.label}</option>`).join('')}</select>
+        <select class="inp" id="tHelp" aria-label="Помогло ли">${HELP.map(x => `<option value="${x.id}">${x.label}</option>`).join('')}</select>
       </div>
     </div>
     <div class="err" id="tErr" hidden></div>
@@ -553,6 +745,10 @@ function renderPanel(){
 
     <div class="section-label">Заметка</div>
     <textarea class="inp" data-act="note" rows="2" placeholder="Что помогло, настроение, аппетит…">${esc(rec.note || '')}</textarea>
+
+    <div class="panel-footer">
+      <button class="link danger" type="button" data-act="clear">Очистить день</button>
+    </div>
   `;
 }
 
@@ -607,7 +803,7 @@ panelEl.addEventListener('input', e => {
   if (e.target.dataset.act === 'note' && selected){
     const rec = getDay(selected, true);
     rec.note = e.target.value;
-    save(); // без полного ререндера, чтобы не терять курсор
+    save();
   }
 });
 
@@ -646,18 +842,20 @@ function addTemp(){
   commit();
 }
 
-/* ---- обновление таймера ---- */
+/* ============================ ТАЙМЕР (каждые 30 сек) ============================ */
 setInterval(() => {
-  if (!selected) return;
+  renderDoseBar();
   const el = document.getElementById('nextdose');
-  if (!el) return;
-  const rec = state.days[selected];
-  if (!rec || !rec.temps || !rec.temps.length) return;
-  const temps = rec.temps.slice().sort((a,b) => a.time.localeCompare(b.time));
-  const html = nextDoseHtml(temps, selected);
-  if (html) el.outerHTML = html;
-  else el.remove();
-}, 20000);
+  if (el && selected){
+    const rec = state.days[selected];
+    if (rec && rec.temps && rec.temps.length){
+      const temps = rec.temps.slice().sort((a,b) => a.time.localeCompare(b.time));
+      const html = nextDoseHtml(temps, selected);
+      if (html) el.outerHTML = html;
+      else el.remove();
+    }
+  }
+}, 30000);
 
 /* ============================ СТАТИСТИКА ============================ */
 function renderStats(){
@@ -701,12 +899,12 @@ function renderStats(){
     <div class="stat"><span class="sval" style="color:var(--coral)">${sick}</span><span class="slab">дней болел</span></div>
     <div class="stat"><span class="sval" style="color:var(--sage)">${garden}</span><span class="slab">дней в садике</span></div>
     <div class="stat"><span class="sval">${feverDays}</span><span class="slab">дней с температурой</span></div>
-    <div class="stat"><span class="sval">${maxT ? fmtT(maxT) + '°' : '—'}</span><span class="slab">максимум за месяц</span></div>
+    <div class="stat"><span class="sval">${maxT ? fmtT(maxT) + '°' : '—'}</span><span class="slab">максимум</span></div>
 
     <div class="stat wide">
       <div class="bar"><i style="width:${total ? Math.min(100, sick/total*100) : 0}%"></i></div>
       <div class="slab" style="margin-top:8px">
-        ${MONTHS[m]}: болел <strong>${sick}</strong> из ${total} дней${total ? ` · ${Math.round(sick/total*100)}%` : ''}${entries ? ` · ${entries} замер(ов) температуры` : ''}
+        ${MONTHS[m]}: болел <strong>${sick}</strong> из ${total} дней${total ? ` · ${Math.round(sick/total*100)}%` : ''}${entries ? ` · ${entries} замер(ов)` : ''}
       </div>
     </div>
 
@@ -723,6 +921,7 @@ function renderStats(){
 function render(){
   applyTheme();
   renderCalendar();
+  renderDoseBar();
   renderPanel();
   renderStats();
 }
@@ -732,6 +931,27 @@ function commit(){
   save();
   render();
 }
+
+/* ============================ BOTTOM SHEET ============================ */
+function openSheet(){
+  sheet.classList.add('open');
+  backdrop.classList.add('open');
+  document.body.classList.add('no-scroll');
+  sheet.scrollTop = 0;
+}
+function closeSheet(){
+  sheet.classList.remove('open');
+  backdrop.classList.remove('open');
+  document.body.classList.remove('no-scroll');
+  renderDoseBar();
+}
+
+backdrop.addEventListener('click', closeSheet);
+sheetClose.addEventListener('click', closeSheet);
+grip.addEventListener('click', closeSheet);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && sheet.classList.contains('open')) closeSheet();
+});
 
 /* ============================ НАВИГАЦИЯ ============================ */
 document.getElementById('prevBtn').addEventListener('click', () => {
@@ -747,6 +967,7 @@ document.getElementById('todayBtn').addEventListener('click', () => {
   view = { y: n.getFullYear(), m: n.getMonth() };
   selected = keyOf(n);
   render();
+  if (isMobile()) openSheet();
 });
 
 /* ============================ ЭКСПОРТ / ИМПОРТ ============================ */
