@@ -371,6 +371,7 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
 .ep-item .ep-diag{font-size:.78rem; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis}
 .ep-item .ep-len{font-size:.72rem; font-weight:800; padding:2px 7px; border-radius:999px; border:1px solid var(--line); color:var(--muted); flex:none}
 
+/* copy mode banner */
 #copyBanner{
   position:fixed; top:calc(12px + env(safe-area-inset-top));
   left:50%; transform:translateX(-50%);
@@ -391,6 +392,99 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
   cursor:pointer; min-height:32px; touch-action:manipulation; flex:none;
 }
 #copyBanner button:hover{background:#29272433}
+
+/* toast */
+#toast{
+  position:fixed; bottom:calc(24px + env(safe-area-inset-bottom));
+  left:50%; transform:translateX(-50%);
+  background:var(--ink); color:var(--surface);
+  padding:8px 8px 8px 16px;
+  border-radius:999px;
+  font-size:.86rem; font-weight:700;
+  z-index:300;
+  box-shadow:0 4px 16px #00000050;
+  transition:opacity .3s;
+  opacity:0;
+  pointer-events:none;
+  max-width:calc(100% - 24px);
+  display:flex; align-items:center; gap:10px;
+  text-align:left;
+}
+#toast.show{ opacity:1; pointer-events:auto; }
+#toast .tst-text{ line-height:1.3; padding-left:4px; }
+#toast button{
+  background:var(--lime); color:var(--ink);
+  border:0; border-radius:999px;
+  padding:6px 14px;
+  font:inherit; font-size:.82rem; font-weight:700;
+  cursor:pointer;
+  min-height:32px;
+  touch-action:manipulation;
+  flex:none;
+}
+#toast button:active{ transform:scale(.96); }
+
+/* copy options modal */
+.copy-opts-backdrop{
+  position:fixed; inset:0; background:#00000080;
+  display:none; align-items:center; justify-content:center;
+  z-index:200; padding:16px;
+  touch-action:none;
+}
+.copy-opts-backdrop.show{ display:flex; }
+.copy-opts-card{
+  background:var(--surface);
+  border-radius:18px;
+  padding:20px;
+  max-width:380px;
+  width:100%;
+  max-height:90vh;
+  overflow-y:auto;
+  box-shadow:0 10px 40px #00000050;
+  border:1px solid var(--line);
+}
+.copy-opts-card h3{
+  font-size:1.05rem;
+  margin-bottom:4px;
+  letter-spacing:-.01em;
+}
+.copy-opts-card .co-sub{
+  color:var(--muted);
+  font-size:.82rem;
+  margin:0 0 14px;
+}
+.copy-opts-list{
+  display:flex; flex-direction:column; gap:2px;
+  margin-bottom:16px;
+}
+.copy-opts-list label{
+  display:flex; align-items:center; gap:11px;
+  padding:10px 12px; border-radius:10px;
+  font-size:.92rem;
+  cursor:pointer;
+  user-select:none;
+  min-height:44px;
+  border:1px solid transparent;
+  transition:background .12s, border-color .12s;
+}
+.copy-opts-list label:hover{
+  background:var(--bg);
+  border-color:var(--line);
+}
+.copy-opts-list input{
+  width:20px; height:20px; margin:0;
+  accent-color:#687B59;
+  cursor:pointer;
+  flex:none;
+}
+.copy-opts-actions{
+  display:flex; gap:8px;
+  justify-content:flex-end;
+}
+.copy-opts-actions .btn{ flex:1; }
+@media (min-width:520px){
+  .copy-opts-actions .btn{ flex:0 0 auto; min-width:100px; }
+}
 
 footer{margin-top:22px; border-top:1px solid var(--line); padding-top:12px}
 footer p{margin:6px 0}
@@ -490,6 +584,26 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
   </footer>
 </main>
 
+<!-- Copy options modal -->
+<div class="copy-opts-backdrop" id="copyOpts">
+  <div class="copy-opts-card">
+    <h3>Что скопировать?</h3>
+    <p class="co-sub">Источник: <strong id="copyOptsDate">—</strong></p>
+    <div class="copy-opts-list">
+      <label><input type="checkbox" data-key="status"> Статус (Здоров / Болеет)</label>
+      <label><input type="checkbox" data-key="garden"> Был в садике</label>
+      <label><input type="checkbox" data-key="diagnosis"> Диагноз</label>
+      <label><input type="checkbox" data-key="symptoms"> Симптомы</label>
+      <label><input type="checkbox" data-key="temps"> Температура</label>
+      <label><input type="checkbox" data-key="note"> Заметка</label>
+    </div>
+    <div class="copy-opts-actions">
+      <button class="btn" id="copyOptsCancel" type="button">Отмена</button>
+      <button class="btn primary" id="copyOptsNext" type="button">Далее →</button>
+    </div>
+  </div>
+</div>
+
 <input type="file" id="fileInput" accept="application/json" hidden>
 
 <script>
@@ -530,6 +644,16 @@ const CAT_DOT = {
   tummy:'var(--dot-tummy)', rash:'var(--dot-rash)'
 };
 
+const DEFAULT_COPY_OPTIONS = {
+  status: true, garden: true, diagnosis: true,
+  symptoms: true, temps: true, note: true
+};
+
+const COPY_OPT_LABELS = {
+  status: 'статус', garden: 'садик', diagnosis: 'диагноз',
+  symptoms: 'симптомы', temps: 'температура', note: 'заметка'
+};
+
 const MONTHS    = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
 const MONTHS_G  = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 const WD_FULL   = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
@@ -558,14 +682,19 @@ function loadState(){
     const raw = localStorage.getItem(STORE);
     if (raw){
       const s = JSON.parse(raw);
-      return { theme: s.theme || null, days: s.days || {} };
+      return {
+        theme: s.theme || null,
+        days: s.days || {},
+        copyOptions: s.copyOptions || null
+      };
     }
   } catch(e){}
-  return { theme:null, days:{} };
+  return { theme:null, days:{}, copyOptions:null };
 }
 
 const state = loadState();
 if (!state.theme) state.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+if (!state.copyOptions) state.copyOptions = { ...DEFAULT_COPY_OPTIONS };
 
 function save(){ try { localStorage.setItem(STORE, JSON.stringify(state)); } catch(e){} }
 
@@ -667,6 +796,7 @@ const sheet      = document.getElementById('sheet');
 const backdrop   = document.getElementById('backdrop');
 const sheetClose = document.getElementById('sheetClose');
 const grip       = document.getElementById('grip');
+const copyOptsModal = document.getElementById('copyOpts');
 
 /* ============================ ВИД ============================ */
 const now0 = new Date();
@@ -684,48 +814,190 @@ themeBtn.addEventListener('click', () => {
   save(); applyTheme();
 });
 
-/* ============================ ТОСТ ============================ */
-function toast(msg){
+/* ============================ ТОСТ С UNDO ============================ */
+let toastTimer = null;
+function toast(msg, undoFn){
   let el = document.getElementById('toast');
   if (!el){
     el = document.createElement('div');
     el.id = 'toast';
-    el.style.cssText = 'position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 18px;border-radius:999px;font-size:.86rem;font-weight:700;z-index:200;box-shadow:0 4px 16px #00000050;transition:opacity .3s;opacity:0;pointer-events:none;max-width:calc(100% - 24px);text-align:center';
     document.body.appendChild(el);
   }
-  el.textContent = msg;
-  el.style.opacity = '1';
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.style.opacity = '0', 2600);
+  el.innerHTML = '';
+  const span = document.createElement('span');
+  span.className = 'tst-text';
+  span.textContent = msg;
+  el.appendChild(span);
+
+  if (undoFn){
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'Отменить';
+    btn.onclick = () => {
+      hideToast();
+      undoFn();
+    };
+    el.appendChild(btn);
+  }
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, undoFn ? 8000 : 2600);
+}
+function hideToast(){
+  const el = document.getElementById('toast');
+  if (el) el.classList.remove('show');
+  clearTimeout(toastTimer);
 }
 
 /* ============================ КОПИРОВАНИЕ ДНЯ ============================ */
-let copyMode = null; // { fromKey } — режим "выбери целевой день"
+let copyMode = null;     // { fromKey, options }
+let lastCopyUndo = null; // { toKey, prevData }
 
-function copyDayData(fromKey, toKey){
+function defaultCopyOptions(){ return { ...DEFAULT_COPY_OPTIONS }; }
+
+function conflictFields(dst, options){
+  if (!dst) return [];
+  const conflicts = [];
+  if (options.status && dst.status) conflicts.push('статус');
+  if (options.garden && dst.garden) conflicts.push('«был в садике»');
+  if (options.diagnosis && dst.diagnosis && dst.diagnosis.trim()) conflicts.push('диагноз');
+  if (options.symptoms && dst.symptoms && dst.symptoms.length) conflicts.push('симптомы');
+  if (options.temps && dst.temps && dst.temps.length) conflicts.push('температура');
+  if (options.note && dst.note && dst.note.trim()) conflicts.push('заметка');
+  return conflicts;
+}
+
+function copyDayData(fromKey, toKey, options){
   if (fromKey === toKey) return;
   const src = state.days[fromKey];
-  if (!src){
-    toast('В этом дне нет данных');
+  if (!hasAnyData(src)){
+    toast('В этом дне нет данных для копирования');
+    return;
+  }
+
+  const opts = options || state.copyOptions || defaultCopyOptions();
+  const keys = Object.keys(opts).filter(k => opts[k]);
+  if (!keys.length){
+    toast('Не выбрано ни одного параметра');
     return;
   }
 
   const dst = state.days[toKey];
-  if (hasAnyData(dst)){
-    const ok = confirm(`В ${fmtDate(toKey)} уже есть отметки. Перезаписать?`);
+  const conflicts = conflictFields(dst, opts);
+  if (conflicts.length){
+    const ok = confirm(`В ${fmtDate(toKey)} уже есть: ${conflicts.join(', ')}.\n\nПерезаписать?`);
     if (!ok) return;
   }
 
-  const copy = JSON.parse(JSON.stringify(src));
-  copy.temps = (copy.temps || []).map(t => ({...t, id: uid()}));
-  state.days[toKey] = copy;
+  // сохраняем прежнее состояние для отмены
+  const prevData = dst ? JSON.parse(JSON.stringify(dst)) : null;
+
+  // создаём новый день, сохраняя поля, которые НЕ копируем
+  const base = dst
+    ? JSON.parse(JSON.stringify(dst))
+    : { status:null, symptoms:[], temps:[], note:'', diagnosis:'', garden:false };
+
+  if (opts.status)    base.status    = src.status || null;
+  if (opts.garden)    base.garden    = !!src.garden;
+  if (opts.diagnosis) base.diagnosis = src.diagnosis || '';
+  if (opts.symptoms)  base.symptoms  = (src.symptoms || []).slice();
+  if (opts.temps)     base.temps     = (src.temps || []).map(t => ({...t, id: uid()}));
+  if (opts.note)      base.note      = src.note || '';
+
+  if (hasAnyData(base)){
+    state.days[toKey] = base;
+  } else {
+    delete state.days[toKey];
+  }
+
+  lastCopyUndo = { toKey, prevData };
   save();
   render();
-  toast(`Скопировано: ${fmtDateShort(fromKey)} → ${fmtDateShort(toKey)}`);
+
+  toast(
+    `Скопировано ${fmtDateShort(fromKey)} → ${fmtDateShort(toKey)}`,
+    () => undoLastCopy()
+  );
 }
 
-function enterCopyMode(fromKey){
-  copyMode = { fromKey };
+function undoLastCopy(){
+  if (!lastCopyUndo) return;
+  const { toKey, prevData } = lastCopyUndo;
+  if (prevData === null){
+    delete state.days[toKey];
+  } else {
+    state.days[toKey] = prevData;
+  }
+  lastCopyUndo = null;
+  save();
+  render();
+  toast('Копирование отменено');
+}
+
+/* ---- Копирование через кнопку (с выбором параметров) ---- */
+let copyOptsSourceKey = null;
+
+function showCopyOptionsDialog(fromKey){
+  if (!fromKey) return;
+  if (!hasAnyData(state.days[fromKey])){
+    toast('В этом дне нет данных для копирования');
+    return;
+  }
+  copyOptsSourceKey = fromKey;
+  const d = parseK(fromKey);
+  document.getElementById('copyOptsDate').textContent =
+    `${d.getDate()} ${MONTHS_G[d.getMonth()]}`;
+
+  const opts = state.copyOptions || defaultCopyOptions();
+  document.querySelectorAll('.copy-opts-list input[data-key]').forEach(cb => {
+    cb.checked = !!opts[cb.dataset.key];
+  });
+
+  copyOptsModal.classList.add('show');
+  document.body.classList.add('no-scroll');
+}
+
+function hideCopyOptionsDialog(){
+  copyOptsModal.classList.remove('show');
+  document.body.classList.remove('no-scroll');
+  copyOptsSourceKey = null;
+}
+
+document.getElementById('copyOptsCancel').addEventListener('click', hideCopyOptionsDialog);
+copyOptsModal.addEventListener('click', e => {
+  if (e.target === copyOptsModal) hideCopyOptionsDialog();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && copyOptsModal.classList.contains('show')) hideCopyOptionsDialog();
+});
+
+document.getElementById('copyOptsNext').addEventListener('click', () => {
+  const fromKey = copyOptsSourceKey;
+  if (!fromKey) return;
+
+  const opts = {};
+  document.querySelectorAll('.copy-opts-list input[data-key]').forEach(cb => {
+    opts[cb.dataset.key] = cb.checked;
+  });
+
+  if (!Object.values(opts).some(v => v)){
+    toast('Выбери хотя бы один параметр');
+    return;
+  }
+
+  // запоминаем выбор
+  state.copyOptions = { ...DEFAULT_COPY_OPTIONS, ...opts };
+  save();
+
+  hideCopyOptionsDialog();
+  closeSheet();
+  enterCopyMode(fromKey, opts);
+  toast('Тапни целевой день');
+});
+
+/* ---- Режим «выбери целевой день» ---- */
+function enterCopyMode(fromKey, options){
+  copyMode = { fromKey, options: options || state.copyOptions || defaultCopyOptions() };
   closeSheet();
   updateCopyBanner();
   renderCalendar();
@@ -743,8 +1015,17 @@ function updateCopyBanner(){
     document.body.appendChild(banner);
   }
   if (copyMode){
+    const d = parseK(copyMode.fromKey);
+    const selectedLabels = Object.keys(copyMode.options)
+      .filter(k => copyMode.options[k])
+      .map(k => COPY_OPT_LABELS[k])
+      .filter(Boolean)
+      .join(' · ');
     banner.innerHTML = `
-      <span class="cb-txt">Куда скопировать <strong>${fmtDate(copyMode.fromKey)}</strong>?</span>
+      <span class="cb-txt">
+        Куда скопировать <strong>${fmtDate(copyMode.fromKey)}</strong>?<br>
+        <span style="font-weight:600; opacity:.7; font-size:.78rem">${selectedLabels || '—'}</span>
+      </span>
       <button type="button" id="copyCancel">Отмена</button>
     `;
     banner.classList.add('show');
@@ -816,10 +1097,11 @@ daysEl.addEventListener('click', e => {
 
   if (copyMode){
     const fromKey = copyMode.fromKey;
+    const opts    = copyMode.options;
     const toKey   = btn.dataset.key;
     exitCopyMode();
     if (toKey !== fromKey){
-      copyDayData(fromKey, toKey);
+      copyDayData(fromKey, toKey, opts);
     } else {
       toast('Отменено');
     }
@@ -910,7 +1192,8 @@ function onDayPointerUp(e){
     endDrag();
 
     if (toKey && toKey !== fromKey){
-      copyDayData(fromKey, toKey);
+      const opts = state.copyOptions || defaultCopyOptions();
+      copyDayData(fromKey, toKey, opts);
     } else if (!toKey){
       toast('Отменено');
     }
@@ -1231,8 +1514,7 @@ panelEl.addEventListener('click', e => {
     }
   }
   if (act === 'copyto'){
-    enterCopyMode(selected);
-    toast(`Тапни целевой день`);
+    showCopyOptionsDialog(selected);
   }
 });
 
@@ -1572,6 +1854,7 @@ fileInput.addEventListener('change', () => {
       if (!data.days || typeof data.days !== 'object') throw new Error('bad file');
       state.days = data.days;
       if (data.theme) state.theme = data.theme;
+      if (data.copyOptions) state.copyOptions = { ...DEFAULT_COPY_OPTIONS, ...data.copyOptions };
       save();
       render();
       alert('Данные импортированы.');
