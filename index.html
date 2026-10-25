@@ -26,15 +26,17 @@
   --cell:#fffaf1; --cell-line:#e3d9c9;
   --sick-bg:#FBE2E2; --sick-line:#EFB3BF;
   --dot-nose:#687B59; --dot-cough:#A9BA18; --dot-fever:#F27691; --dot-tummy:#5a544c; --dot-rash:#E8A0B4;
-  --shadow:0 1px 2px #0000000a;
-  --pad: 12px;
+  --shadow: 0 8px 24px -8px rgba(41, 39, 36, 0.10);
+  --shadow-soft: 0 4px 12px -4px rgba(41, 39, 36, 0.06);
+  --pad: 14px;
 }
 [data-theme="dark"]{
   --bg:#171614; --surface:#232120; --ink:#F1E8DA; --muted:#a49c90; --line:#3a3530;
   --cell:#232120; --cell-line:#3a3530;
   --sick-bg:#4A3236; --sick-line:#8A4A58;
   --dot-nose:#93AC80; --dot-cough:#DCEB32; --dot-fever:#F27691; --dot-tummy:#C9C0B1; --dot-rash:#F2A7BC;
-  --shadow:0 1px 2px #00000040;
+  --shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.45);
+  --shadow-soft: 0 4px 12px -4px rgba(0, 0, 0, 0.3);
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
 html{ -webkit-text-size-adjust:100%; }
@@ -43,7 +45,7 @@ body{
   background:var(--bg); color:var(--ink);
   font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   -webkit-font-smoothing:antialiased;
-  transition:background .2s ease, color .2s ease;
+  transition:background .25s ease, color .25s ease;
   overscroll-behavior-y: none;
 }
 body.no-scroll{ overflow:hidden; }
@@ -55,39 +57,64 @@ main{
 }
 h1,h2,h3{margin:0; line-height:1.15; letter-spacing:-.02em}
 
+/* ========== HERO ========== */
 .hero{
-  border:2px solid var(--ink); border-radius:16px; background:var(--surface);
-  padding:14px 16px;
-  display:flex; gap:12px; justify-content:space-between; align-items:flex-start; flex-wrap:wrap;
+  position:relative; overflow:hidden;
+  border:2px solid var(--ink); border-radius:22px; background:var(--surface);
+  padding:16px 18px 16px 24px;
+  display:flex; gap:14px; justify-content:space-between; align-items:flex-start; flex-wrap:wrap;
+  box-shadow: var(--shadow);
+}
+.hero::before{
+  content:''; position:absolute; left:0; top:0; bottom:0; width:6px;
+  background:var(--lime);
 }
 .hero-main{min-width:0; flex:1 1 240px}
-.eyebrow{text-transform:uppercase; letter-spacing:.12em; font-size:.66rem; font-weight:800; color:var(--muted)}
-h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px}
+.eyebrow{text-transform:uppercase; letter-spacing:.14em; font-size:.66rem; font-weight:800; color:var(--muted)}
+h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03em}
 .mark{background:var(--lime); color:#292724; padding:0 .14em; box-decoration-break:clone; -webkit-box-decoration-break:clone}
 .lead{margin:0; font-size:.9rem; color:var(--muted); line-height:1.45}
+.hero-meta{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px}
+.meta-pill{
+  font-size:.78rem; font-weight:700; padding:5px 11px; border-radius:999px;
+  background:var(--lime); color:#292724;
+  letter-spacing:-.01em;
+  display:inline-flex; align-items:center; gap:5px;
+}
+.meta-pill.meta-coral{
+  background:#F2769120; color:var(--ink); border:1px solid #F2769166;
+}
+.meta-pill.meta-sage{
+  background:#687B5922; color:var(--ink); border:1px solid #687B5966;
+}
+.meta-pill.meta-muted{
+  background:var(--bg); color:var(--muted); border:1px solid var(--line);
+}
 .hero-actions{display:flex; gap:6px; flex-wrap:wrap}
 @media (max-width:520px){
-  .hero{padding:12px 14px}
+  .hero{padding:14px 16px 14px 20px}
   .lead{display:none}
   .hero-actions{width:100%}
   .hero-actions .btn{flex:1}
 }
 
+/* ========== BUTTONS ========== */
 .btn{
   font:inherit; font-size:.88rem; font-weight:700; cursor:pointer;
   background:var(--surface); color:var(--ink);
   border:1.5px solid var(--ink); border-radius:999px; padding:9px 16px;
   min-height:40px; display:inline-flex; align-items:center; justify-content:center; gap:6px;
-  transition:background .15s, transform .06s; touch-action:manipulation;
+  transition:background .15s, transform .1s, box-shadow .15s; touch-action:manipulation;
 }
-.btn:hover{background:var(--lime); color:#292724}
-.btn:active{transform:scale(.97)}
+.btn:hover{background:var(--lime); color:#292724; transform:translateY(-1px); box-shadow:var(--shadow-soft)}
+.btn:active{transform:translateY(0) scale(.98)}
 .btn.primary{background:var(--ink); color:var(--surface); padding:9px 14px}
 .btn.primary:hover{background:var(--lime); color:#292724; border-color:var(--ink)}
 .navbtn{
-  width:44px; height:44px; border-radius:50%; display:grid; place-items:center;
+  width:42px; height:42px; border-radius:50%; display:grid; place-items:center;
   border:1.5px solid var(--line); background:var(--surface); color:var(--ink);
-  cursor:pointer; font-size:1.05rem; line-height:1; transition:background .15s; touch-action:manipulation;
+  cursor:pointer; font-size:1.05rem; line-height:1; transition:background .15s, transform .1s;
+  touch-action:manipulation;
 }
 .navbtn:hover{background:var(--lime); color:#292724; border-color:var(--ink)}
 .navbtn:active{transform:scale(.94)}
@@ -105,39 +132,72 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px}
 .link:hover{color:var(--sage)}
 .link.danger{color:var(--coral)}
 
+/* ========== TABS ========== */
 .tabs{
   display:flex; gap:4px; background:var(--surface); border:1px solid var(--line);
-  border-radius:14px; padding:4px; margin-top:12px;
+  border-radius:16px; padding:4px; margin-top:12px;
+  box-shadow: var(--shadow-soft);
 }
 .tabs button{
-  flex:1; border:0; background:transparent; padding:10px 6px; border-radius:10px;
+  flex:1; border:0; background:transparent; padding:10px 6px; border-radius:12px;
   font:inherit; font-size:.9rem; font-weight:700; color:var(--muted); cursor:pointer;
-  min-height:40px; touch-action:manipulation;
+  min-height:40px; touch-action:manipulation; transition:background .15s, color .15s;
 }
 .tabs button.on{background:var(--ink); color:var(--surface)}
 .tabs button:hover:not(.on){color:var(--ink)}
 
+/* ========== LAYOUT ========== */
 .layout{
-  display:grid; gap:12px; margin-top:12px;
+  display:grid; gap:14px; margin-top:14px;
   grid-template-columns:minmax(0,1fr);
 }
 @media (min-width:880px){
   .layout{ grid-template-columns:minmax(0,1.35fr) minmax(340px,1fr); align-items:start; }
 }
-.card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:var(--pad); box-shadow:var(--shadow)}
+.card{
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:20px; padding:var(--pad);
+  box-shadow: var(--shadow);
+}
 
-.cal-head{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px}
-.cal-title{font-weight:800; font-size:1.05rem; letter-spacing:-.01em; text-transform:capitalize; flex:1; text-align:center}
+/* ========== CALENDAR ========== */
+.cal-head{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px}
+.cal-title{
+  font-weight:800; font-size:1.08rem; letter-spacing:-.02em;
+  text-transform:capitalize; flex:1; text-align:center;
+}
+
+.view-toggle{
+  display:flex; gap:2px;
+  background:var(--bg); border:1px solid var(--line);
+  border-radius:12px; padding:3px; margin-bottom:12px;
+}
+.view-toggle button{
+  flex:1; border:0; background:transparent; padding:8px 12px; border-radius:9px;
+  font:inherit; font-size:.84rem; font-weight:700; color:var(--muted); cursor:pointer;
+  min-height:36px; transition:background .15s, color .15s, box-shadow .15s;
+  touch-action:manipulation;
+}
+.view-toggle button.on{
+  background:var(--surface); color:var(--ink);
+  box-shadow: 0 1px 3px rgba(41,39,36,0.10);
+}
+[data-theme="dark"] .view-toggle button.on{ box-shadow: 0 1px 3px rgba(0,0,0,0.35); }
+
+.days-wrap{ touch-action: pan-y; }
 .weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-bottom:4px}
-.weekdays span{text-align:center; font-size:.62rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); font-weight:800}
+.weekdays span{
+  text-align:center; font-size:.62rem; text-transform:uppercase;
+  letter-spacing:.08em; color:var(--muted); font-weight:800;
+}
 .days{display:grid; grid-template-columns:repeat(7,1fr); gap:4px}
 .day{
-  position:relative; min-height:52px; padding:4px 5px;
+  position:relative; min-height:52px; padding:5px 6px;
   display:flex; flex-direction:column; justify-content:space-between;
-  background:var(--cell); border:1.5px solid var(--cell-line); border-radius:9px;
+  background:var(--cell); border:1.5px solid var(--cell-line); border-radius:10px;
   color:var(--ink); font:inherit; text-align:left; cursor:pointer;
-  transition:border-color .12s, transform .06s, opacity .12s, box-shadow .12s;
-  touch-action:manipulation;
+  transition:border-color .15s, transform .08s, opacity .15s, box-shadow .15s, background .15s;
+  touch-action: pan-y;
   -webkit-user-select:none; user-select:none;
   -webkit-touch-callout: none;
   overflow:hidden;
@@ -146,7 +206,7 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px}
 .day:active{transform:scale(.96)}
 .day.blank{background:transparent; border-color:transparent; cursor:default; pointer-events:none}
 .day.sick{background:var(--sick-bg); border-color:var(--sick-line)}
-.day.sel{border-color:var(--ink); border-width:2px; padding:3px 4px}
+.day.sel{border-color:var(--ink); border-width:2px; padding:4px 5px}
 .day.dragging{
   opacity:.5; transform:scale(.93);
   border-color:var(--sage); border-width:2.5px;
@@ -169,36 +229,145 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px}
 .day-top{display:flex; justify-content:space-between; align-items:baseline; gap:2px; width:100%}
 .dnum{font-size:.8rem; font-weight:800; line-height:1}
 .day.today .dnum{background:var(--lime); color:#292724; border-radius:4px; padding:1px 4px; margin-left:-4px}
-.dtemp{font-size:.58rem; font-weight:800; color:var(--coral); line-height:1; font-variant-numeric:tabular-nums; flex:none}
+.dtemp{
+  font-size:.58rem; font-weight:800; color:var(--coral); line-height:1;
+  font-variant-numeric:tabular-nums; flex:none;
+}
 [data-theme="dark"] .dtemp{color:#F9A2B5}
 .dots{display:flex; gap:3px; min-height:6px; align-items:center}
 .dot{width:5px; height:5px; border-radius:50%; display:block; flex:none}
 .dot.nose{background:var(--dot-nose)} .dot.cough{background:var(--dot-cough)}
 .dot.fever{background:var(--dot-fever)} .dot.tummy{background:var(--dot-tummy)}
 .dot.rash{background:var(--dot-rash)}
-.gdot{position:absolute; top:5px; right:5px; width:5px; height:5px; border-radius:50%; background:var(--lime); box-shadow:0 0 0 1px #29272440}
+.gdot{
+  position:absolute; top:5px; right:5px; width:5px; height:5px; border-radius:50%;
+  background:var(--lime); box-shadow:0 0 0 1px #29272440;
+}
 @media (min-width:880px){
-  .day{aspect-ratio:1/1; min-height:0; padding:6px 7px; border-radius:10px}
+  .day{aspect-ratio:1/1; min-height:0; padding:6px 7px; border-radius:11px}
   .dnum{font-size:.88rem}
   .dtemp{font-size:.66rem}
   .dot{width:6px; height:6px}
   .days{gap:5px}
 }
 
-.legend{display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:12px; font-size:.72rem; color:var(--muted); align-items:center}
+/* Слайд-анимация после свайпа */
+@keyframes slideInFromRight{
+  from { transform: translateX(24px); opacity: 0.35; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slideInFromLeft{
+  from { transform: translateX(-24px); opacity: 0.35; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+.days.slide-from-right, #weekDays.slide-from-right { animation: slideInFromRight 0.22s ease-out; }
+.days.slide-from-left,  #weekDays.slide-from-left  { animation: slideInFromLeft  0.22s ease-out; }
+@media (prefers-reduced-motion: reduce){
+  .days.slide-from-right, .days.slide-from-left,
+  #weekDays.slide-from-right, #weekDays.slide-from-left { animation: none; }
+}
+
+/* ========== WEEK VIEW ========== */
+#weekDays{
+  display: flex; flex-direction: column; gap: 8px;
+}
+.week-day{
+  display: grid;
+  grid-template-columns: 52px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px;
+  background: var(--cell);
+  border: 1.5px solid var(--cell-line);
+  border-radius: 13px;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s, transform .08s, box-shadow .15s, background .15s;
+  touch-action: manipulation;
+  position: relative;
+  overflow: hidden;
+  min-height: 64px;
+}
+.week-day:hover{ border-color: var(--ink); box-shadow: var(--shadow-soft); }
+.week-day:active{ transform: scale(.985); }
+.week-day.sick{ background: var(--sick-bg); border-color: var(--sick-line); }
+.week-day.sel{ border-color: var(--ink); border-width: 2px; padding: 10px 12px; }
+.week-day.today .wday-num{
+  background: var(--lime); color:#292724;
+  border-radius: 6px; padding: 0 5px;
+}
+.week-day.copy-source{ box-shadow: 0 0 0 3px var(--sage); }
+.week-day.drag-over{ border-color: var(--coral); border-width: 2.5px; }
+
+.wday-date{
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-right: 1px solid var(--cell-line); padding-right: 10px;
+}
+.wday-name{
+  font-size: .66rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted);
+}
+.wday-num{
+  font-size: 1.22rem; font-weight: 800;
+  line-height: 1.15; font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em;
+}
+.wday-main{ min-width: 0; overflow: hidden; }
+.wday-status{
+  font-size: .9rem; font-weight: 700;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wday-diag{
+  color: var(--muted); font-weight: 600; font-size: .82rem;
+  margin-left: 3px;
+}
+.wday-meta{
+  display: flex; align-items: center; gap: 5px;
+  margin-top: 3px;
+  font-size: .8rem; color: var(--muted);
+}
+.wday-temp{
+  font-weight: 800; color: var(--coral);
+  font-variant-numeric: tabular-nums;
+  margin-left: 5px;
+}
+[data-theme="dark"] .wday-temp{ color: #F9A2B5; }
+.week-day.sick .wday-status{ color: var(--ink); }
+.week-day.ok .wday-status{ color: var(--sage); }
+[data-theme="dark"] .week-day.ok .wday-status{ color: var(--dot-nose); }
+.week-day.none .wday-status{ color: var(--muted); font-weight: 500; font-style: italic; }
+
+.wday-garden{
+  font-size: .64rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .06em;
+  padding: 3px 8px; border-radius: 999px;
+  background: var(--lime); color:#292724;
+  flex: none;
+}
+
+/* ========== LEGEND / HINT ========== */
+.legend{
+  display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:14px;
+  font-size:.72rem; color:var(--muted); align-items:center;
+}
 .legend b{display:inline-flex; align-items:center; gap:5px; font-weight:600}
 .legend i{width:10px; height:10px; border-radius:3px; display:inline-block; flex:none}
 .legend .r{border-radius:50%; width:7px; height:7px}
 
 .hint{
-  margin-top:8px; font-size:.76rem; color:var(--muted);
-  padding:6px 10px; border-radius:8px; background:var(--bg);
-  border:1px dashed var(--line);
+  margin-top:10px; font-size:.78rem; color:var(--ink);
+  padding:8px 12px; border-radius:0 10px 10px 0;
+  background:#fffaf1; border-left:4px solid var(--lime);
 }
+[data-theme="dark"] .hint{ background:var(--surface); }
 
+/* ========== DOSE BAR ========== */
 .dose-bar{
   display:none; margin-top:10px; padding:9px 12px;
-  border-radius:10px; border-left:5px solid var(--sage);
+  border-radius:0 12px 12px 0; border-left:5px solid var(--sage);
   background:var(--bg); font-size:.84rem;
   align-items:center; gap:10px; cursor:pointer; touch-action:manipulation;
 }
@@ -209,18 +378,26 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px}
 .dose-bar .dose-text{flex:1; line-height:1.35}
 .dose-bar strong{font-weight:800}
 
+/* ========== CHART ========== */
 .chart-box{
   margin-top:12px; padding:10px 6px 4px;
-  border-radius:12px; background:var(--bg); border:1px solid var(--line);
+  border-radius:14px; background:var(--bg); border:1px solid var(--line);
   overflow:hidden;
 }
-.chart-title{font-size:.72rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.08em; margin:0 4px 6px}
+.chart-title{
+  font-size:.72rem; font-weight:800; color:var(--muted);
+  text-transform:uppercase; letter-spacing:.08em; margin:0 4px 6px;
+}
 .chart-box svg{display:block; width:100%; height:auto}
-.chart-legend{display:flex; flex-wrap:wrap; gap:8px 14px; font-size:.72rem; color:var(--muted); margin:6px 4px 2px}
+.chart-legend{
+  display:flex; flex-wrap:wrap; gap:8px 14px;
+  font-size:.72rem; color:var(--muted); margin:6px 4px 2px;
+}
 .chart-legend b{font-weight:600; display:inline-flex; align-items:center; gap:5px}
 .chart-legend i{width:8px; height:8px; border-radius:50%; display:inline-block}
 .chart-legend .ln{width:14px; height:2px; border-radius:1px}
 
+/* ========== SHEET ========== */
 .sheet-backdrop{
   position:fixed; inset:0; background:#00000066;
   opacity:0; pointer-events:none; transition:opacity .25s ease; z-index:100; touch-action:none;
@@ -260,7 +437,7 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px}
   .sheet{
     position:relative; left:auto; right:auto; bottom:auto; top:auto;
     transform:none !important; visibility:visible !important;
-    max-height:none; overflow:visible; border-radius:16px;
+    max-height:none; overflow:visible; border-radius:20px;
     border:1px solid var(--line); box-shadow:var(--shadow); padding-bottom:0;
     transition:none; background:var(--surface);
   }
@@ -268,6 +445,7 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px}
   .sheet-body{padding:16px}
 }
 
+/* ========== PANEL ========== */
 .panel-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px; margin-bottom:12px}
 .panel-date{font-size:1.25rem; font-weight:800; letter-spacing:-.02em; text-transform:capitalize; margin-top:2px}
 .panel-head-right{display:flex; align-items:center; gap:8px}
@@ -286,14 +464,22 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px}
 .check{display:flex; align-items:center; gap:10px; margin-top:12px; font-size:.92rem; cursor:pointer; user-select:none; min-height:36px}
 .check input{width:20px; height:20px; accent-color:#687B59; cursor:pointer; margin:0; flex:none}
 
-.section-label{font-size:.68rem; text-transform:uppercase; letter-spacing:.09em; font-weight:800; color:var(--muted); margin:16px 0 8px}
+.section-label{
+  font-size:.68rem; text-transform:uppercase; letter-spacing:.1em;
+  font-weight:800; color:var(--muted); margin:16px 0 8px;
+  display:flex; align-items:center; gap:6px;
+}
+.section-label::before{
+  content:''; display:inline-block; width:3px; height:12px;
+  background:var(--lime); border-radius:2px;
+}
 
 .chips{display:flex; flex-wrap:wrap; gap:6px}
 .chip{
   font:inherit; font-size:.82rem; padding:8px 12px; border-radius:999px;
   border:1.5px solid var(--line); background:var(--surface); color:var(--ink);
   cursor:pointer; display:inline-flex; align-items:center; gap:7px;
-  transition:background .12s, border-color .12s, transform .06s;
+  transition:background .15s, border-color .15s, transform .08s;
   min-height:36px; touch-action:manipulation; -webkit-user-select:none; user-select:none;
 }
 .chip:active{transform:scale(.96)}
@@ -309,12 +495,16 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px}
   font:inherit; font-size:16px; padding:10px 12px; border-radius:10px;
   border:1.5px solid var(--line); background:var(--surface); color:var(--ink);
   min-width:0; width:100%; min-height:44px;
+  transition:border-color .15s;
 }
 .inp:focus{outline:2px solid var(--lime); outline-offset:1px; border-color:var(--ink)}
 textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inherit; font-size:16px}
 .err{color:var(--coral); font-size:.82rem; margin-top:6px}
 
-.nextdose{margin-top:10px; padding:10px 12px; border-radius:0 12px 12px 0; border-left:5px solid var(--sage); background:var(--bg); font-size:.85rem}
+.nextdose{
+  margin-top:10px; padding:10px 14px; border-radius:0 12px 12px 0;
+  border-left:5px solid var(--sage); background:var(--bg); font-size:.85rem;
+}
 .nextdose.wait{border-left-color:var(--lime)}
 .nextdose.ready{border-left-color:var(--coral)}
 .nd-top{color:var(--muted); font-size:.76rem; margin-bottom:3px}
@@ -339,48 +529,71 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
   display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;
 }
 
-.stats-wrap{margin-top:12px; display:grid; gap:10px; grid-template-columns:repeat(2,1fr)}
-@media (min-width:880px){ .stats-wrap{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))} }
-.stat{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:12px 14px; box-shadow:var(--shadow)}
+/* ========== STATS ========== */
+.stats-wrap{
+  margin-top:14px; display:grid; gap:10px;
+  grid-template-columns:repeat(2,1fr);
+}
+@media (min-width:880px){
+  .stats-wrap{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+}
+.stat{
+  background:var(--surface); border:1px solid var(--line); border-radius:16px;
+  padding:13px 15px; box-shadow:var(--shadow-soft);
+  transition:transform .15s, box-shadow .15s;
+}
+.stat:hover{transform:translateY(-1px); box-shadow:var(--shadow)}
 .stat.wide{grid-column:1/-1}
-.sval{display:block; font-size:1.5rem; font-weight:800; letter-spacing:-.04em; line-height:1.1; font-variant-numeric:tabular-nums}
+.sval{
+  display:block; font-size:1.55rem; font-weight:800; letter-spacing:-.04em;
+  line-height:1.1; font-variant-numeric:tabular-nums;
+}
 @media (min-width:880px){ .sval{font-size:1.9rem} }
 .slab{font-size:.78rem; color:var(--muted)}
 .bar{height:10px; border-radius:999px; background:var(--bg); border:1px solid var(--line); overflow:hidden}
 .bar i{display:block; height:100%; background:var(--coral); border-radius:999px; transition:width .35s ease}
-.pill{display:inline-block; padding:4px 11px; border:1px solid var(--line); border-radius:999px; font-size:.78rem; color:var(--ink); background:var(--bg)}
+.pill{
+  display:inline-block; padding:4px 11px; border:1px solid var(--line);
+  border-radius:999px; font-size:.78rem; color:var(--ink); background:var(--bg);
+}
 .pill.coral{background:#F2769122; border-color:#F2769166}
 .pill.sage{background:#687B5922; border-color:#687B5966}
 .pill.lime{background:#DCEB3244; border-color:#A9BA1888}
 
-.period-seg{display:flex; gap:4px; background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:4px; margin-bottom:12px}
+.period-seg{
+  display:flex; gap:4px; background:var(--bg); border:1px solid var(--line);
+  border-radius:12px; padding:4px; margin-bottom:12px;
+}
 .period-seg button{
   flex:1; border:0; background:transparent; padding:9px 4px; border-radius:9px;
   font:inherit; font-size:.82rem; font-weight:700; color:var(--muted); cursor:pointer;
-  min-height:38px; touch-action:manipulation;
+  min-height:38px; touch-action:manipulation; transition:background .15s, color .15s;
 }
 .period-seg button.on{background:var(--ink); color:var(--surface)}
 
 .ep-list{display:flex; flex-direction:column; gap:6px; max-height:320px; overflow-y:auto; padding-right:4px}
 .ep-item{
-  padding:8px 10px; border-radius:10px; background:var(--bg); border:1px solid var(--line);
+  padding:8px 12px; border-radius:10px; background:var(--bg); border:1px solid var(--line);
   display:flex; justify-content:space-between; gap:8px; align-items:flex-start;
 }
 .ep-item .ep-main{flex:1; min-width:0}
 .ep-item .ep-dates{font-weight:800; font-size:.85rem; font-variant-numeric:tabular-nums}
 .ep-item .ep-diag{font-size:.78rem; color:var(--muted); margin-top:2px; overflow:hidden; text-overflow:ellipsis}
-.ep-item .ep-len{font-size:.72rem; font-weight:800; padding:2px 7px; border-radius:999px; border:1px solid var(--line); color:var(--muted); flex:none}
+.ep-item .ep-len{
+  font-size:.72rem; font-weight:800; padding:2px 7px; border-radius:999px;
+  border:1px solid var(--line); color:var(--muted); flex:none;
+}
 
-/* copy mode banner */
+/* ========== COPY BANNER ========== */
 #copyBanner{
   position:fixed; top:calc(12px + env(safe-area-inset-top));
   left:50%; transform:translateX(-50%);
   background:var(--lime); color:#292724;
   padding:10px 8px 10px 16px;
-  border-radius:12px;
+  border-radius:14px;
   font-size:.86rem; font-weight:700;
   z-index:150;
-  box-shadow:0 4px 20px #00000040;
+  box-shadow:0 8px 24px rgba(41,39,36,0.3);
   display:none; gap:12px; align-items:center;
   max-width:calc(100% - 24px);
 }
@@ -393,7 +606,7 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
 }
 #copyBanner button:hover{background:#29272433}
 
-/* toast */
+/* ========== TOAST ========== */
 #toast{
   position:fixed; bottom:calc(24px + env(safe-area-inset-bottom));
   left:50%; transform:translateX(-50%);
@@ -402,8 +615,8 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
   border-radius:999px;
   font-size:.86rem; font-weight:700;
   z-index:300;
-  box-shadow:0 4px 16px #00000050;
-  transition:opacity .3s;
+  box-shadow:0 8px 24px rgba(0,0,0,0.35);
+  transition:opacity .25s, transform .25s;
   opacity:0;
   pointer-events:none;
   max-width:calc(100% - 24px);
@@ -424,7 +637,7 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
 }
 #toast button:active{ transform:scale(.96); }
 
-/* copy options modal */
+/* ========== COPY OPTIONS MODAL ========== */
 .copy-opts-backdrop{
   position:fixed; inset:0; background:#00000080;
   display:none; align-items:center; justify-content:center;
@@ -434,24 +647,24 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
 .copy-opts-backdrop.show{ display:flex; }
 .copy-opts-card{
   background:var(--surface);
-  border-radius:18px;
-  padding:20px;
+  border-radius:20px;
+  padding:22px;
   max-width:380px;
   width:100%;
   max-height:90vh;
   overflow-y:auto;
-  box-shadow:0 10px 40px #00000050;
+  box-shadow:0 10px 40px rgba(0,0,0,0.35);
   border:1px solid var(--line);
 }
 .copy-opts-card h3{
-  font-size:1.05rem;
+  font-size:1.08rem;
   margin-bottom:4px;
-  letter-spacing:-.01em;
+  letter-spacing:-.02em;
 }
 .copy-opts-card .co-sub{
   color:var(--muted);
   font-size:.82rem;
-  margin:0 0 14px;
+  margin:0 0 16px;
 }
 .copy-opts-list{
   display:flex; flex-direction:column; gap:2px;
@@ -465,7 +678,7 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
   user-select:none;
   min-height:44px;
   border:1px solid transparent;
-  transition:background .12s, border-color .12s;
+  transition:background .15s, border-color .15s;
 }
 .copy-opts-list label:hover{
   background:var(--bg);
@@ -486,7 +699,10 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
   .copy-opts-actions .btn{ flex:0 0 auto; min-width:100px; }
 }
 
-footer{margin-top:22px; border-top:1px solid var(--line); padding-top:12px}
+/* ========== FOOTER ========== */
+footer{
+  margin-top:24px; border-top:1px solid var(--line); padding-top:14px;
+}
 footer p{margin:6px 0}
 footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86rem}
 
@@ -501,6 +717,7 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
       <div class="eyebrow">Трекер · «Ещё одна галочка»</div>
       <h1>Адаптация к <span class="mark">садику</span></h1>
       <p class="lead">Болезни, симптомы, температура, диагнозы и аналитика.</p>
+      <div class="hero-meta" id="heroMeta"></div>
     </div>
     <div class="hero-actions">
       <button class="btn" id="themeBtn" type="button">Тёмная тема</button>
@@ -517,14 +734,31 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
     <div class="layout">
       <section class="card">
         <div class="cal-head">
-          <button class="navbtn" id="prevBtn" type="button" aria-label="Предыдущий месяц">←</button>
+          <button class="navbtn" id="prevBtn" type="button" aria-label="Предыдущий период">←</button>
           <div class="cal-title" id="monthTitle">—</div>
-          <button class="navbtn" id="nextBtn" type="button" aria-label="Следующий месяц">→</button>
+          <button class="navbtn" id="nextBtn" type="button" aria-label="Следующий период">→</button>
         </div>
-        <div class="weekdays">
-          <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
+
+        <div class="view-toggle" role="group" aria-label="Вид календаря">
+          <button type="button" data-view="month" class="on">Месяц</button>
+          <button type="button" data-view="week">Неделя</button>
         </div>
-        <div class="days" id="days"></div>
+
+        <div id="calendarMonthView">
+          <div class="days-wrap" id="daysWrap">
+            <div class="weekdays">
+              <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
+            </div>
+            <div class="days" id="days"></div>
+          </div>
+        </div>
+
+        <div id="calendarWeekView" class="hidden">
+          <div class="week-days-wrap" id="weekDaysWrap">
+            <div id="weekDays"></div>
+          </div>
+        </div>
+
         <div class="legend">
           <b><i style="background:var(--sick-bg); border:1.5px solid var(--sick-line)"></i>болеет</b>
           <b><i class="r" style="background:var(--lime)"></i>в садике</b>
@@ -534,7 +768,9 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
           <b><i class="r" style="background:var(--dot-tummy)"></i>живот</b>
           <b><i class="r" style="background:var(--dot-rash)"></i>сыпь</b>
         </div>
-        <div class="hint">💡 Зажми день и протяни на другой — скопируешь все отметки. Или открой день и нажми «Скопировать в день…».</div>
+
+        <div class="hint">💡 Свайп по календарю — смена месяца/недели. Зажми день и протяни — быстро скопируешь отметки.</div>
+
         <div class="dose-bar" id="doseBar" role="button" tabindex="0"></div>
 
         <div class="chart-box">
@@ -584,7 +820,6 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
   </footer>
 </main>
 
-<!-- Copy options modal -->
 <div class="copy-opts-backdrop" id="copyOpts">
   <div class="copy-opts-card">
     <h3>Что скопировать?</h3>
@@ -648,15 +883,16 @@ const DEFAULT_COPY_OPTIONS = {
   status: true, garden: true, diagnosis: true,
   symptoms: true, temps: true, note: true
 };
-
 const COPY_OPT_LABELS = {
-  status: 'статус', garden: 'садик', diagnosis: 'диагноз',
-  symptoms: 'симптомы', temps: 'температура', note: 'заметка'
+  status:'статус', garden:'садик', diagnosis:'диагноз',
+  symptoms:'симптомы', temps:'температура', note:'заметка'
 };
 
-const MONTHS    = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-const MONTHS_G  = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-const WD_FULL   = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+const MONTHS      = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const MONTHS_G    = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const MONTHS_G_SHORT = ['янв','фев','мар','апр','мая','июн','июл','авг','сен','окт','ноя','дек'];
+const WD_FULL     = ['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'];
+const WD_SHORT    = ['ПН','ВТ','СР','ЧТ','ПТ','СБ','ВС'];
 
 /* ============================ УТИЛИТЫ ============================ */
 const pad    = n => String(n).padStart(2,'0');
@@ -675,6 +911,12 @@ function dur(ms){
 function medInterval(medId){ const m = MEDS.find(x => x.id === medId); return m ? m.interval : 0; }
 function fmtDate(k){ const d = parseK(k); return `${d.getDate()} ${MONTHS_G[d.getMonth()]}`; }
 function fmtDateShort(k){ const d = parseK(k); return `${pad(d.getDate())}.${pad(d.getMonth()+1)}`; }
+function plural(n, one, few, many){
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
+  return many;
+}
 
 /* ============================ СОСТОЯНИЕ ============================ */
 function loadState(){
@@ -757,10 +999,7 @@ function getEpisodes(daysObj){
       const last = parseK(current.end);
       const d    = parseK(k);
       const gap  = Math.round((d - last) / 86400000);
-      if (gap <= 2){
-        current.end = k;
-        continue;
-      }
+      if (gap <= 2){ current.end = k; continue; }
     }
     if (current) episodes.push(current);
     current = { start: k, end: k, diagnoses: new Set(), days: 0 };
@@ -778,24 +1017,29 @@ function getEpisodes(daysObj){
     ep.days = Math.round((e - s) / 86400000) + 1;
     ep.diagnoses = [...ep.diagnoses].filter(Boolean);
   });
-
   return episodes;
 }
 
 /* ============================ ЭЛЕМЕНТЫ ============================ */
-const daysEl     = document.getElementById('days');
-const panelEl    = document.getElementById('panel');
-const statsEl    = document.getElementById('stats');
-const analyticsEl= document.getElementById('analytics');
-const monthTitle = document.getElementById('monthTitle');
-const chartMonth = document.getElementById('chartMonth');
-const chartEl    = document.getElementById('tempChart');
-const themeBtn   = document.getElementById('themeBtn');
-const doseBar    = document.getElementById('doseBar');
-const sheet      = document.getElementById('sheet');
-const backdrop   = document.getElementById('backdrop');
-const sheetClose = document.getElementById('sheetClose');
-const grip       = document.getElementById('grip');
+const daysEl        = document.getElementById('days');
+const daysWrap      = document.getElementById('daysWrap');
+const weekDaysEl    = document.getElementById('weekDays');
+const weekDaysWrap  = document.getElementById('weekDaysWrap');
+const monthViewEl   = document.getElementById('calendarMonthView');
+const weekViewEl    = document.getElementById('calendarWeekView');
+const panelEl       = document.getElementById('panel');
+const statsEl       = document.getElementById('stats');
+const analyticsEl   = document.getElementById('analytics');
+const monthTitle    = document.getElementById('monthTitle');
+const chartMonth    = document.getElementById('chartMonth');
+const chartEl       = document.getElementById('tempChart');
+const heroMetaEl    = document.getElementById('heroMeta');
+const themeBtn      = document.getElementById('themeBtn');
+const doseBar       = document.getElementById('doseBar');
+const sheet         = document.getElementById('sheet');
+const backdrop      = document.getElementById('backdrop');
+const sheetClose    = document.getElementById('sheetClose');
+const grip          = document.getElementById('grip');
 const copyOptsModal = document.getElementById('copyOpts');
 
 /* ============================ ВИД ============================ */
@@ -803,6 +1047,8 @@ const now0 = new Date();
 let view = { y: now0.getFullYear(), m: now0.getMonth() };
 let selected = keyOf(now0);
 let currentPeriod = 'month';
+let viewMode = 'month'; // 'month' | 'week'
+let weekAnchor = keyOf(now0);
 
 /* ============================ ТЕМА ============================ */
 function applyTheme(){
@@ -814,7 +1060,7 @@ themeBtn.addEventListener('click', () => {
   save(); applyTheme();
 });
 
-/* ============================ ТОСТ С UNDO ============================ */
+/* ============================ ТОСТ ============================ */
 let toastTimer = null;
 function toast(msg, undoFn){
   let el = document.getElementById('toast');
@@ -828,15 +1074,11 @@ function toast(msg, undoFn){
   span.className = 'tst-text';
   span.textContent = msg;
   el.appendChild(span);
-
   if (undoFn){
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.textContent = 'Отменить';
-    btn.onclick = () => {
-      hideToast();
-      undoFn();
-    };
+    btn.onclick = () => { hideToast(); undoFn(); };
     el.appendChild(btn);
   }
   el.classList.add('show');
@@ -849,38 +1091,32 @@ function hideToast(){
   clearTimeout(toastTimer);
 }
 
-/* ============================ КОПИРОВАНИЕ ДНЯ ============================ */
-let copyMode = null;     // { fromKey, options }
-let lastCopyUndo = null; // { toKey, prevData }
+/* ============================ КОПИРОВАНИЕ ============================ */
+let copyMode = null;
+let lastCopyUndo = null;
 
 function defaultCopyOptions(){ return { ...DEFAULT_COPY_OPTIONS }; }
 
 function conflictFields(dst, options){
   if (!dst) return [];
   const conflicts = [];
-  if (options.status && dst.status) conflicts.push('статус');
-  if (options.garden && dst.garden) conflicts.push('«был в садике»');
-  if (options.diagnosis && dst.diagnosis && dst.diagnosis.trim()) conflicts.push('диагноз');
-  if (options.symptoms && dst.symptoms && dst.symptoms.length) conflicts.push('симптомы');
-  if (options.temps && dst.temps && dst.temps.length) conflicts.push('температура');
-  if (options.note && dst.note && dst.note.trim()) conflicts.push('заметка');
+  if (options.status    && dst.status)                                  conflicts.push('статус');
+  if (options.garden    && dst.garden)                                  conflicts.push('«был в садике»');
+  if (options.diagnosis && dst.diagnosis && dst.diagnosis.trim())       conflicts.push('диагноз');
+  if (options.symptoms  && dst.symptoms  && dst.symptoms.length)        conflicts.push('симптомы');
+  if (options.temps     && dst.temps     && dst.temps.length)           conflicts.push('температура');
+  if (options.note      && dst.note      && dst.note.trim())            conflicts.push('заметка');
   return conflicts;
 }
 
 function copyDayData(fromKey, toKey, options){
   if (fromKey === toKey) return;
   const src = state.days[fromKey];
-  if (!hasAnyData(src)){
-    toast('В этом дне нет данных для копирования');
-    return;
-  }
+  if (!hasAnyData(src)){ toast('В этом дне нет данных для копирования'); return; }
 
   const opts = options || state.copyOptions || defaultCopyOptions();
   const keys = Object.keys(opts).filter(k => opts[k]);
-  if (!keys.length){
-    toast('Не выбрано ни одного параметра');
-    return;
-  }
+  if (!keys.length){ toast('Не выбрано ни одного параметра'); return; }
 
   const dst = state.days[toKey];
   const conflicts = conflictFields(dst, opts);
@@ -889,10 +1125,7 @@ function copyDayData(fromKey, toKey, options){
     if (!ok) return;
   }
 
-  // сохраняем прежнее состояние для отмены
   const prevData = dst ? JSON.parse(JSON.stringify(dst)) : null;
-
-  // создаём новый день, сохраняя поля, которые НЕ копируем
   const base = dst
     ? JSON.parse(JSON.stringify(dst))
     : { status:null, symptoms:[], temps:[], note:'', diagnosis:'', garden:false };
@@ -904,65 +1137,46 @@ function copyDayData(fromKey, toKey, options){
   if (opts.temps)     base.temps     = (src.temps || []).map(t => ({...t, id: uid()}));
   if (opts.note)      base.note      = src.note || '';
 
-  if (hasAnyData(base)){
-    state.days[toKey] = base;
-  } else {
-    delete state.days[toKey];
-  }
+  if (hasAnyData(base)) state.days[toKey] = base;
+  else delete state.days[toKey];
 
   lastCopyUndo = { toKey, prevData };
   save();
   render();
 
-  toast(
-    `Скопировано ${fmtDateShort(fromKey)} → ${fmtDateShort(toKey)}`,
-    () => undoLastCopy()
-  );
+  toast(`Скопировано ${fmtDateShort(fromKey)} → ${fmtDateShort(toKey)}`, () => undoLastCopy());
 }
 
 function undoLastCopy(){
   if (!lastCopyUndo) return;
   const { toKey, prevData } = lastCopyUndo;
-  if (prevData === null){
-    delete state.days[toKey];
-  } else {
-    state.days[toKey] = prevData;
-  }
+  if (prevData === null) delete state.days[toKey];
+  else state.days[toKey] = prevData;
   lastCopyUndo = null;
   save();
   render();
   toast('Копирование отменено');
 }
 
-/* ---- Копирование через кнопку (с выбором параметров) ---- */
 let copyOptsSourceKey = null;
-
 function showCopyOptionsDialog(fromKey){
   if (!fromKey) return;
-  if (!hasAnyData(state.days[fromKey])){
-    toast('В этом дне нет данных для копирования');
-    return;
-  }
+  if (!hasAnyData(state.days[fromKey])){ toast('В этом дне нет данных для копирования'); return; }
   copyOptsSourceKey = fromKey;
   const d = parseK(fromKey);
-  document.getElementById('copyOptsDate').textContent =
-    `${d.getDate()} ${MONTHS_G[d.getMonth()]}`;
-
+  document.getElementById('copyOptsDate').textContent = `${d.getDate()} ${MONTHS_G[d.getMonth()]}`;
   const opts = state.copyOptions || defaultCopyOptions();
   document.querySelectorAll('.copy-opts-list input[data-key]').forEach(cb => {
     cb.checked = !!opts[cb.dataset.key];
   });
-
   copyOptsModal.classList.add('show');
   document.body.classList.add('no-scroll');
 }
-
 function hideCopyOptionsDialog(){
   copyOptsModal.classList.remove('show');
   document.body.classList.remove('no-scroll');
   copyOptsSourceKey = null;
 }
-
 document.getElementById('copyOptsCancel').addEventListener('click', hideCopyOptionsDialog);
 copyOptsModal.addEventListener('click', e => {
   if (e.target === copyOptsModal) hideCopyOptionsDialog();
@@ -970,76 +1184,57 @@ copyOptsModal.addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && copyOptsModal.classList.contains('show')) hideCopyOptionsDialog();
 });
-
 document.getElementById('copyOptsNext').addEventListener('click', () => {
   const fromKey = copyOptsSourceKey;
   if (!fromKey) return;
-
   const opts = {};
   document.querySelectorAll('.copy-opts-list input[data-key]').forEach(cb => {
     opts[cb.dataset.key] = cb.checked;
   });
-
-  if (!Object.values(opts).some(v => v)){
-    toast('Выбери хотя бы один параметр');
-    return;
-  }
-
-  // запоминаем выбор
+  if (!Object.values(opts).some(v => v)){ toast('Выбери хотя бы один параметр'); return; }
   state.copyOptions = { ...DEFAULT_COPY_OPTIONS, ...opts };
   save();
-
   hideCopyOptionsDialog();
   closeSheet();
   enterCopyMode(fromKey, opts);
   toast('Тапни целевой день');
 });
 
-/* ---- Режим «выбери целевой день» ---- */
 function enterCopyMode(fromKey, options){
   copyMode = { fromKey, options: options || state.copyOptions || defaultCopyOptions() };
   closeSheet();
   updateCopyBanner();
   renderCalendar();
+  if (viewMode === 'week') renderWeekView();
 }
 function exitCopyMode(){
   copyMode = null;
   updateCopyBanner();
   renderCalendar();
+  if (viewMode === 'week') renderWeekView();
 }
 function updateCopyBanner(){
   let banner = document.getElementById('copyBanner');
-  if (!banner){
-    banner = document.createElement('div');
-    banner.id = 'copyBanner';
-    document.body.appendChild(banner);
-  }
+  if (!banner){ banner = document.createElement('div'); banner.id = 'copyBanner'; document.body.appendChild(banner); }
   if (copyMode){
-    const d = parseK(copyMode.fromKey);
-    const selectedLabels = Object.keys(copyMode.options)
-      .filter(k => copyMode.options[k])
-      .map(k => COPY_OPT_LABELS[k])
-      .filter(Boolean)
-      .join(' · ');
+    const labels = Object.keys(copyMode.options)
+      .filter(k => copyMode.options[k]).map(k => COPY_OPT_LABELS[k]).join(' · ');
     banner.innerHTML = `
       <span class="cb-txt">
         Куда скопировать <strong>${fmtDate(copyMode.fromKey)}</strong>?<br>
-        <span style="font-weight:600; opacity:.7; font-size:.78rem">${selectedLabels || '—'}</span>
+        <span style="font-weight:600; opacity:.7; font-size:.78rem">${labels || '—'}</span>
       </span>
       <button type="button" id="copyCancel">Отмена</button>
     `;
     banner.classList.add('show');
-    document.getElementById('copyCancel').onclick = () => {
-      exitCopyMode();
-      toast('Отменено');
-    };
+    document.getElementById('copyCancel').onclick = () => { exitCopyMode(); toast('Отменено'); };
   } else {
     banner.classList.remove('show');
     banner.innerHTML = '';
   }
 }
 
-/* ============================ КАЛЕНДАРЬ ============================ */
+/* ============================ КАЛЕНДАРЬ МЕСЯЦА ============================ */
 function dayCats(rec){
   const s = new Set();
   (rec.symptoms || []).forEach(id => {
@@ -1086,6 +1281,64 @@ function renderCalendar(){
   daysEl.innerHTML = html;
 }
 
+/* ============================ НЕДЕЛЬНЫЙ ВИД ============================ */
+function renderWeekView(){
+  if (!weekAnchor) weekAnchor = selected || keyOf(new Date());
+  const anchor = parseK(weekAnchor);
+  const dow    = (anchor.getDay() + 6) % 7;
+  const monday = new Date(anchor);
+  monday.setDate(anchor.getDate() - dow);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  monthTitle.textContent =
+    `${monday.getDate()} ${MONTHS_G_SHORT[monday.getMonth()]} — ${sunday.getDate()} ${MONTHS_G_SHORT[sunday.getMonth()]} ${sunday.getFullYear()}`;
+
+  const todayKey = keyOf(new Date());
+  let html = '';
+
+  for (let i = 0; i < 7; i++){
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const k = keyOf(d);
+    const rec = state.days[k];
+    const cats = rec ? dayCats(rec) : [];
+    const temps = rec && rec.temps ? rec.temps.map(t => t.value) : [];
+    const maxT = temps.length ? Math.max(...temps) : null;
+    const status = rec ? rec.status : null;
+    const diag = rec ? rec.diagnosis : '';
+    const garden = rec && rec.garden;
+    const isToday = k === todayKey;
+    const isSel = k === selected;
+
+    const statusCls = status === 'sick' ? 'sick' : status === 'ok' ? 'ok' : 'none';
+    const statusLabel = status === 'sick' ? 'Болеет' : status === 'ok' ? 'Здоров' : 'Не отмечено';
+
+    const cls = ['week-day', statusCls];
+    if (isToday) cls.push('today');
+    if (isSel) cls.push('sel');
+    if (copyMode && k === copyMode.fromKey) cls.push('copy-source');
+
+    html += `<button type="button" class="${cls.join(' ')}" data-key="${k}">
+      <div class="wday-date">
+        <span class="wday-name">${WD_SHORT[i]}</span>
+        <span class="wday-num">${d.getDate()}</span>
+      </div>
+      <div class="wday-main">
+        <div class="wday-status">
+          ${statusLabel}${diag ? `<span class="wday-diag">· ${esc(diag)}</span>` : ''}
+        </div>
+        ${cats.length || maxT !== null ? `<div class="wday-meta">
+          ${cats.map(c => `<i class="dot ${c}"></i>`).join('')}
+          ${maxT !== null ? `<span class="wday-temp">${fmtT(maxT)}°</span>` : ''}
+        </div>` : ''}
+      </div>
+      ${garden ? '<span class="wday-garden">сад</span>' : ''}
+    </button>`;
+  }
+  weekDaysEl.innerHTML = html;
+}
+
 /* ============================ КЛИК ПО ДНЮ ============================ */
 let suppressClick = false;
 let dragState = null;
@@ -1100,11 +1353,8 @@ daysEl.addEventListener('click', e => {
     const opts    = copyMode.options;
     const toKey   = btn.dataset.key;
     exitCopyMode();
-    if (toKey !== fromKey){
-      copyDayData(fromKey, toKey, opts);
-    } else {
-      toast('Отменено');
-    }
+    if (toKey !== fromKey) copyDayData(fromKey, toKey, opts);
+    else toast('Отменено');
     return;
   }
 
@@ -1114,24 +1364,44 @@ daysEl.addEventListener('click', e => {
   if (isMobile()) openSheet();
 });
 
-/* ============================ DRAG-КОПИРОВАНИЕ ============================ */
+weekDaysEl.addEventListener('click', e => {
+  if (suppressClick) return;
+  const btn = e.target.closest('.week-day');
+  if (!btn) return;
+
+  if (copyMode){
+    const fromKey = copyMode.fromKey;
+    const opts    = copyMode.options;
+    const toKey   = btn.dataset.key;
+    exitCopyMode();
+    if (toKey !== fromKey) copyDayData(fromKey, toKey, opts);
+    else toast('Отменено');
+    return;
+  }
+
+  selected = btn.dataset.key;
+  weekAnchor = selected;
+  renderWeekView();
+  renderPanel();
+  if (isMobile()) openSheet();
+});
+
+/* ============================ DRAG-КОПИРОВАНИЕ (только в месячном виде) ============================ */
 const LONG_PRESS_MS = 500;
 const MOVE_CANCEL_PX = 10;
 
 function onDayPointerDown(e){
   if (copyMode) return;
+  if (viewMode !== 'month') return;
   const day = e.target.closest('.day:not(.blank)');
   if (!day) return;
   if (e.pointerType === 'mouse' && e.button !== 0) return;
 
   dragState = {
     fromKey: day.dataset.key,
-    startX: e.clientX,
-    startY: e.clientY,
-    sourceEl: day,
-    pointerId: e.pointerId,
-    targetEl: null,
-    targetKey: null,
+    startX: e.clientX, startY: e.clientY,
+    sourceEl: day, pointerId: e.pointerId,
+    targetEl: null, targetKey: null,
     active: false,
     timer: setTimeout(() => beginDrag(), LONG_PRESS_MS)
   };
@@ -1149,7 +1419,6 @@ function beginDrag(){
 
 function onDayPointerMove(e){
   if (!dragState) return;
-
   const dx = e.clientX - dragState.startX;
   const dy = e.clientY - dragState.startY;
   const dist = Math.sqrt(dx*dx + dy*dy);
@@ -1163,37 +1432,28 @@ function onDayPointerMove(e){
   }
 
   if (e.cancelable) e.preventDefault();
-
   const el = document.elementFromPoint(e.clientX, e.clientY);
   const day = el && el.closest('.day:not(.blank)');
-
   if (day !== dragState.targetEl){
     if (dragState.targetEl) dragState.targetEl.classList.remove('drag-over');
     dragState.targetEl = day;
     dragState.targetKey = day ? day.dataset.key : null;
-    if (day && day !== dragState.sourceEl){
-      day.classList.add('drag-over');
-    }
+    if (day && day !== dragState.sourceEl) day.classList.add('drag-over');
   }
 }
 
 function onDayPointerUp(e){
   if (!dragState) return;
   clearTimeout(dragState.timer);
-
   if (dragState.active){
     if (e.cancelable) e.preventDefault();
     suppressClick = true;
     setTimeout(() => { suppressClick = false; }, 300);
-
     const fromKey = dragState.fromKey;
     const toKey   = dragState.targetKey;
-
     endDrag();
-
     if (toKey && toKey !== fromKey){
-      const opts = state.copyOptions || defaultCopyOptions();
-      copyDayData(fromKey, toKey, opts);
+      copyDayData(fromKey, toKey, state.copyOptions || defaultCopyOptions());
     } else if (!toKey){
       toast('Отменено');
     }
@@ -1214,9 +1474,7 @@ function endDrag(){
     dragState.sourceEl.classList.remove('dragging');
     dragState.sourceEl.style.touchAction = '';
   }
-  if (dragState.targetEl){
-    dragState.targetEl.classList.remove('drag-over');
-  }
+  if (dragState.targetEl) dragState.targetEl.classList.remove('drag-over');
   document.body.classList.remove('is-dragging');
 }
 
@@ -1226,7 +1484,85 @@ daysEl.addEventListener('pointerup', onDayPointerUp);
 daysEl.addEventListener('pointercancel', onDayPointerCancel);
 daysEl.addEventListener('contextmenu', e => e.preventDefault());
 
+/* ============================ СВАЙП (месяц и неделя) ============================ */
+function makeSwipeable(el, onSwipeLeft, onSwipeRight){
+  let track = null;
+  el.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    track = { x: e.clientX, y: e.clientY, id: e.pointerId, moved: false, horizontal: false };
+  });
+  el.addEventListener('pointermove', e => {
+    if (!track || e.pointerId !== track.id) return;
+    const dx = e.clientX - track.x;
+    const dy = e.clientY - track.y;
+    if (!track.moved && Math.hypot(dx, dy) > 15){
+      track.moved = true;
+      track.horizontal = Math.abs(dx) > Math.abs(dy) * 1.3;
+      if (track.horizontal && dragState && !dragState.active){
+        clearTimeout(dragState.timer);
+        dragState = null;
+      }
+    }
+  });
+  el.addEventListener('pointerup', e => {
+    if (!track || e.pointerId !== track.id) { track = null; return; }
+    const dx = e.clientX - track.x;
+    const dy = e.clientY - track.y;
+    if (track.horizontal && Math.abs(dx) > 60){
+      if (dx < 0) onSwipeLeft(); else onSwipeRight();
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 300);
+    }
+    track = null;
+  });
+  el.addEventListener('pointercancel', () => { track = null; });
+}
+
+makeSwipeable(daysWrap,
+  () => shiftPeriod(1, 'right'),
+  () => shiftPeriod(-1, 'left')
+);
+makeSwipeable(weekDaysWrap,
+  () => shiftPeriod(1, 'right'),
+  () => shiftPeriod(-1, 'left')
+);
+
+/* ============================ ПЕРЕКЛЮЧЕНИЕ ПЕРИОДА ============================ */
+function shiftPeriod(dir, slideFrom){
+  if (viewMode === 'month'){
+    view.m += dir;
+    if (view.m > 11){ view.m = 0; view.y++; }
+    if (view.m < 0) { view.m = 11; view.y--; }
+    renderCalendar();
+    slideAnim(daysEl, slideFrom);
+  } else {
+    const anchor = weekAnchor ? parseK(weekAnchor) : new Date();
+    anchor.setDate(anchor.getDate() + 7 * dir);
+    weekAnchor = keyOf(anchor);
+    // sync view month
+    view = { y: anchor.getFullYear(), m: anchor.getMonth() };
+    renderWeekView();
+    slideAnim(weekDaysEl, slideFrom);
+  }
+  renderTempChart();
+  renderStats();
+  renderAnalytics();
+  updateHeroMeta();
+  updateChartMonthLabel();
+}
+
+function slideAnim(el, from){
+  if (!el) return;
+  el.classList.remove('slide-from-right','slide-from-left');
+  void el.offsetWidth;
+  el.classList.add(from === 'right' ? 'slide-from-right' : 'slide-from-left');
+}
+
 /* ============================ ГРАФИК ============================ */
+function updateChartMonthLabel(){
+  chartMonth.textContent = MONTHS[view.m] + ' ' + view.y;
+}
+
 function renderTempChart(){
   const { y, m } = view;
   const total = new Date(y, m+1, 0).getDate();
@@ -1255,13 +1591,11 @@ function renderTempChart(){
   const padL = 30, padR = 10, padT = 12, padB = 24;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
-
   const minVal = Math.min(36, ...points.map(p => p.value));
   const maxVal = Math.max(40, ...points.map(p => p.value));
   const yMin = Math.floor((minVal - 0.2) * 10) / 10;
   const yMax = Math.ceil((maxVal + 0.2) * 10) / 10;
   const xStart = 0, xEnd = total * 1440;
-
   const px = min => padL + (min - xStart) / (xEnd - xStart) * plotW;
   const py = val => padT + (1 - (val - yMin) / (yMax - yMin)) * plotH;
 
@@ -1358,7 +1692,8 @@ function renderDoseBar(){
 
 doseBar.addEventListener('click', () => {
   selected = keyOf(new Date());
-  renderCalendar(); renderPanel();
+  weekAnchor = selected;
+  render();
   if (isMobile()) openSheet();
 });
 
@@ -1513,9 +1848,7 @@ panelEl.addEventListener('click', e => {
       commit();
     }
   }
-  if (act === 'copyto'){
-    showCopyOptionsDialog(selected);
-  }
+  if (act === 'copyto') showCopyOptionsDialog(selected);
 });
 
 panelEl.addEventListener('change', e => {
@@ -1595,7 +1928,6 @@ setInterval(() => {
 function renderStats(){
   const { y, m } = view;
   const total = new Date(y, m+1, 0).getDate();
-
   let sick = 0, healthy = 0, garden = 0, feverDays = 0, maxT = 0, entries = 0;
   const sym = {};
 
@@ -1613,24 +1945,19 @@ function renderStats(){
       if (mx > maxT) maxT = mx;
       if (mx >= 37.5) feverDays++;
     }
-    (r.symptoms || []).forEach(id => {
-      if (id !== 'fever') sym[id] = (sym[id] || 0) + 1;
-    });
+    (r.symptoms || []).forEach(id => { if (id !== 'fever') sym[id] = (sym[id] || 0) + 1; });
   }
 
-  const top = Object.entries(sym)
-    .sort((a,b) => b[1] - a[1])
-    .slice(0, 4)
+  const top = Object.entries(sym).sort((a,b) => b[1] - a[1]).slice(0, 4)
     .map(([id, n]) => {
       const s = SYMPTOMS.find(x => x.id === id);
       return s ? `${s.label.toLowerCase()} · ${n}` : '';
-    })
-    .filter(Boolean);
+    }).filter(Boolean);
 
   statsEl.innerHTML = `
     <div class="stat"><span class="sval" style="color:var(--coral)">${sick}</span><span class="slab">дней болел</span></div>
     <div class="stat"><span class="sval" style="color:var(--sage)">${garden}</span><span class="slab">дней в садике</span></div>
-    <div class="stat"><span class="sval" style="color:var(--lime)">${healthy}</span><span class="slab">дней здоров</span></div>
+    <div class="stat"><span class="sval" style="color:#8aa63a">${healthy}</span><span class="slab">дней здоров</span></div>
     <div class="stat"><span class="sval">${feverDays}</span><span class="slab">дней с температурой</span></div>
     <div class="stat"><span class="sval">${maxT ? fmtT(maxT) + '°' : '—'}</span><span class="slab">максимум</span></div>
 
@@ -1648,6 +1975,25 @@ function renderStats(){
         : '<span class="muted small">Пока нет данных</span>'}
     </div>
   `;
+}
+
+/* ============================ HERO META ============================ */
+function updateHeroMeta(){
+  const { y, m } = view;
+  const total = new Date(y, m+1, 0).getDate();
+  let sick = 0, garden = 0;
+  for (let d = 1; d <= total; d++){
+    const k = `${y}-${pad(m+1)}-${pad(d)}`;
+    const r = state.days[k];
+    if (!r) continue;
+    if (r.status === 'sick') sick++;
+    if (r.garden) garden++;
+  }
+  let html = `<span class="meta-pill">${MONTHS[m]} ${y}</span>`;
+  if (sick) html += `<span class="meta-pill meta-coral">${sick} ${plural(sick, 'день', 'дня', 'дней')} болезни</span>`;
+  if (garden) html += `<span class="meta-pill meta-sage">${garden} ${plural(garden, 'день', 'дня', 'дней')} в садике</span>`;
+  if (!sick && !garden) html += `<span class="meta-pill meta-muted">пока без отметок</span>`;
+  heroMetaEl.innerHTML = html;
 }
 
 /* ============================ АНАЛИТИКА ============================ */
@@ -1682,17 +2028,13 @@ function renderAnalytics(){
   const avgLen = episodes.length ? episodes.reduce((s,e) => s + e.days, 0) / episodes.length : 0;
 
   const diagCount = {};
-  episodes.forEach(ep => {
-    ep.diagnoses.forEach(d => { diagCount[d] = (diagCount[d] || 0) + 1; });
-  });
+  episodes.forEach(ep => { ep.diagnoses.forEach(d => { diagCount[d] = (diagCount[d] || 0) + 1; }); });
   const diagList = Object.entries(diagCount).sort((a,b) => b[1] - a[1]);
   const noDiag = episodes.filter(ep => ep.diagnoses.length === 0).length;
 
   const symCount = {};
   Object.values(filtered).forEach(r => {
-    (r.symptoms || []).forEach(id => {
-      if (id !== 'fever') symCount[id] = (symCount[id] || 0) + 1;
-    });
+    (r.symptoms || []).forEach(id => { if (id !== 'fever') symCount[id] = (symCount[id] || 0) + 1; });
   });
   const symList = Object.entries(symCount).sort((a,b) => b[1] - a[1]);
 
@@ -1706,7 +2048,7 @@ function renderAnalytics(){
 
     <div class="stats-wrap" style="margin-top:0">
       <div class="stat"><span class="sval">${sickDays}</span><span class="slab">дней болезни</span></div>
-      <div class="stat"><span class="sval" style="color:var(--lime)">${healthyDays}</span><span class="slab">дней здоров</span></div>
+      <div class="stat"><span class="sval" style="color:#8aa63a">${healthyDays}</span><span class="slab">дней здоров</span></div>
       <div class="stat"><span class="sval">${avgLen ? avgLen.toFixed(1).replace('.', ',') : '—'}</span><span class="slab">средняя длительность</span></div>
       <div class="stat"><span class="sval">${episodes.length ? Math.max(...episodes.map(e=>e.days)) : 0}</span><span class="slab">макс. длительность</span></div>
       <div class="stat"><span class="sval">${noDiag}</span><span class="slab">без диагноза</span></div>
@@ -1743,12 +2085,14 @@ function renderAnalytics(){
 /* ============================ ОБЩИЙ РЕНДЕР ============================ */
 function render(){
   applyTheme();
-  renderCalendar();
+  if (viewMode === 'month') renderCalendar();
+  else renderWeekView();
   renderDoseBar();
   renderPanel();
   renderStats();
   renderTempChart();
   renderAnalytics();
+  updateHeroMeta();
 }
 
 function commit(){
@@ -1770,7 +2114,6 @@ function closeSheet(){
   document.body.classList.remove('no-scroll');
   renderDoseBar();
 }
-
 backdrop.addEventListener('click', closeSheet);
 sheetClose.addEventListener('click', closeSheet);
 grip.addEventListener('click', closeSheet);
@@ -1811,19 +2154,47 @@ document.querySelectorAll('.period-seg button').forEach(btn => {
   });
 });
 
+/* ============================ VIEW TOGGLE ============================ */
+document.querySelectorAll('.view-toggle button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const mode = btn.dataset.view;
+    if (mode === viewMode) return;
+    viewMode = mode;
+    document.querySelectorAll('.view-toggle button').forEach(b => b.classList.toggle('on', b === btn));
+
+    if (mode === 'week'){
+      weekAnchor = selected || keyOf(new Date());
+      monthViewEl.classList.add('hidden');
+      weekViewEl.classList.remove('hidden');
+      renderWeekView();
+    } else {
+      if (weekAnchor){
+        const d = parseK(weekAnchor);
+        view = { y: d.getFullYear(), m: d.getMonth() };
+      }
+      weekViewEl.classList.add('hidden');
+      monthViewEl.classList.remove('hidden');
+      renderCalendar();
+    }
+    renderTempChart();
+    renderStats();
+    renderAnalytics();
+    updateHeroMeta();
+  });
+});
+
 /* ============================ НАВИГАЦИЯ ============================ */
 document.getElementById('prevBtn').addEventListener('click', () => {
-  view.m--; if (view.m < 0){ view.m = 11; view.y--; }
-  render();
+  shiftPeriod(-1, 'left');
 });
 document.getElementById('nextBtn').addEventListener('click', () => {
-  view.m++; if (view.m > 11){ view.m = 0; view.y++; }
-  render();
+  shiftPeriod(1, 'right');
 });
 document.getElementById('todayBtn').addEventListener('click', () => {
   const n = new Date();
   view = { y: n.getFullYear(), m: n.getMonth() };
   selected = keyOf(n);
+  weekAnchor = selected;
   render();
   switchView('cal');
   if (isMobile()) openSheet();
