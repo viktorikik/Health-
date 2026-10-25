@@ -257,7 +257,6 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
   #weekDays.slide-from-right, #weekDays.slide-from-left { animation: none; }
 }
 
-/* Badge при мульти-выделении */
 .drag-badge{
   position: fixed;
   background: var(--ink);
@@ -578,6 +577,30 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
 }
 .period-seg button.on{background:var(--ink); color:var(--surface)}
 
+/* Аналитика: шапка + экспорт */
+.analytics-head{
+  display:flex; justify-content:space-between; align-items:flex-start; gap:12px;
+  flex-wrap:wrap; margin-bottom:12px;
+}
+.analytics-head h2{
+  font-size:1.15rem; letter-spacing:-.02em;
+}
+
+/* Фильтр симптомов */
+.symptom-filter{
+  display:flex; flex-wrap:wrap; gap:5px; margin:4px 0 10px;
+}
+.symptom-filter button{
+  font:inherit; font-size:.78rem; padding:6px 11px; border-radius:999px;
+  border:1.5px solid var(--line); background:var(--surface); color:var(--ink);
+  cursor:pointer; min-height:32px; touch-action:manipulation;
+  transition:background .15s, border-color .15s, color .15s;
+}
+.symptom-filter button:hover{border-color:var(--ink)}
+.symptom-filter button.on{
+  background:var(--ink); color:var(--surface); border-color:var(--ink);
+}
+
 .ep-list{display:flex; flex-direction:column; gap:6px; max-height:320px; overflow-y:auto; padding-right:4px}
 .ep-item{
   padding:8px 12px; border-radius:10px; background:var(--bg); border:1px solid var(--line);
@@ -653,7 +676,7 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
   background:var(--surface);
   border-radius:20px;
   padding:22px;
-  max-width:380px;
+  max-width:440px;
   width:100%;
   max-height:90vh;
   overflow-y:auto;
@@ -701,6 +724,38 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
 .copy-opts-actions .btn{ flex:1; }
 @media (min-width:520px){
   .copy-opts-actions .btn{ flex:0 0 auto; min-width:100px; }
+}
+
+/* PDF export options */
+.pdf-period{
+  display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px;
+}
+.pdf-period button{
+  font:inherit; font-size:.82rem; padding:7px 13px; border-radius:999px;
+  border:1.5px solid var(--line); background:var(--surface); color:var(--ink);
+  cursor:pointer; min-height:34px; touch-action:manipulation;
+  transition:background .15s, border-color .15s, color .15s;
+}
+.pdf-period button:hover{border-color:var(--ink)}
+.pdf-period button.on{
+  background:var(--ink); color:var(--surface); border-color:var(--ink);
+}
+.pdf-custom{
+  display:flex; flex-direction:column; gap:6px;
+  margin:4px 0 12px; padding:10px;
+  background:var(--bg); border-radius:10px;
+  border:1px solid var(--line);
+}
+.pdf-custom.hidden{ display:none; }
+.pdf-custom label{
+  font-size:.76rem; color:var(--muted); font-weight:700;
+  text-transform:uppercase; letter-spacing:.06em;
+}
+.pdf-note{
+  font-size:.76rem; color:var(--muted);
+  padding:8px 10px; margin-top:12px;
+  background:var(--bg); border-radius:8px;
+  border-left:3px solid var(--lime);
 }
 
 footer{
@@ -803,6 +858,10 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 
   <div id="viewStats" class="hidden" style="margin-top:12px">
     <div class="card">
+      <div class="analytics-head">
+        <h2>Аналитика</h2>
+        <button class="btn primary" id="pdfBtn" type="button">📄 Экспорт в PDF</button>
+      </div>
       <div class="period-seg" role="tablist">
         <button type="button" data-period="month" class="on">Месяц</button>
         <button type="button" data-period="year">Год</button>
@@ -814,8 +873,8 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 
   <footer>
     <div class="foot-actions">
-      <button class="link" id="exportBtn" type="button">Экспорт</button>
-      <button class="link" id="importBtn" type="button">Импорт</button>
+      <button class="link" id="exportBtn" type="button">Экспорт JSON</button>
+      <button class="link" id="importBtn" type="button">Импорт JSON</button>
       <button class="link danger" id="resetBtn" type="button">Сброс</button>
     </div>
     <p class="small muted" style="margin-top:10px">
@@ -839,6 +898,51 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
     <div class="copy-opts-actions">
       <button class="btn" id="copyOptsCancel" type="button">Отмена</button>
       <button class="btn primary" id="copyOptsNext" type="button">Далее →</button>
+    </div>
+  </div>
+</div>
+
+<div class="copy-opts-backdrop" id="pdfOpts">
+  <div class="copy-opts-card">
+    <h3>Экспорт в PDF</h3>
+    <p class="co-sub">Настрой, что и за какой период включить в документ</p>
+
+    <div class="section-label" style="margin-top:0">Период</div>
+    <div class="pdf-period" id="pdfPeriod">
+      <button type="button" data-v="month" class="on">Месяц</button>
+      <button type="button" data-v="year">Год</button>
+      <button type="button" data-v="all">Всё время</button>
+      <button type="button" data-v="custom">Свой диапазон</button>
+    </div>
+
+    <div class="pdf-custom hidden" id="pdfCustom">
+      <label for="pdfDateFrom">С</label>
+      <input class="inp" type="date" id="pdfDateFrom">
+      <label for="pdfDateTo">По</label>
+      <input class="inp" type="date" id="pdfDateTo">
+    </div>
+
+    <div class="section-label">Что включить</div>
+    <div class="copy-opts-list">
+      <label><input type="checkbox" data-pdf="summary" checked> Сводка (эпизоды, дни, длительность)</label>
+      <label><input type="checkbox" data-pdf="sickChart" checked> График болезней</label>
+      <label><input type="checkbox" data-pdf="symChart" checked> Частота симптомов</label>
+      <label><input type="checkbox" data-pdf="diagnoses" checked> Список болезней</label>
+      <label><input type="checkbox" data-pdf="episodes" checked> Список эпизодов</label>
+      <label><input type="checkbox" data-pdf="temps" checked> Таблица температур</label>
+      <label><input type="checkbox" data-pdf="notes"> Заметки по дням</label>
+    </div>
+
+    <div class="section-label">Фильтр симптомов</div>
+    <div class="symptom-filter" id="pdfSymFilter" style="margin-bottom:14px"></div>
+
+    <div class="pdf-note">
+      Более гибкий экспорт (титульный лист, логотип, CSV, шаблоны) — в бэклоге.
+    </div>
+
+    <div class="copy-opts-actions" style="margin-top:14px">
+      <button class="btn" id="pdfCancel" type="button">Отмена</button>
+      <button class="btn primary" id="pdfGenerate" type="button">Сформировать PDF</button>
     </div>
   </div>
 </div>
@@ -887,6 +991,16 @@ const CAT_DOT = {
   tummy:'var(--dot-tummy)', rash:'var(--dot-rash)', other:'var(--dot-other)'
 };
 
+const SYM_CATS = [
+  {id:'all',   label:'Все'},
+  {id:'nose',  label:'Нос'},
+  {id:'cough', label:'Кашель'},
+  {id:'tummy', label:'Живот'},
+  {id:'rash',  label:'Сыпь'},
+  {id:'fever', label:'Температура'},
+  {id:'other', label:'Другое'}
+];
+
 const DEFAULT_COPY_OPTIONS = {
   status: true, garden: true, diagnosis: true,
   symptoms: true, temps: true, note: true
@@ -894,6 +1008,11 @@ const DEFAULT_COPY_OPTIONS = {
 const COPY_OPT_LABELS = {
   status:'статус', garden:'садик', diagnosis:'диагноз',
   symptoms:'симптомы', temps:'температура', note:'заметка'
+};
+
+const DEFAULT_PDF_OPTIONS = {
+  summary: true, sickChart: true, symChart: true,
+  diagnoses: true, episodes: true, temps: true, notes: false
 };
 
 const MONTHS      = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -925,7 +1044,6 @@ function plural(n, one, few, many){
   if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
   return many;
 }
-
 function datesBetween(k1, k2){
   const a = k1 <= k2 ? k1 : k2;
   const b = k1 <= k2 ? k2 : k1;
@@ -948,16 +1066,18 @@ function loadState(){
       return {
         theme: s.theme || null,
         days: s.days || {},
-        copyOptions: s.copyOptions || null
+        copyOptions: s.copyOptions || null,
+        symptomFilter: s.symptomFilter || 'all'
       };
     }
   } catch(e){}
-  return { theme:null, days:{}, copyOptions:null };
+  return { theme:null, days:{}, copyOptions:null, symptomFilter:'all' };
 }
 
 const state = loadState();
 if (!state.theme) state.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 if (!state.copyOptions) state.copyOptions = { ...DEFAULT_COPY_OPTIONS };
+if (!state.symptomFilter) state.symptomFilter = 'all';
 
 function save(){ try { localStorage.setItem(STORE, JSON.stringify(state)); } catch(e){} }
 
@@ -1073,6 +1193,7 @@ const backdrop      = document.getElementById('backdrop');
 const sheetClose    = document.getElementById('sheetClose');
 const grip          = document.getElementById('grip');
 const copyOptsModal = document.getElementById('copyOpts');
+const pdfOptsModal  = document.getElementById('pdfOpts');
 
 /* ============================ ВИД ============================ */
 const now0 = new Date();
@@ -1142,7 +1263,6 @@ function conflictFields(dst, options){
   return c;
 }
 
-/* Копирование из одного дня в набор целевых */
 function copyDayDataToKeys(fromKey, targetKeys, options){
   const targets = (targetKeys || []).filter(k => k && k !== fromKey);
   if (!targets.length) return;
@@ -1245,7 +1365,10 @@ copyOptsModal.addEventListener('click', e => {
   if (e.target === copyOptsModal) hideCopyOptionsDialog();
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && copyOptsModal.classList.contains('show')) hideCopyOptionsDialog();
+  if (e.key === 'Escape'){
+    if (copyOptsModal.classList.contains('show')) hideCopyOptionsDialog();
+    if (pdfOptsModal.classList.contains('show')) hidePdfOpts();
+  }
 });
 document.getElementById('copyOptsNext').addEventListener('click', () => {
   const fromKey = copyOptsSourceKey;
@@ -1297,7 +1420,7 @@ function updateCopyBanner(){
   }
 }
 
-/* ============================ КАЛЕНДАРЬ МЕСЯЦА ============================ */
+/* ============================ КАЛЕНДАРЬ ============================ */
 function dayCats(rec){
   const s = new Set();
   (rec.symptoms || []).forEach(id => {
@@ -1505,7 +1628,6 @@ function onDayPointerMove(e){
   }
 
   if (e.cancelable) e.preventDefault();
-
   const el = document.elementFromPoint(e.clientX, e.clientY);
   const day = el && el.closest('.day:not(.blank)');
   const newKey = day ? day.dataset.key : null;
@@ -1850,7 +1972,6 @@ function renderPanel(){
   const nowTime = pad(new Date().getHours()) + ':' + pad(new Date().getMinutes());
   const diags = allDiagnoses();
 
-  // Сворачиваемые симптомы
   let visibleSymptoms;
   if (symptomsExpanded){
     visibleSymptoms = SYMPTOMS;
@@ -2110,14 +2231,13 @@ function updateHeroMeta(){
   heroMetaEl.innerHTML = html;
 }
 
-/* ============================ АНАЛИТИКА С ГРАФИКАМИ ============================ */
+/* ============================ ГРАФИКИ АНАЛИТИКИ ============================ */
 function renderBarChart(labels, values, color){
   const W = 340, H = 150;
   const padL = 8, padR = 8, padT = 14, padB = 24;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
   const maxV = Math.max(1, ...values);
-
   const rawBarW = plotW / Math.max(1, labels.length);
   const barW = Math.min(52, rawBarW * 0.82);
   const totalW = barW * labels.length;
@@ -2144,8 +2264,7 @@ function renderBarChart(labels, values, color){
     } else {
       bars += `<rect x="${x.toFixed(1)}" y="${(padT + plotH - 2).toFixed(1)}" width="${barW.toFixed(1)}" height="2" rx="1" fill="${color}" opacity="0.2"/>`;
     }
-    const showLabel = labels.length <= 12;
-    if (showLabel){
+    if (labels.length <= 12){
       bars += `<text x="${cx(i).toFixed(1)}" y="${H - padB + 13}" font-size="8" text-anchor="middle" fill="currentColor" opacity="0.6">${lbl}</text>`;
     }
   });
@@ -2153,9 +2272,9 @@ function renderBarChart(labels, values, color){
   return `<svg viewBox="0 0 ${W} ${H}" role="img">${grid}${bars}</svg>`;
 }
 
-function renderSymptomBars(list, color){
+function renderSymptomBars(list, color, maxItems){
   if (!list.length) return '';
-  const items = list.slice(0, 8);
+  const items = list.slice(0, maxItems || 8);
   const W = 340, rowH = 22;
   const padL = 110, padR = 32, padT = 4, padB = 4;
   const H = items.length * rowH + padT + padB;
@@ -2220,6 +2339,28 @@ function computeSickDaysSeries(period, filtered){
   return { labels, values };
 }
 
+/* ============================ АНАЛИТИКА ============================ */
+function filterSymptomList(list){
+  if (state.symptomFilter === 'all') return list;
+  return list.filter(([id]) => {
+    const s = SYMPTOMS.find(x => x.id === id);
+    return s && s.cat === state.symptomFilter;
+  });
+}
+
+function buildSymFilterChips(targetEl, currentValue, onChange){
+  targetEl.innerHTML = SYM_CATS.map(c =>
+    `<button type="button" data-cat="${c.id}" class="${c.id === currentValue ? 'on' : ''}">${c.label}</button>`
+  ).join('');
+  targetEl.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      targetEl.querySelectorAll('button').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      onChange(btn.dataset.cat);
+    });
+  });
+}
+
 function renderAnalytics(){
   const period = currentPeriod;
   let startK, endK, label;
@@ -2259,7 +2400,7 @@ function renderAnalytics(){
   Object.values(filtered).forEach(r => {
     (r.symptoms || []).forEach(id => { if (id !== 'fever') symCount[id] = (symCount[id] || 0) + 1; });
   });
-  const symList = Object.entries(symCount).sort((a,b) => b[1] - a[1]);
+  const symList = filterSymptomList(Object.entries(symCount).sort((a,b) => b[1] - a[1]));
 
   const periodLabel = period === 'month' ? 'за месяц' : (period === 'year' ? 'за год' : 'за всё время');
   const sickSeries = computeSickDaysSeries(period, filtered);
@@ -2268,7 +2409,7 @@ function renderAnalytics(){
     : '<p class="muted small" style="margin:8px 0">Нет данных за период</p>';
   const symChartHtml = symList.length
     ? renderSymptomBars(symList, '#687B59')
-    : '<p class="muted small" style="margin:8px 0">Симптомов пока нет</p>';
+    : '<p class="muted small" style="margin:8px 0">Симптомов по этому фильтру пока нет</p>';
 
   const chartTitle = period === 'month' ? 'Дни болезни по неделям'
                    : period === 'year' ? 'Дни болезни по месяцам'
@@ -2295,6 +2436,7 @@ function renderAnalytics(){
     </div>
 
     <div class="section-label">Частота симптомов</div>
+    <div class="symptom-filter" id="symFilter"></div>
     <div class="chart-box">
       <div class="chart-title">Топ симптомов ${periodLabel}</div>
       ${symChartHtml}
@@ -2318,6 +2460,450 @@ function renderAnalytics(){
           </div>`).join('')}</div>`
       : '<p class="muted small" style="margin:6px 0">Эпизодов пока нет</p>'}
   `;
+
+  const symFilterEl = document.getElementById('symFilter');
+  buildSymFilterChips(symFilterEl, state.symptomFilter, cat => {
+    state.symptomFilter = cat;
+    save();
+    renderAnalytics();
+  });
+}
+
+/* ============================ PDF ЭКСПОРТ ============================ */
+let pdfPeriodMode = 'month';
+let pdfSymptomFilter = state.symptomFilter;
+let pdfOptions = { ...DEFAULT_PDF_OPTIONS };
+
+function openPdfOpts(){
+  // Синхронизируем с текущим периодом аналитики
+  pdfPeriodMode = currentPeriod;
+  document.querySelectorAll('#pdfPeriod button').forEach(b => {
+    b.classList.toggle('on', b.dataset.v === pdfPeriodMode);
+  });
+  document.getElementById('pdfCustom').classList.toggle('hidden', pdfPeriodMode !== 'custom');
+
+  // Диапазон по умолчанию: текущий месяц
+  if (!document.getElementById('pdfDateFrom').value){
+    const m = view.m + 1;
+    document.getElementById('pdfDateFrom').value = `${view.y}-${pad(m)}-01`;
+    const total = new Date(view.y, view.m+1, 0).getDate();
+    document.getElementById('pdfDateTo').value = `${view.y}-${pad(m)}-${pad(total)}`;
+  }
+
+  // Восстанавливаем опции
+  document.querySelectorAll('#pdfOpts input[data-pdf]').forEach(cb => {
+    cb.checked = !!pdfOptions[cb.dataset.pdf];
+  });
+
+  // Фильтр симптомов
+  pdfSymptomFilter = state.symptomFilter;
+  const pdfSymFilterEl = document.getElementById('pdfSymFilter');
+  buildSymFilterChips(pdfSymFilterEl, pdfSymptomFilter, cat => {
+    pdfSymptomFilter = cat;
+  });
+
+  pdfOptsModal.classList.add('show');
+  document.body.classList.add('no-scroll');
+}
+function hidePdfOpts(){
+  pdfOptsModal.classList.remove('show');
+  document.body.classList.remove('no-scroll');
+}
+
+document.getElementById('pdfBtn').addEventListener('click', openPdfOpts);
+document.getElementById('pdfCancel').addEventListener('click', hidePdfOpts);
+pdfOptsModal.addEventListener('click', e => {
+  if (e.target === pdfOptsModal) hidePdfOpts();
+});
+
+document.querySelectorAll('#pdfPeriod button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#pdfPeriod button').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    pdfPeriodMode = btn.dataset.v;
+    document.getElementById('pdfCustom').classList.toggle('hidden', pdfPeriodMode !== 'custom');
+  });
+});
+
+document.getElementById('pdfGenerate').addEventListener('click', () => {
+  const opts = {};
+  document.querySelectorAll('#pdfOpts input[data-pdf]').forEach(cb => {
+    opts[cb.dataset.pdf] = cb.checked;
+  });
+  if (!Object.values(opts).some(v => v)){ toast('Выбери хотя бы один раздел'); return; }
+
+  pdfOptions = { ...DEFAULT_PDF_OPTIONS, ...opts };
+
+  // Определяем диапазон дат
+  let startK, endK, label;
+  if (pdfPeriodMode === 'month'){
+    const total = new Date(view.y, view.m+1, 0).getDate();
+    startK = `${view.y}-${pad(view.m+1)}-01`;
+    endK   = `${view.y}-${pad(view.m+1)}-${pad(total)}`;
+    label  = MONTHS[view.m] + ' ' + view.y;
+  } else if (pdfPeriodMode === 'year'){
+    startK = `${view.y}-01-01`;
+    endK   = `${view.y}-12-31`;
+    label  = String(view.y);
+  } else if (pdfPeriodMode === 'all'){
+    const keys = Object.keys(state.days).sort();
+    startK = keys[0] || keyOf(new Date());
+    endK   = keys[keys.length-1] || keyOf(new Date());
+    label  = 'Всё время';
+  } else {
+    const from = document.getElementById('pdfDateFrom').value;
+    const to   = document.getElementById('pdfDateTo').value;
+    if (!from || !to){ toast('Укажи обе даты'); return; }
+    startK = from <= to ? from : to;
+    endK   = from <= to ? to : from;
+    label  = `${fmtDateShort(startK)} — ${fmtDateShort(endK)}`;
+  }
+
+  hidePdfOpts();
+  generatePdf(startK, endK, label);
+});
+
+function generatePdf(startK, endK, periodLabel){
+  const filtered = {};
+  Object.keys(state.days).forEach(k => {
+    if (k >= startK && k <= endK) filtered[k] = state.days[k];
+  });
+
+  const episodes = getEpisodes(filtered);
+  const sickDays = Object.values(filtered).filter(r => r.status === 'sick').length;
+  const healthyDays = Object.values(filtered).filter(r => r.status === 'ok').length;
+  const gardenDays = Object.values(filtered).filter(r => r.garden).length;
+  const avgLen = episodes.length ? episodes.reduce((s,e) => s + e.days, 0) / episodes.length : 0;
+
+  const diagCount = {};
+  episodes.forEach(ep => { ep.diagnoses.forEach(d => { diagCount[d] = (diagCount[d] || 0) + 1; }); });
+  const diagList = Object.entries(diagCount).sort((a,b) => b[1] - a[1]);
+  const noDiag = episodes.filter(ep => ep.diagnoses.length === 0).length;
+
+  const symCount = {};
+  Object.values(filtered).forEach(r => {
+    (r.symptoms || []).forEach(id => { if (id !== 'fever') symCount[id] = (symCount[id] || 0) + 1; });
+  });
+  let symList = Object.entries(symCount).sort((a,b) => b[1] - a[1]);
+  if (pdfSymptomFilter !== 'all'){
+    symList = symList.filter(([id]) => {
+      const s = SYMPTOMS.find(x => x.id === id);
+      return s && s.cat === pdfSymptomFilter;
+    });
+  }
+
+  // Данные для графиков
+  const sickSeries = (function(){
+    // Универсально — по месяцам, если диапазон > 1 месяца; иначе по неделям
+    const startD = parseK(startK), endD = parseK(endK);
+    const daysDiff = Math.round((endD - startD) / 86400000) + 1;
+    if (daysDiff <= 62){
+      const labels = [], values = [];
+      const weeks = Math.ceil(daysDiff / 7);
+      for (let w = 0; w < weeks; w++){
+        let count = 0;
+        for (let i = 0; i < 7; i++){
+          const d = new Date(startD);
+          d.setDate(startD.getDate() + w * 7 + i);
+          if (d > endD) break;
+          const k = keyOf(d);
+          if (filtered[k] && filtered[k].status === 'sick') count++;
+        }
+        labels.push(`Н${w + 1}`);
+        values.push(count);
+      }
+      return { labels, values };
+    }
+    // по месяцам
+    const monthMap = {};
+    Object.keys(filtered).forEach(k => {
+      if (filtered[k].status === 'sick'){
+        const mk = k.slice(0, 7);
+        monthMap[mk] = (monthMap[mk] || 0) + 1;
+      }
+    });
+    const labels = [], values = [];
+    Object.keys(monthMap).sort().forEach(mk => {
+      const [y, m] = mk.split('-').map(Number);
+      labels.push(MONTHS_G_SHORT[m-1] + ' ' + String(y).slice(2));
+      values.push(monthMap[mk]);
+    });
+    return { labels, values };
+  })();
+
+  // Собираем температуры
+  const allTemps = [];
+  Object.keys(filtered).sort().forEach(k => {
+    (filtered[k].temps || []).forEach(t => {
+      allTemps.push({
+        date: k,
+        time: t.time,
+        value: t.value,
+        med: t.med,
+        helped: t.helped
+      });
+    });
+  });
+
+  // Заметки
+  const notes = [];
+  Object.keys(filtered).sort().forEach(k => {
+    if (filtered[k].note && filtered[k].note.trim()){
+      notes.push({ date: k, note: filtered[k].note.trim(), diag: filtered[k].diagnosis || '' });
+    }
+  });
+
+  // Генерируем HTML
+  const parts = [];
+
+  // === Шапка ===
+  parts.push(`
+    <header class="pdf-header">
+      <div class="pdf-brand">«Ещё одна галочка»</div>
+      <h1>Адаптация к садику</h1>
+      <p class="pdf-sub">Период: <strong>${periodLabel}</strong> · сформировано ${new Date().toLocaleDateString('ru-RU')}</p>
+    </header>
+  `);
+
+  // === Сводка ===
+  if (pdfOptions.summary){
+    parts.push(`
+      <section class="pdf-section">
+        <h2>Сводка</h2>
+        <div class="pdf-stats">
+          <div class="pdf-stat"><span class="pdf-sv">${episodes.length}</span><span class="pdf-sl">эпизодов болезни</span></div>
+          <div class="pdf-stat"><span class="pdf-sv">${sickDays}</span><span class="pdf-sl">дней болезни</span></div>
+          <div class="pdf-stat"><span class="pdf-sv">${healthyDays}</span><span class="pdf-sl">дней здоров</span></div>
+          <div class="pdf-stat"><span class="pdf-sv">${gardenDays}</span><span class="pdf-sl">дней в садике</span></div>
+          <div class="pdf-stat"><span class="pdf-sv">${avgLen ? avgLen.toFixed(1).replace('.', ',') : '—'}</span><span class="pdf-sl">средняя длительность (дн.)</span></div>
+          <div class="pdf-stat"><span class="pdf-sv">${episodes.length ? Math.max(...episodes.map(e => e.days)) : 0}</span><span class="pdf-sl">макс. длительность</span></div>
+          <div class="pdf-stat"><span class="pdf-sv">${noDiag}</span><span class="pdf-sl">эпизодов без диагноза</span></div>
+        </div>
+      </section>
+    `);
+  }
+
+  // === График болезней ===
+  if (pdfOptions.sickChart && sickSeries.labels.length){
+    parts.push(`
+      <section class="pdf-section">
+        <h2>График болезней</h2>
+        ${renderBarChart(sickSeries.labels, sickSeries.values, '#F27691')}
+      </section>
+    `);
+  }
+
+  // === Частота симптомов ===
+  if (pdfOptions.symChart && symList.length){
+    parts.push(`
+      <section class="pdf-section">
+        <h2>Частота симптомов${pdfSymptomFilter !== 'all' ? ' · ' + (SYM_CATS.find(c => c.id === pdfSymptomFilter)?.label || '') : ''}</h2>
+        ${renderSymptomBars(symList, '#687B59', 15)}
+      </section>
+    `);
+  }
+
+  // === Болезни ===
+  if (pdfOptions.diagnoses){
+    parts.push(`
+      <section class="pdf-section">
+        <h2>Болезни</h2>
+        ${diagList.length
+          ? `<ul class="pdf-diag-list">${diagList.map(([d, n]) =>
+              `<li><strong>${esc(d)}</strong> — ${n} ${plural(n, 'эпизод', 'эпизода', 'эпизодов')}</li>`).join('')}</ul>`
+          : '<p class="pdf-muted">Диагнозов за период нет.</p>'}
+      </section>
+    `);
+  }
+
+  // === Эпизоды ===
+  if (pdfOptions.episodes){
+    parts.push(`
+      <section class="pdf-section">
+        <h2>Список эпизодов</h2>
+        ${episodes.length
+          ? `<table class="pdf-table">
+              <thead><tr><th>Начало</th><th>Конец</th><th>Дней</th><th>Диагнозы</th></tr></thead>
+              <tbody>
+                ${episodes.slice().reverse().map(ep => `
+                  <tr>
+                    <td>${fmtDateShort(ep.start)}</td>
+                    <td>${ep.start !== ep.end ? fmtDateShort(ep.end) : '—'}</td>
+                    <td>${ep.days}</td>
+                    <td>${ep.diagnoses.length ? esc(ep.diagnoses.join(', ')) : '<span class="pdf-muted">без диагноза</span>'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>`
+          : '<p class="pdf-muted">Эпизодов за период нет.</p>'}
+      </section>
+    `);
+  }
+
+  // === Таблица температур ===
+  if (pdfOptions.temps && allTemps.length){
+    parts.push(`
+      <section class="pdf-section">
+        <h2>Замеры температуры</h2>
+        <table class="pdf-table">
+          <thead>
+            <tr><th>Дата</th><th>Время</th><th>Темп.</th><th>Лекарство</th><th>Помогло</th></tr>
+          </thead>
+          <tbody>
+            ${allTemps.map(t => {
+              const med = MEDS.find(m => m.id === t.med);
+              const help = HELP.find(h => h.id === t.helped);
+              return `<tr>
+                <td>${fmtDateShort(t.date)}</td>
+                <td>${t.time}</td>
+                <td><strong>${fmtT(t.value)}°</strong></td>
+                <td>${med && med.id ? esc(med.label) : '—'}</td>
+                <td>${help && help.id ? esc(help.label.toLowerCase()) : '—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </section>
+    `);
+  }
+
+  // === Заметки ===
+  if (pdfOptions.notes && notes.length){
+    parts.push(`
+      <section class="pdf-section">
+        <h2>Заметки по дням</h2>
+        ${notes.map(n => `
+          <div class="pdf-note-item">
+            <div class="pdf-note-date">${fmtDate(n.date)}${n.diag ? ' · ' + esc(n.diag) : ''}</div>
+            <div class="pdf-note-text">${esc(n.note).replace(/\n/g, '<br>')}</div>
+          </div>
+        `).join('')}
+      </section>
+    `);
+  }
+
+  const fullHtml = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Аналитика · ${periodLabel}</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #292724; background: #fff; margin: 0; padding: 24px;
+    line-height: 1.5; font-size: 12pt;
+  }
+  .pdf-page { max-width: 720px; margin: 0 auto; }
+  .pdf-header {
+    border-bottom: 2pt solid #DCEB32; padding-bottom: 12pt; margin-bottom: 18pt;
+  }
+  .pdf-brand {
+    font-size: 9pt; text-transform: uppercase; letter-spacing: 0.12em;
+    color: #756f65; font-weight: 800;
+  }
+  .pdf-header h1 {
+    font-size: 22pt; margin: 4pt 0 6pt; letter-spacing: -0.02em;
+  }
+  .pdf-sub { color: #756f65; font-size: 10pt; margin: 0; }
+  .pdf-section {
+    margin-bottom: 18pt;
+    page-break-inside: avoid;
+  }
+  .pdf-section h2 {
+    font-size: 14pt; margin: 0 0 8pt;
+    padding-left: 10pt; position: relative;
+    letter-spacing: -0.01em;
+  }
+  .pdf-section h2::before {
+    content: ''; position: absolute; left: 0; top: 3pt; bottom: 3pt;
+    width: 4pt; background: #DCEB32; border-radius: 2pt;
+  }
+  .pdf-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8pt;
+  }
+  .pdf-stat {
+    padding: 8pt 10pt; border: 0.5pt solid #dfd4c4; border-radius: 6pt;
+    background: #fffaf1;
+  }
+  .pdf-sv {
+    display: block; font-size: 18pt; font-weight: 800;
+    letter-spacing: -0.03em; line-height: 1.1; color: #292724;
+  }
+  .pdf-sl { font-size: 8.5pt; color: #756f65; }
+  .pdf-table {
+    width: 100%; border-collapse: collapse; font-size: 10pt;
+    border: 0.5pt solid #dfd4c4; border-radius: 6pt; overflow: hidden;
+  }
+  .pdf-table th {
+    background: #fffaf1; padding: 6pt 8pt; text-align: left;
+    border-bottom: 0.5pt solid #dfd4c4; font-weight: 700; font-size: 9pt;
+    text-transform: uppercase; letter-spacing: 0.04em; color: #756f65;
+  }
+  .pdf-table td {
+    padding: 6pt 8pt; border-bottom: 0.5pt solid #ece0d0;
+    vertical-align: top;
+  }
+  .pdf-table tr:last-child td { border-bottom: 0; }
+  .pdf-diag-list {
+    padding-left: 16pt; margin: 0;
+  }
+  .pdf-diag-list li { margin-bottom: 3pt; }
+  .pdf-muted { color: #a49c90; font-style: italic; }
+  .pdf-note-item {
+    padding: 6pt 10pt; border-left: 3pt solid #DCEB32;
+    background: #fffaf1; margin-bottom: 6pt; border-radius: 0 4pt 4pt 0;
+    page-break-inside: avoid;
+  }
+  .pdf-note-date { font-weight: 700; font-size: 10pt; margin-bottom: 2pt; }
+  .pdf-note-text { font-size: 10pt; color: #4a4139; }
+  svg { display: block; width: 100%; height: auto; max-width: 480px; }
+  .pdf-footer {
+    margin-top: 24pt; padding-top: 12pt;
+    border-top: 0.5pt solid #dfd4c4;
+    color: #a49c90; font-size: 9pt; text-align: center;
+  }
+  @media print {
+    body { padding: 0; font-size: 11pt; }
+    .pdf-page { max-width: 100%; }
+    .pdf-section { page-break-inside: avoid; }
+    .pdf-table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; }
+    @page { size: A4; margin: 15mm 12mm; }
+  }
+</style>
+</head>
+<body>
+  <div class="pdf-page">
+    ${parts.join('')}
+    <div class="pdf-footer">
+      «Ещё одна галочка» · Трекер адаптации к садику · ${new Date().toLocaleDateString('ru-RU')}
+    </div>
+  </div>
+  <script>
+    window.addEventListener('load', function(){
+      setTimeout(function(){ window.print(); }, 400);
+    });
+  <\/script>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  if (!win){
+    // Блокировка popup — предложим скачать
+    const blob = new Blob([fullHtml], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'analytics-' + startK + '_' + endK + '.html';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast('Браузер заблокировал окно — файл сохранён');
+    return;
+  }
+  win.document.open();
+  win.document.write(fullHtml);
+  win.document.close();
 }
 
 /* ============================ ОБЩИЙ РЕНДЕР ============================ */
@@ -2432,7 +3018,7 @@ document.getElementById('todayBtn').addEventListener('click', () => {
   if (isMobile()) openSheet();
 });
 
-/* ============================ ЭКСПОРТ / ИМПОРТ ============================ */
+/* ============================ ЭКСПОРТ / ИМПОРТ JSON ============================ */
 document.getElementById('exportBtn').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json' });
   const a = document.createElement('a');
@@ -2457,6 +3043,7 @@ fileInput.addEventListener('change', () => {
       state.days = data.days;
       if (data.theme) state.theme = data.theme;
       if (data.copyOptions) state.copyOptions = { ...DEFAULT_COPY_OPTIONS, ...data.copyOptions };
+      if (data.symptomFilter) state.symptomFilter = data.symptomFilter;
       save();
       render();
       alert('Данные импортированы.');
