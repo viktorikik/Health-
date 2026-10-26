@@ -25,7 +25,6 @@
   --bg:#F4EBDD; --surface:#fffaf1; --ink:#292724; --muted:#756f65; --line:#dfd4c4;
   --cell:#fffaf1; --cell-line:#e3d9c9;
   --sick-bg:#FBE2E2; --sick-line:#EFB3BF;
-  /* v2.5: лёгкая лаймовая заливка для здоровых дней */
   --ok-bg:#f3f8cc; --ok-line:#cfdd6e;
   --dot-nose:#687B59; --dot-cough:#A9BA18; --dot-fever:#F27691;
   --dot-tummy:#5a544c; --dot-rash:#E8A0B4; --dot-other:#b88a5e;
@@ -226,14 +225,11 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 .dot.fever{background:var(--dot-fever)} .dot.tummy{background:var(--dot-tummy)}
 .dot.rash{background:var(--dot-rash)} .dot.other{background:var(--dot-other)}
 
-/* v2.5: маркеры «сад» и «дома» в правом верхнем углу дня */
 .day-marks{
   position:absolute; top:5px; right:5px;
   display:flex; gap:3px; align-items:center;
 }
-.gdot, .hdot{
-  width:5px; height:5px; border-radius:50%; flex:none;
-}
+.gdot, .hdot{ width:5px; height:5px; border-radius:50%; flex:none; }
 .gdot{ background:var(--lime); box-shadow:0 0 0 1px #29272440; }
 .hdot{ background:var(--coral); box-shadow:0 0 0 1px #29272440; }
 
@@ -266,7 +262,6 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 }
 .drag-badge.show{ opacity: 1; }
 
-/* v2.5: обёртка недельного вида — touch-action pan-y для свайпа */
 .week-days-wrap{ touch-action: pan-y; }
 #weekDaysWrap{ touch-action: pan-y; }
 #weekDays{ display: flex; flex-direction: column; gap: 8px; touch-action: pan-y; }
@@ -306,13 +301,11 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .wday-diag{ color: var(--muted); font-weight: 600; font-size: .82rem; margin-left: 3px; }
-/* v2.5: текстовая строка симптомов и температуры под статусом */
 .wday-meta{
   display: flex; align-items: center; gap: 6px;
   margin-top: 3px; font-size: .78rem; color: var(--muted);
   flex-wrap: wrap; line-height: 1.3;
 }
-.wday-syms{ }
 .wday-temp{ font-weight: 800; color: var(--coral); font-variant-numeric: tabular-nums; }
 [data-theme="dark"] .wday-temp{ color: #F9A2B5; }
 .week-day.sick .wday-status{ color: var(--ink); }
@@ -373,7 +366,6 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 .chart-sub{
   font-size:.72rem; color:var(--muted); margin:0 4px 8px; line-height:1.4;
 }
-/* v2.5: навигация по периодам графика */
 .chart-nav{
   display:flex; align-items:center; gap:8px;
   margin:0 4px 6px;
@@ -601,7 +593,6 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
 .symptom-filter button:hover{border-color:var(--ink)}
 .symptom-filter button.on{ background:var(--ink); color:var(--surface); border-color:var(--ink); }
 
-/* chart-view toggle (Неделя / Месяц / Год) */
 .chart-view-toggle{
   display:flex; gap:2px; background:var(--surface); border:1px solid var(--line);
   border-radius:10px; padding:3px; margin-bottom:8px; width:fit-content;
@@ -721,6 +712,45 @@ footer{ margin-top:24px; border-top:1px solid var(--line); padding-top:14px; }
 footer p{margin:6px 0}
 footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86rem}
 
+/* ===== v2.5: сводка за день под календарём ===== */
+.day-summary-card{ margin-top:14px; }
+.ds-head{ display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+.ds-title{
+  flex:1; text-align:center;
+  font-weight:800; font-size:1rem; letter-spacing:-.02em;
+  text-transform:capitalize;
+  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.ds-today{
+  display:inline-block;
+  font-size:.62rem; font-weight:800;
+  text-transform:uppercase; letter-spacing:.08em;
+  padding:2px 8px; border-radius:999px;
+  background:var(--lime); color:#292724;
+  vertical-align:middle; margin-right:6px;
+}
+.ds-body{ display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; }
+.ds-main{ flex:1 1 240px; min-width:0; }
+.ds-status-line{ display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-bottom:8px; }
+.ds-status-badge{
+  font-size:.76rem; font-weight:800;
+  padding:3px 10px; border-radius:999px;
+  border:1px solid transparent;
+}
+.ds-status-badge.sick{ background:var(--sick-bg); border-color:var(--sick-line); color:var(--ink); }
+.ds-status-badge.ok{ background:var(--ok-bg); border-color:var(--ok-line); color:var(--ink); }
+.ds-status-badge.none{ background:var(--bg); border-color:var(--line); color:var(--muted); }
+.ds-mark-badge{ font-size:.7rem; font-weight:800; padding:3px 9px; border-radius:999px; }
+.ds-mark-badge.garden{ background:var(--lime); color:#292724; }
+.ds-mark-badge.home{ background:var(--coral); color:#fff; }
+.ds-syms{ display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px; }
+.ds-syms .pill{ font-size:.72rem; padding:2px 8px; }
+.ds-facts{ display:flex; flex-wrap:wrap; gap:4px 14px; font-size:.85rem; color:var(--muted); line-height:1.5; }
+.ds-facts b{ color:var(--ink); font-weight:800; }
+.ds-empty{ color:var(--muted); font-size:.88rem; font-style:italic; flex:1 1 240px; }
+.ds-open{ flex:0 0 auto; align-self:flex-end; }
+@media (max-width:600px){ .ds-open{ flex:1 1 100%; } }
+
 .hidden{display:none !important}
 </style>
 </head>
@@ -811,6 +841,15 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
         <div class="sheet-body" id="panel"></div>
       </aside>
     </div>
+
+    <section class="card day-summary-card">
+      <div class="ds-head">
+        <button class="navbtn" id="dsPrev" type="button" aria-label="Предыдущий день">←</button>
+        <div class="ds-title" id="dsTitle">—</div>
+        <button class="navbtn" id="dsNext" type="button" aria-label="Следующий день">→</button>
+      </div>
+      <div class="ds-body" id="dsBody"></div>
+    </section>
 
     <section class="stats-wrap" id="stats"></section>
   </div>
@@ -1166,11 +1205,12 @@ const pdfOptsModal  = document.getElementById('pdfOpts');
 const now0 = new Date();
 let view = { y: now0.getFullYear(), m: now0.getMonth() };
 let selected = keyOf(now0);
+let summaryKey = keyOf(now0); // v2.5: своя навигация для сводки под календарём
 let currentPeriod = 'month';
 let viewMode = 'month';
 let weekAnchor = keyOf(now0);
 let symptomsExpanded = false;
-let chartMode = state.chartMode || 'month'; // 'week' | 'month' | 'year'
+let chartMode = state.chartMode || 'month';
 
 /* ============================ ТЕМА ============================ */
 function applyTheme(){
@@ -1459,7 +1499,6 @@ function renderWeekView(){
     if (isSel) cls.push('sel');
     if (copyMode && k === copyMode.fromKey) cls.push('copy-source');
 
-    /* v2.5: текстовая строка симптомов вместо одних только точек */
     const symLabels = (rec && rec.symptoms ? rec.symptoms.map(id => {
       const s = SYMPTOMS.find(x => x.id === id);
       return s ? s.label : '';
@@ -2143,7 +2182,7 @@ setInterval(() => {
   }
 }, 30000);
 
-/* ============================ ПЕЧАТЬ КАРТОЧКИ ДНЯ (v2.5) ============================ */
+/* ============================ ПЕЧАТЬ КАРТОЧКИ ДНЯ ============================ */
 function printDayCard(key){
   const rec = state.days[key];
   if (!rec || !hasAnyData(rec)){ toast('В этом дне нет данных для печати'); return; }
@@ -2266,6 +2305,73 @@ function printDayCard(key){
   win.document.write(html);
   win.document.close();
 }
+
+/* ============================ СВОДКА ЗА ДЕНЬ (v2.5) ============================ */
+function renderDaySummary(){
+  const titleEl = document.getElementById('dsTitle');
+  const bodyEl  = document.getElementById('dsBody');
+  if (!titleEl || !bodyEl) return;
+  const d = parseK(summaryKey);
+  const todayKey = keyOf(new Date());
+  const isToday = summaryKey === todayKey;
+  titleEl.innerHTML = `${isToday ? '<span class="ds-today">сегодня</span>' : ''}${WD_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS_G[d.getMonth()]}`;
+
+  const rec = state.days[summaryKey];
+  if (!rec || !hasAnyData(rec)){
+    bodyEl.innerHTML = `<div class="ds-empty">Нет отметок за этот день</div>
+      <button class="btn primary ds-open" type="button" data-ds-open>Открыть день →</button>`;
+    return;
+  }
+
+  const statusLabel = rec.status === 'sick' ? 'Болеет' : rec.status === 'ok' ? 'Здоров' : 'Не отмечен';
+  const statusCls   = rec.status === 'sick' ? 'sick' : rec.status === 'ok' ? 'ok' : 'none';
+  const syms = (rec.symptoms || [])
+    .map(id => SYMPTOMS.find(s => s.id === id))
+    .filter(Boolean);
+  const temps = rec.temps || [];
+  const maxT = temps.length ? Math.max(...temps.map(t => t.value)) : null;
+  const medCount = (rec.meds || []).length;
+  const diag = rec.diagnosis && rec.diagnosis.trim();
+
+  const facts = [];
+  if (maxT !== null) facts.push(`<span>макс. <b>${fmtT(maxT)}°</b></span>`);
+  if (temps.length) facts.push(`<span><b>${temps.length}</b> ${plural(temps.length, 'замер', 'замера', 'замеров')}</span>`);
+  if (medCount) facts.push(`<span><b>${medCount}</b> ${plural(medCount, 'препарат', 'препарата', 'препаратов')}</span>`);
+  if (diag) facts.push(`<span>диагноз: <b>${esc(diag)}</b></span>`);
+
+  bodyEl.innerHTML = `
+    <div class="ds-main">
+      <div class="ds-status-line">
+        <span class="ds-status-badge ${statusCls}">${statusLabel}</span>
+        ${rec.garden ? '<span class="ds-mark-badge garden">в саду</span>' : ''}
+        ${rec.home ? '<span class="ds-mark-badge home">дома</span>' : ''}
+      </div>
+      ${syms.length ? `<div class="ds-syms">${syms.map(s => `<span class="pill">${s.label}</span>`).join('')}</div>` : ''}
+      ${facts.length ? `<div class="ds-facts">${facts.join('')}</div>` : ''}
+    </div>
+    <button class="btn primary ds-open" type="button" data-ds-open>Открыть день →</button>
+  `;
+}
+
+function shiftSummary(dir){
+  const d = parseK(summaryKey);
+  d.setDate(d.getDate() + dir);
+  summaryKey = keyOf(d);
+  renderDaySummary();
+}
+document.getElementById('dsPrev').addEventListener('click', () => shiftSummary(-1));
+document.getElementById('dsNext').addEventListener('click', () => shiftSummary(1));
+document.getElementById('dsBody').addEventListener('click', e => {
+  if (!e.target.closest('[data-ds-open]')) return;
+  selected = summaryKey;
+  weekAnchor = selected;
+  const dd = parseK(selected);
+  view = { y: dd.getFullYear(), m: dd.getMonth() };
+  if (viewMode === 'month') renderCalendar();
+  else renderWeekView();
+  renderPanel();
+  if (isMobile()) openSheet();
+});
 
 /* ============================ СТАТИСТИКА МЕСЯЦА ============================ */
 function renderStats(){
@@ -2400,7 +2506,6 @@ function renderSymptomBars(list, color, maxItems){
 }
 
 /* ============================ ГРАФИК БОЛЕЗНЕЙ ============================ */
-// v2.5: независимая навигация по периодам графика через state.chartAnchor
 function computeSickDaysSeries(mode){
   const labels = [], values = [];
   const days = state.days;
@@ -2521,7 +2626,6 @@ function buildChartViewToggle(containerEl){
   });
 }
 
-// v2.5: делегирование клика по стрелкам графика (кнопки пересоздаются при каждом рендере)
 analyticsEl.addEventListener('click', e => {
   const btn = e.target.closest('[data-chart-nav]');
   if (!btn) return;
@@ -2570,13 +2674,11 @@ function renderAnalytics(){
 
   const periodLabel = period === 'month' ? 'за месяц' : (period === 'year' ? 'за год' : 'за всё время');
 
-  // === График болезней (свой период, независимая навигация) ===
   const sickSeries = computeSickDaysSeries(chartMode);
   const sickChartHtml = sickSeries.labels.length
     ? renderBarChart(sickSeries.labels, sickSeries.values, '#F27691')
     : '<p class="muted small" style="margin:8px 0">Нет данных за период</p>';
 
-  // === Симптомы ===
   const symChartHtml = symList.length
     ? renderSymptomBars(symList, '#687B59')
     : '<p class="muted small" style="margin:8px 0">Симптомов по этому фильтру пока нет</p>';
@@ -3023,6 +3125,7 @@ function render(){
   renderDoseBar();
   renderPanel();
   renderStats();
+  renderDaySummary();
   renderTempChart();
   renderAnalytics();
   updateHeroMeta();
@@ -3124,7 +3227,7 @@ document.getElementById('todayBtn').addEventListener('click', () => {
   view = { y: n.getFullYear(), m: n.getMonth() };
   selected = keyOf(n);
   weekAnchor = selected;
-  // v2.5: при сбросе на «Сегодня» возвращаем и график к текущему периоду
+  summaryKey = selected;
   state.chartAnchor = selected;
   save();
   render();
