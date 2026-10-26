@@ -28,6 +28,7 @@
   --ok-bg:#f3f8cc; --ok-line:#cfdd6e;
   --dot-nose:#687B59; --dot-cough:#A9BA18; --dot-fever:#F27691;
   --dot-tummy:#5a544c; --dot-rash:#E8A0B4; --dot-other:#b88a5e;
+  --dot-throat:#A63446; --dot-ear:#C87533; --dot-eyes:#4A6FA5; --dot-general:#6E6A65;
   --shadow: 0 8px 24px -8px rgba(41, 39, 36, 0.10);
   --shadow-soft: 0 4px 12px -4px rgba(41, 39, 36, 0.06);
   --pad: 14px;
@@ -39,6 +40,7 @@
   --ok-bg:#2d3319; --ok-line:#556628;
   --dot-nose:#93AC80; --dot-cough:#DCEB32; --dot-fever:#F27691;
   --dot-tummy:#C9C0B1; --dot-rash:#F2A7BC; --dot-other:#d4a574;
+  --dot-throat:#D45C71; --dot-ear:#E0A05E; --dot-eyes:#7B9DD4; --dot-general:#B0A9A0;
   --shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.45);
   --shadow-soft: 0 4px 12px -4px rgba(0, 0, 0, 0.3);
 }
@@ -221,9 +223,16 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 [data-theme="dark"] .dtemp{color:#F9A2B5}
 .dots{display:flex; gap:3px; min-height:6px; align-items:center; flex-wrap:wrap}
 .dot{width:5px; height:5px; border-radius:50%; display:block; flex:none}
-.dot.nose{background:var(--dot-nose)} .dot.cough{background:var(--dot-cough)}
-.dot.fever{background:var(--dot-fever)} .dot.tummy{background:var(--dot-tummy)}
-.dot.rash{background:var(--dot-rash)} .dot.other{background:var(--dot-other)}
+.dot.nose{background:var(--dot-nose)}
+.dot.cough{background:var(--dot-cough)}
+.dot.fever{background:var(--dot-fever)}
+.dot.tummy{background:var(--dot-tummy)}
+.dot.rash{background:var(--dot-rash)}
+.dot.other{background:var(--dot-other)}
+.dot.throat{background:var(--dot-throat)}
+.dot.ear{background:var(--dot-ear)}
+.dot.eyes{background:var(--dot-eyes)}
+.dot.general{background:var(--dot-general)}
 
 .day-marks{
   position:absolute; top:5px; right:5px;
@@ -810,10 +819,14 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
           <b><i class="r" style="background:var(--lime)"></i>в садике</b>
           <b><i class="r" style="background:var(--coral)"></i>дома</b>
           <b><i class="r" style="background:var(--dot-nose)"></i>нос</b>
+          <b><i class="r" style="background:var(--dot-throat)"></i>горло</b>
           <b><i class="r" style="background:var(--dot-cough)"></i>кашель</b>
+          <b><i class="r" style="background:var(--dot-ear)"></i>уши</b>
+          <b><i class="r" style="background:var(--dot-eyes)"></i>глаза</b>
           <b><i class="r" style="background:var(--dot-fever)"></i>температура</b>
           <b><i class="r" style="background:var(--dot-tummy)"></i>живот</b>
           <b><i class="r" style="background:var(--dot-rash)"></i>сыпь</b>
+          <b><i class="r" style="background:var(--dot-general)"></i>общее</b>
           <b><i class="r" style="background:var(--dot-other)"></i>другое</b>
         </div>
 
@@ -947,20 +960,32 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 const STORE = 'eog-sad-v2';
 
 const SYMPTOMS = [
-  {id:'runny',   label:'Жидкие сопли',    cat:'nose'},
-  {id:'stuffy',  label:'Нос не дышит',    cat:'nose'},
-  {id:'thick',   label:'Густые сопли',    cat:'nose'},
-  {id:'green',   label:'Зелёные сопли',   cat:'nose'},
-  {id:'dry',     label:'Сухой кашель',    cat:'cough'},
-  {id:'wet',     label:'Влажный кашель',  cat:'cough'},
-  {id:'rash',    label:'Сыпь',            cat:'rash'},
-  {id:'vomit',   label:'Рвота',           cat:'tummy'},
-  {id:'tummy',   label:'Болит живот',     cat:'tummy'},
-  {id:'fever',   label:'Температура',     cat:'fever'},
-  {id:'loose',   label:'Жидкий стул',     cat:'tummy'},
-  {id:'constip', label:'Запор',           cat:'tummy'},
-  {id:'stenosis',label:'Стеноз',          cat:'cough'},
-  {id:'other',   label:'Другое',          cat:'other'}
+  {id:'runny',      label:'Жидкие сопли',        cat:'nose'},
+  {id:'stuffy',     label:'Нос не дышит',        cat:'nose'},
+  {id:'thick',      label:'Густые сопли',        cat:'nose'},
+  {id:'green',      label:'Зелёные сопли',       cat:'nose'},
+  {id:'sorethroat', label:'Боль в горле',        cat:'throat'},
+  {id:'redthroat',  label:'Красное горло',       cat:'throat'},
+  {id:'dry',        label:'Сухой кашель',        cat:'cough'},
+  {id:'wet',        label:'Влажный кашель',      cat:'cough'},
+  {id:'hoarse',     label:'Осиплость',           cat:'cough'},
+  {id:'stenosis',   label:'Стеноз',              cat:'cough'},
+  {id:'earpain',    label:'Боль в ухе',          cat:'ear'},
+  {id:'conjunct',   label:'Конъюнктивит',        cat:'eyes'},
+  {id:'watery',     label:'Слезящиеся глаза',    cat:'eyes'},
+  {id:'rash',       label:'Сыпь',                cat:'rash'},
+  {id:'vomit',      label:'Рвота',               cat:'tummy'},
+  {id:'tummy',      label:'Болит живот',         cat:'tummy'},
+  {id:'loose',      label:'Жидкий стул',         cat:'tummy'},
+  {id:'constip',    label:'Запор',               cat:'tummy'},
+  {id:'fever',      label:'Температура',         cat:'fever'},
+  {id:'lethargy',   label:'Вялость / капризы',   cat:'general'},
+  {id:'appetite',   label:'Плохой аппетит',      cat:'general'},
+  {id:'badsleep',   label:'Плохо спит',          cat:'general'},
+  {id:'headache',   label:'Головная боль',       cat:'general'},
+  {id:'stomatitis', label:'Стоматит',            cat:'other'},
+  {id:'herpes',     label:'Герпес на губе',      cat:'other'},
+  {id:'other',      label:'Другое',              cat:'other'}
 ];
 
 const MEDS = [
@@ -984,18 +1009,24 @@ const HELP = [
 ];
 
 const CAT_DOT = {
-  nose:'var(--dot-nose)', cough:'var(--dot-cough)', fever:'var(--dot-fever)',
-  tummy:'var(--dot-tummy)', rash:'var(--dot-rash)', other:'var(--dot-other)'
+  nose:'var(--dot-nose)', throat:'var(--dot-throat)',
+  cough:'var(--dot-cough)', ear:'var(--dot-ear)', eyes:'var(--dot-eyes)',
+  fever:'var(--dot-fever)', tummy:'var(--dot-tummy)', rash:'var(--dot-rash)',
+  general:'var(--dot-general)', other:'var(--dot-other)'
 };
 
 const SYM_CATS = [
-  {id:'all',   label:'Все'},
-  {id:'nose',  label:'Нос'},
-  {id:'cough', label:'Кашель'},
-  {id:'tummy', label:'Живот'},
-  {id:'rash',  label:'Сыпь'},
-  {id:'fever', label:'Температура'},
-  {id:'other', label:'Другое'}
+  {id:'all',     label:'Все'},
+  {id:'nose',    label:'Нос'},
+  {id:'throat',  label:'Горло'},
+  {id:'cough',   label:'Кашель'},
+  {id:'ear',     label:'Уши'},
+  {id:'eyes',    label:'Глаза'},
+  {id:'tummy',   label:'Живот'},
+  {id:'rash',    label:'Сыпь'},
+  {id:'fever',   label:'Температура'},
+  {id:'general', label:'Общее'},
+  {id:'other',   label:'Другое'}
 ];
 
 const DEFAULT_COPY_OPTIONS = {
@@ -1205,7 +1236,7 @@ const pdfOptsModal  = document.getElementById('pdfOpts');
 const now0 = new Date();
 let view = { y: now0.getFullYear(), m: now0.getMonth() };
 let selected = keyOf(now0);
-let summaryKey = keyOf(now0); // v2.5: своя навигация для сводки под календарём
+let summaryKey = keyOf(now0);
 let currentPeriod = 'month';
 let viewMode = 'month';
 let weekAnchor = keyOf(now0);
@@ -2306,7 +2337,7 @@ function printDayCard(key){
   win.document.close();
 }
 
-/* ============================ СВОДКА ЗА ДЕНЬ (v2.5) ============================ */
+/* ============================ СВОДКА ЗА ДЕНЬ ============================ */
 function renderDaySummary(){
   const titleEl = document.getElementById('dsTitle');
   const bodyEl  = document.getElementById('dsBody');
