@@ -84,7 +84,7 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 .meta-pill.meta-coral{ background:#F2769120; color:var(--ink); border:1px solid #F2769166; }
 .meta-pill.meta-sage{ background:#687B5922; color:var(--ink); border:1px solid #687B5966; }
 .meta-pill.meta-muted{ background:var(--bg); color:var(--muted); border:1px solid var(--line); }
-.hero-actions{display:flex; gap:6px; flex-wrap:wrap}
+.hero-actions{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
 @media (max-width:520px){
   .hero{padding:14px 16px 14px 20px}
   .lead{display:none}
@@ -103,6 +103,24 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 .btn:active{transform:translateY(0) scale(.98)}
 .btn.primary{background:var(--ink); color:var(--surface); padding:9px 14px}
 .btn.primary:hover{background:var(--lime); color:#292724; border-color:var(--ink)}
+
+/* ===== v2.6: кнопка-гамбургер ===== */
+.menu-btn{
+  width:42px; height:42px; flex:none;
+  border-radius:50%;
+  border:1.5px solid var(--ink);
+  background:var(--surface);
+  color:var(--ink);
+  cursor:pointer;
+  display:grid; place-items:center;
+  padding:0;
+  touch-action:manipulation;
+  transition:background .15s, color .15s, transform .1s;
+}
+.menu-btn:hover{background:var(--lime); color:#292724; transform:translateY(-1px);}
+.menu-btn:active{transform:translateY(0) scale(.94);}
+.menu-btn svg{display:block;}
+
 .navbtn{
   width:42px; height:42px; border-radius:50%; display:grid; place-items:center;
   border:1.5px solid var(--line); background:var(--surface); color:var(--ink);
@@ -721,7 +739,7 @@ footer{ margin-top:24px; border-top:1px solid var(--line); padding-top:14px; }
 footer p{margin:6px 0}
 footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86rem}
 
-/* ===== v2.5: сводка за день под календарём ===== */
+/* ===== Сводка за день ===== */
 .day-summary-card{ margin-top:14px; }
 .ds-head{ display:flex; align-items:center; gap:8px; margin-bottom:12px; }
 .ds-title{
@@ -748,6 +766,88 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 .ds-open{ align-self:flex-start; margin-top:4px; }
 @media (max-width:600px){ .ds-open{ align-self:stretch; } }
 
+/* ===== v2.6: меню настроек ===== */
+.menu-backdrop{
+  position:fixed; inset:0;
+  background:rgba(41,39,36,0.32);
+  z-index:210;
+  visibility:hidden; opacity:0;
+  transition:opacity .2s ease, visibility 0s .2s;
+}
+.menu-backdrop.show{
+  visibility:visible; opacity:1;
+  transition:opacity .2s ease, visibility 0s;
+}
+.menu-panel{
+  position:fixed;
+  z-index:220;
+  background:var(--surface);
+  border:1.5px solid var(--ink);
+  border-radius:18px;
+  padding:16px;
+  box-shadow:0 16px 48px rgba(0,0,0,0.28);
+  width:300px;
+  max-width:calc(100vw - 24px);
+  max-height:calc(100vh - 100px);
+  overflow-y:auto;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  visibility:hidden;
+  opacity:0;
+  transform:scale(.95);
+  transform-origin:top right;
+  pointer-events:none;
+  transition:transform .15s ease, opacity .15s ease, visibility 0s .15s;
+}
+.menu-panel.show{
+  visibility:visible;
+  opacity:1;
+  transform:scale(1);
+  pointer-events:auto;
+  transition:transform .15s ease, opacity .15s ease, visibility 0s;
+}
+.menu-head{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:8px;
+}
+.menu-title{
+  font-size:.82rem; font-weight:800;
+  text-transform:uppercase; letter-spacing:.1em;
+  color:var(--muted);
+}
+.menu-close{
+  width:30px; height:30px; border-radius:50%;
+  border:0; background:var(--bg); color:var(--muted);
+  font-size:1.15rem; line-height:1; cursor:pointer;
+  display:grid; place-items:center;
+  touch-action:manipulation;
+  flex:none;
+  transition:color .15s, background .15s;
+}
+.menu-close:hover{ color:var(--ink); background:var(--line); }
+
+.menu-field{ display:flex; flex-direction:column; gap:6px; }
+.menu-label{
+  font-size:.72rem; font-weight:800;
+  text-transform:uppercase; letter-spacing:.08em;
+  color:var(--muted);
+}
+.menu-hint{ font-size:.74rem; color:var(--muted); margin-top:2px; line-height:1.35; }
+
+.menu-item{
+  display:flex; align-items:center; gap:10px;
+  width:100%; padding:11px 14px;
+  border:1.5px solid var(--line); border-radius:12px;
+  background:var(--surface); color:var(--ink);
+  font:inherit; font-size:.92rem; font-weight:700;
+  cursor:pointer; text-align:left; min-height:44px;
+  touch-action:manipulation;
+  transition:background .15s, border-color .15s;
+}
+.menu-item:hover{ background:var(--bg); border-color:var(--ink); }
+.menu-item-ico{ font-size:1.1rem; }
+
 .hidden{display:none !important}
 </style>
 </head>
@@ -762,9 +862,14 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
       <div class="hero-meta" id="heroMeta"></div>
     </div>
     <div class="hero-actions">
-      <button class="btn" id="nameBtn" type="button" title="Имя ребёнка">⚙️</button>
-      <button class="btn" id="themeBtn" type="button">Тема</button>
       <button class="btn" id="todayBtn" type="button">Сегодня</button>
+      <button class="menu-btn" id="menuBtn" type="button" aria-label="Настройки" aria-expanded="false" aria-controls="menuPanel">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="2" y1="5" x2="16" y2="5"/>
+          <line x1="2" y1="9" x2="16" y2="9"/>
+          <line x1="2" y1="13" x2="16" y2="13"/>
+        </svg>
+      </button>
     </div>
   </header>
 
@@ -882,6 +987,26 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
     </p>
   </footer>
 </main>
+
+<!-- v2.6: меню настроек -->
+<div class="menu-backdrop" id="menuBackdrop"></div>
+<div class="menu-panel" id="menuPanel" role="dialog" aria-modal="true" aria-label="Настройки">
+  <div class="menu-head">
+    <span class="menu-title">Настройки</span>
+    <button class="menu-close" id="menuClose" type="button" aria-label="Закрыть">×</button>
+  </div>
+
+  <div class="menu-field">
+    <label class="menu-label" for="menuName">Имя ребёнка</label>
+    <input class="inp" type="text" id="menuName" placeholder="Например, Миша" autocomplete="off" maxlength="20">
+    <div class="menu-hint">Показывается в сводке за день</div>
+  </div>
+
+  <button class="menu-item" id="menuThemeToggle" type="button">
+    <span class="menu-item-ico" id="menuThemeIcon">🌙</span>
+    <span id="menuThemeLabel">Тёмная тема</span>
+  </button>
+</div>
 
 <div class="copy-opts-backdrop" id="copyOpts">
   <div class="copy-opts-card">
@@ -1213,7 +1338,6 @@ const monthTitle    = document.getElementById('monthTitle');
 const chartMonth    = document.getElementById('chartMonth');
 const chartEl       = document.getElementById('tempChart');
 const heroMetaEl    = document.getElementById('heroMeta');
-const themeBtn      = document.getElementById('themeBtn');
 const doseBar       = document.getElementById('doseBar');
 const sheet         = document.getElementById('sheet');
 const backdrop      = document.getElementById('backdrop');
@@ -1236,21 +1360,68 @@ let chartMode = state.chartMode || 'month';
 /* ============================ ТЕМА ============================ */
 function applyTheme(){
   document.documentElement.dataset.theme = state.theme;
-  themeBtn.textContent = state.theme === 'dark' ? 'Светлая' : 'Тёмная';
 }
-themeBtn.addEventListener('click', () => {
-  state.theme = state.theme === 'dark' ? 'light' : 'dark';
-  save(); applyTheme();
-});
 
-/* ============================ ИМЯ РЕБЁНКА ============================ */
-document.getElementById('nameBtn').addEventListener('click', () => {
-  const n = prompt('Как зовут ребёнка? (по желанию)', state.childName || '');
-  if (n !== null) {
-    state.childName = n.trim();
-    save();
-    renderDaySummary();
+/* ============================ МЕНЮ (v2.6) ============================ */
+const menuBtn         = document.getElementById('menuBtn');
+const menuPanel       = document.getElementById('menuPanel');
+const menuBackdrop    = document.getElementById('menuBackdrop');
+const menuClose       = document.getElementById('menuClose');
+const menuNameInput   = document.getElementById('menuName');
+const menuThemeToggle = document.getElementById('menuThemeToggle');
+const menuThemeIcon   = document.getElementById('menuThemeIcon');
+const menuThemeLabel  = document.getElementById('menuThemeLabel');
+
+function updateMenuThemeLabel(){
+  if (state.theme === 'dark'){
+    menuThemeIcon.textContent  = '☀️';
+    menuThemeLabel.textContent = 'Светлая тема';
+  } else {
+    menuThemeIcon.textContent  = '🌙';
+    menuThemeLabel.textContent = 'Тёмная тема';
   }
+}
+function openMenu(){
+  const rect = menuBtn.getBoundingClientRect();
+  const menuWidth = Math.min(300, window.innerWidth - 24);
+  const leftPos = Math.max(
+    12,
+    Math.min(window.innerWidth - menuWidth - 12, rect.right - menuWidth)
+  );
+  menuPanel.style.top  = (rect.bottom + 8) + 'px';
+  menuPanel.style.left = leftPos + 'px';
+  menuNameInput.value = state.childName || '';
+  updateMenuThemeLabel();
+  menuPanel.classList.add('show');
+  menuBackdrop.classList.add('show');
+  menuBtn.setAttribute('aria-expanded', 'true');
+  document.body.classList.add('no-scroll');
+}
+function closeMenu(){
+  menuPanel.classList.remove('show');
+  menuBackdrop.classList.remove('show');
+  menuBtn.setAttribute('aria-expanded', 'false');
+  document.body.classList.remove('no-scroll');
+}
+menuBtn.addEventListener('click', () => {
+  if (menuPanel.classList.contains('show')) closeMenu();
+  else openMenu();
+});
+menuClose.addEventListener('click', closeMenu);
+menuBackdrop.addEventListener('click', closeMenu);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && menuPanel.classList.contains('show')) closeMenu();
+});
+menuNameInput.addEventListener('input', e => {
+  state.childName = e.target.value.trim();
+  save();
+  renderDaySummary();
+});
+menuThemeToggle.addEventListener('click', () => {
+  state.theme = state.theme === 'dark' ? 'light' : 'dark';
+  save();
+  applyTheme();
+  updateMenuThemeLabel();
 });
 
 /* ============================ ТОСТ ============================ */
@@ -2337,7 +2508,7 @@ function printDayCard(key){
   win.document.close();
 }
 
-/* ============================ СВОДКА ЗА ДЕНЬ (v2.5, текстом) ============================ */
+/* ============================ СВОДКА ЗА ДЕНЬ ============================ */
 function renderDaySummary(){
   const titleEl = document.getElementById('dsTitle');
   const bodyEl  = document.getElementById('dsBody');
@@ -2345,7 +2516,7 @@ function renderDaySummary(){
   const d = parseK(summaryKey);
   const todayKey = keyOf(new Date());
   const isToday = summaryKey === todayKey;
-  
+
   titleEl.innerHTML = `${isToday ? '<span class="ds-today">сегодня</span>' : ''}${WD_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS_G[d.getMonth()]}`;
 
   const rec = state.days[summaryKey];
@@ -2358,45 +2529,45 @@ function renderDaySummary(){
   }
 
   const name = state.childName ? `<b>${esc(state.childName)}</b>` : 'ребёнок';
-  
+
   let datePrefix = isToday ? 'Сегодня' : fmtDate(summaryKey);
-  
+
   const statusLabel = rec.status === 'sick' ? 'болеет' : rec.status === 'ok' ? 'здоров' : '';
-  
+
   let locParts = [];
   if (rec.garden) locParts.push('в садике');
   if (rec.home) locParts.push('дома');
   let locStr = locParts.join(' и ');
-  
+
   let mainParts = [];
   if (locStr) mainParts.push(locStr);
   if (statusLabel) mainParts.push(statusLabel);
-  
+
   let sentence = '';
   if (mainParts.length) {
      sentence = `<b>${datePrefix}</b> ${name} <b>${mainParts.join(', ')}</b>.`;
   } else {
      sentence = `<b>${datePrefix}</b> у ${name} есть отметки.`;
   }
-  
+
   let detailsHtml = '';
-  
+
   const syms = (rec.symptoms || []).map(id => SYMPTOMS.find(s => s.id === id)).filter(Boolean);
   if (syms.length) {
     detailsHtml += `<div><b>Симптомы:</b> ${syms.map(s => s.label).join(', ')}.</div>`;
   }
-  
+
   const temps = rec.temps || [];
   if (temps.length) {
      const maxT = Math.max(...temps.map(t => t.value));
      detailsHtml += `<div><b>Температура:</b> до ${fmtT(maxT)}° (${temps.length} ${plural(temps.length, 'замер', 'замера', 'замеров')}).</div>`;
   }
-  
+
   if (rec.meds && rec.meds.length) {
      const medsStr = rec.meds.map(m => `${medLabel(m.med)}${m.dose ? ' ' + m.dose : ''} (${m.time})`).join(', ');
      detailsHtml += `<div><b>Препараты:</b> ${medsStr}.</div>`;
   }
-  
+
   if (rec.diagnosis && rec.diagnosis.trim()) {
      detailsHtml += `<div><b>Диагноз:</b> ${esc(rec.diagnosis)}.</div>`;
   }
