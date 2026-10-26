@@ -738,27 +738,15 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
   background:var(--lime); color:#292724;
   vertical-align:middle; margin-right:6px;
 }
-.ds-body{ display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; }
-.ds-main{ flex:1 1 240px; min-width:0; }
-.ds-status-line{ display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin-bottom:8px; }
-.ds-status-badge{
-  font-size:.76rem; font-weight:800;
-  padding:3px 10px; border-radius:999px;
-  border:1px solid transparent;
-}
-.ds-status-badge.sick{ background:var(--sick-bg); border-color:var(--sick-line); color:var(--ink); }
-.ds-status-badge.ok{ background:var(--ok-bg); border-color:var(--ok-line); color:var(--ink); }
-.ds-status-badge.none{ background:var(--bg); border-color:var(--line); color:var(--muted); }
-.ds-mark-badge{ font-size:.7rem; font-weight:800; padding:3px 9px; border-radius:999px; }
-.ds-mark-badge.garden{ background:var(--lime); color:#292724; }
-.ds-mark-badge.home{ background:var(--coral); color:#fff; }
-.ds-syms{ display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px; }
-.ds-syms .pill{ font-size:.72rem; padding:2px 8px; }
-.ds-facts{ display:flex; flex-wrap:wrap; gap:4px 14px; font-size:.85rem; color:var(--muted); line-height:1.5; }
-.ds-facts b{ color:var(--ink); font-weight:800; }
-.ds-empty{ color:var(--muted); font-size:.88rem; font-style:italic; flex:1 1 240px; }
-.ds-open{ flex:0 0 auto; align-self:flex-end; }
-@media (max-width:600px){ .ds-open{ flex:1 1 100%; } }
+.ds-body{ display:flex; flex-direction:column; gap:10px; }
+.ds-narrative{ font-size:.95rem; line-height:1.45; }
+.ds-sentence{ margin:0 0 6px; font-size:1.05rem; }
+.ds-sentence b{ font-weight:800; }
+.ds-details{ display:flex; flex-direction:column; gap:4px; color:var(--muted); font-size:.86rem; }
+.ds-details b, .ds-details strong { color:var(--ink); font-weight:700; }
+.ds-empty{ color:var(--muted); font-size:.9rem; font-style:italic; }
+.ds-open{ align-self:flex-start; margin-top:4px; }
+@media (max-width:600px){ .ds-open{ align-self:stretch; } }
 
 .hidden{display:none !important}
 </style>
@@ -774,7 +762,8 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
       <div class="hero-meta" id="heroMeta"></div>
     </div>
     <div class="hero-actions">
-      <button class="btn" id="themeBtn" type="button">Тёмная тема</button>
+      <button class="btn" id="nameBtn" type="button" title="Имя ребёнка">⚙️</button>
+      <button class="btn" id="themeBtn" type="button">Тема</button>
       <button class="btn" id="todayBtn" type="button">Сегодня</button>
     </div>
   </header>
@@ -1098,6 +1087,7 @@ function loadState(){
       const s = JSON.parse(raw);
       return {
         theme: s.theme || null,
+        childName: s.childName || '',
         days: s.days || {},
         copyOptions: s.copyOptions || null,
         symptomFilter: s.symptomFilter || 'all',
@@ -1106,7 +1096,7 @@ function loadState(){
       };
     }
   } catch(e){}
-  return { theme:null, days:{}, copyOptions:null, symptomFilter:'all', chartMode:null, chartAnchor:null };
+  return { theme:null, childName:'', days:{}, copyOptions:null, symptomFilter:'all', chartMode:null, chartAnchor:null };
 }
 
 const state = loadState();
@@ -1246,11 +1236,21 @@ let chartMode = state.chartMode || 'month';
 /* ============================ ТЕМА ============================ */
 function applyTheme(){
   document.documentElement.dataset.theme = state.theme;
-  themeBtn.textContent = state.theme === 'dark' ? 'Светлая тема' : 'Тёмная тема';
+  themeBtn.textContent = state.theme === 'dark' ? 'Светлая' : 'Тёмная';
 }
 themeBtn.addEventListener('click', () => {
   state.theme = state.theme === 'dark' ? 'light' : 'dark';
   save(); applyTheme();
+});
+
+/* ============================ ИМЯ РЕБЁНКА ============================ */
+document.getElementById('nameBtn').addEventListener('click', () => {
+  const n = prompt('Как зовут ребёнка? (по желанию)', state.childName || '');
+  if (n !== null) {
+    state.childName = n.trim();
+    save();
+    renderDaySummary();
+  }
 });
 
 /* ============================ ТОСТ ============================ */
@@ -2337,7 +2337,7 @@ function printDayCard(key){
   win.document.close();
 }
 
-/* ============================ СВОДКА ЗА ДЕНЬ ============================ */
+/* ============================ СВОДКА ЗА ДЕНЬ (v2.5, текстом) ============================ */
 function renderDaySummary(){
   const titleEl = document.getElementById('dsTitle');
   const bodyEl  = document.getElementById('dsBody');
@@ -2345,40 +2345,66 @@ function renderDaySummary(){
   const d = parseK(summaryKey);
   const todayKey = keyOf(new Date());
   const isToday = summaryKey === todayKey;
+  
   titleEl.innerHTML = `${isToday ? '<span class="ds-today">сегодня</span>' : ''}${WD_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS_G[d.getMonth()]}`;
 
   const rec = state.days[summaryKey];
   if (!rec || !hasAnyData(rec)){
-    bodyEl.innerHTML = `<div class="ds-empty">Нет отметок за этот день</div>
-      <button class="btn primary ds-open" type="button" data-ds-open>Открыть день →</button>`;
+    bodyEl.innerHTML = `
+      <div class="ds-empty">Нет отметок за этот день</div>
+      <button class="btn primary ds-open" type="button" data-ds-open>Открыть день →</button>
+    `;
     return;
   }
 
-  const statusLabel = rec.status === 'sick' ? 'Болеет' : rec.status === 'ok' ? 'Здоров' : 'Не отмечен';
-  const statusCls   = rec.status === 'sick' ? 'sick' : rec.status === 'ok' ? 'ok' : 'none';
-  const syms = (rec.symptoms || [])
-    .map(id => SYMPTOMS.find(s => s.id === id))
-    .filter(Boolean);
+  const name = state.childName ? `<b>${esc(state.childName)}</b>` : 'ребёнок';
+  
+  let datePrefix = isToday ? 'Сегодня' : fmtDate(summaryKey);
+  
+  const statusLabel = rec.status === 'sick' ? 'болеет' : rec.status === 'ok' ? 'здоров' : '';
+  
+  let locParts = [];
+  if (rec.garden) locParts.push('в садике');
+  if (rec.home) locParts.push('дома');
+  let locStr = locParts.join(' и ');
+  
+  let mainParts = [];
+  if (locStr) mainParts.push(locStr);
+  if (statusLabel) mainParts.push(statusLabel);
+  
+  let sentence = '';
+  if (mainParts.length) {
+     sentence = `<b>${datePrefix}</b> ${name} <b>${mainParts.join(', ')}</b>.`;
+  } else {
+     sentence = `<b>${datePrefix}</b> у ${name} есть отметки.`;
+  }
+  
+  let detailsHtml = '';
+  
+  const syms = (rec.symptoms || []).map(id => SYMPTOMS.find(s => s.id === id)).filter(Boolean);
+  if (syms.length) {
+    detailsHtml += `<div><b>Симптомы:</b> ${syms.map(s => s.label).join(', ')}.</div>`;
+  }
+  
   const temps = rec.temps || [];
-  const maxT = temps.length ? Math.max(...temps.map(t => t.value)) : null;
-  const medCount = (rec.meds || []).length;
-  const diag = rec.diagnosis && rec.diagnosis.trim();
-
-  const facts = [];
-  if (maxT !== null) facts.push(`<span>макс. <b>${fmtT(maxT)}°</b></span>`);
-  if (temps.length) facts.push(`<span><b>${temps.length}</b> ${plural(temps.length, 'замер', 'замера', 'замеров')}</span>`);
-  if (medCount) facts.push(`<span><b>${medCount}</b> ${plural(medCount, 'препарат', 'препарата', 'препаратов')}</span>`);
-  if (diag) facts.push(`<span>диагноз: <b>${esc(diag)}</b></span>`);
+  if (temps.length) {
+     const maxT = Math.max(...temps.map(t => t.value));
+     detailsHtml += `<div><b>Температура:</b> до ${fmtT(maxT)}° (${temps.length} ${plural(temps.length, 'замер', 'замера', 'замеров')}).</div>`;
+  }
+  
+  if (rec.meds && rec.meds.length) {
+     const medsStr = rec.meds.map(m => `${medLabel(m.med)}${m.dose ? ' ' + m.dose : ''} (${m.time})`).join(', ');
+     detailsHtml += `<div><b>Препараты:</b> ${medsStr}.</div>`;
+  }
+  
+  if (rec.diagnosis && rec.diagnosis.trim()) {
+     detailsHtml += `<div><b>Диагноз:</b> ${esc(rec.diagnosis)}.</div>`;
+  }
 
   bodyEl.innerHTML = `
-    <div class="ds-main">
-      <div class="ds-status-line">
-        <span class="ds-status-badge ${statusCls}">${statusLabel}</span>
-        ${rec.garden ? '<span class="ds-mark-badge garden">в саду</span>' : ''}
-        ${rec.home ? '<span class="ds-mark-badge home">дома</span>' : ''}
-      </div>
-      ${syms.length ? `<div class="ds-syms">${syms.map(s => `<span class="pill">${s.label}</span>`).join('')}</div>` : ''}
-      ${facts.length ? `<div class="ds-facts">${facts.join('')}</div>` : ''}
+    <div class="ds-narrative">
+      <p class="ds-sentence">${sentence}</p>
+      ${detailsHtml ? `<div class="ds-details">${detailsHtml}</div>` : ''}
     </div>
     <button class="btn primary ds-open" type="button" data-ds-open>Открыть день →</button>
   `;
@@ -3289,6 +3315,7 @@ fileInput.addEventListener('change', () => {
       if (!data.days || typeof data.days !== 'object') throw new Error('bad file');
       state.days = data.days;
       if (data.theme) state.theme = data.theme;
+      if (data.childName !== undefined) state.childName = data.childName;
       if (data.copyOptions) state.copyOptions = { ...DEFAULT_COPY_OPTIONS, ...data.copyOptions };
       if (data.symptomFilter) state.symptomFilter = data.symptomFilter;
       if (data.chartMode) { state.chartMode = data.chartMode; chartMode = data.chartMode; }
