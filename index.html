@@ -14,7 +14,7 @@
 <title>Адаптация к садику · «Ещё одна галочка»</title>
 <script>
   try {
-    var s = JSON.parse(localStorage.getItem('eog-sad-v2') || '{}');
+    var s = JSON.parse(localStorage.getItem('eog-sad-v3') || '{}');
     if (s.theme) document.documentElement.dataset.theme = s.theme;
     else if (matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.dataset.theme = 'dark';
   } catch (e) {}
@@ -75,6 +75,7 @@ h1,h2,h3{margin:0; line-height:1.15; letter-spacing:-.02em}
 h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03em}
 .mark{background:var(--lime); color:#292724; padding:0 .14em; box-decoration-break:clone; -webkit-box-decoration-break:clone}
 .lead{margin:0; font-size:.9rem; color:var(--muted); line-height:1.45}
+.lead b { color: var(--ink); }
 .hero-meta{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px}
 .meta-pill{
   font-size:.78rem; font-weight:700; padding:5px 11px; border-radius:999px;
@@ -87,7 +88,7 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 
 @media (max-width:520px){
   .hero{padding:14px 16px 14px 20px}
-  .lead{display:none}
+  .lead{font-size:.85rem; margin-bottom:8px;}
 }
 
 .btn{
@@ -778,7 +779,6 @@ footer{ margin-top:24px; border-top:1px solid var(--line); padding-top:14px; }
 footer p{margin:6px 0}
 footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86rem}
 
-/* ===== Сводка за день ===== */
 .day-summary-card{ margin-top:14px; }
 .ds-head{ display:flex; align-items:center; gap:8px; margin-bottom:12px; }
 .ds-title{
@@ -805,7 +805,6 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 .ds-open{ align-self:flex-start; margin-top:4px; }
 @media (max-width:600px){ .ds-open{ align-self:stretch; } }
 
-/* ===== Меню настроек ===== */
 .menu-backdrop{
   position:fixed; inset:0;
   background:rgba(41,39,36,0.32);
@@ -887,6 +886,46 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 .menu-item:hover{ background:var(--bg); border-color:var(--ink); }
 .menu-item-ico{ font-size:1.1rem; }
 
+/* ===== v3: Список детей в меню ===== */
+.menu-children-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.menu-child-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  font-size: .9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.menu-child-item:hover {
+  border-color: var(--ink);
+}
+.menu-child-item.active {
+  background: var(--lime);
+  border-color: var(--ink);
+  color: #292724;
+}
+.menu-child-del {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 2px 6px;
+}
+.menu-child-item.active .menu-child-del {
+  color: #292724;
+}
+
 .hidden{display:none !important}
 </style>
 </head>
@@ -904,7 +943,7 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
     <div class="hero-main">
       <div class="eyebrow">Трекер · «Ещё одна галочка»</div>
       <h1>Адаптация к <span class="mark">садику</span></h1>
-      <p class="lead">Болезни, симптомы, температура, препараты и аналитика.</p>
+      <p class="lead" id="activeChildLabel">Трекер здоровья</p>
       <div class="hero-meta" id="heroMeta"></div>
     </div>
   </header>
@@ -1035,7 +1074,16 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
   </div>
 
   <div class="menu-field">
-    <label class="menu-label" for="menuName">Имя ребёнка</label>
+    <label class="menu-label">Дети</label>
+    <div class="menu-children-list" id="menuChildrenList"></div>
+    <button class="menu-item" id="menuAddChildBtn" type="button" style="padding: 8px 12px; min-height: 38px; font-size: .85rem;">
+      <span class="menu-item-ico">➕</span>
+      <span>Добавить ребёнка</span>
+    </button>
+  </div>
+
+  <div class="menu-field">
+    <label class="menu-label" for="menuName">Имя текущего ребёнка</label>
     <input class="inp" type="text" id="menuName" placeholder="Например, Миша" autocomplete="off" maxlength="20">
     <div class="menu-hint">Показывается в сводке за день</div>
   </div>
@@ -1109,7 +1157,8 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 
 <script>
 /* ============================ ДАННЫЕ ============================ */
-const STORE = 'eog-sad-v2';
+const STORE_V3 = 'eog-sad-v3';
+const STORE_V2 = 'eog-sad-v2';
 
 const SYMPTOMS = [
   {id:'runny',      label:'Жидкие сопли',        cat:'nose'},
@@ -1250,37 +1299,81 @@ function datesBetween(k1, k2){
 /* ============================ СОСТОЯНИЕ ============================ */
 function loadState(){
   try {
-    const raw = localStorage.getItem(STORE);
+    const raw = localStorage.getItem(STORE_V3);
     if (raw){
       const s = JSON.parse(raw);
       return {
+        version: 3,
         theme: s.theme || null,
-        childName: s.childName || '',
-        days: s.days || {},
-        copyOptions: s.copyOptions || null,
-        symptomFilter: s.symptomFilter || 'all',
-        chartMode: s.chartMode || null,
-        chartAnchor: s.chartAnchor || null
+        activeChildId: s.activeChildId,
+        children: s.children || []
       };
     }
+    const raw2 = localStorage.getItem(STORE_V2);
+    if (raw2){
+      const s2 = JSON.parse(raw2);
+      const childId = 'child_' + uid();
+      const v3 = {
+        version: 3,
+        theme: s2.theme || null,
+        activeChildId: childId,
+        children: [{
+          id: childId,
+          name: s2.childName || '',
+          days: s2.days || {},
+          copyOptions: s2.copyOptions || null,
+          symptomFilter: s2.symptomFilter || 'all',
+          chartMode: s2.chartMode || null,
+          chartAnchor: s2.chartAnchor || null
+        }]
+      };
+      localStorage.setItem(STORE_V3, JSON.stringify(v3));
+      return v3;
+    }
   } catch(e){}
-  return { theme:null, childName:'', days:{}, copyOptions:null, symptomFilter:'all', chartMode:null, chartAnchor:null };
+  const childId = 'child_' + uid();
+  return {
+    version: 3,
+    theme: null,
+    activeChildId: childId,
+    children: [{
+      id: childId,
+      name: '',
+      days: {},
+      copyOptions: null,
+      symptomFilter: 'all',
+      chartMode: null,
+      chartAnchor: null
+    }]
+  };
 }
 
 const state = loadState();
 if (!state.theme) state.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-if (!state.copyOptions) state.copyOptions = { ...DEFAULT_COPY_OPTIONS };
-if (!state.symptomFilter) state.symptomFilter = 'all';
-if (!state.chartAnchor) state.chartAnchor = keyOf(new Date());
 
-function save(){ try { localStorage.setItem(STORE, JSON.stringify(state)); } catch(e){} }
+function getActiveChild() {
+  if (!state.children || !state.children.length) {
+    const id = 'child_' + uid();
+    state.children = [{ id, name: '', days: {}, copyOptions: { ...DEFAULT_COPY_OPTIONS }, symptomFilter: 'all', chartMode: 'month', chartAnchor: keyOf(new Date()) }];
+    state.activeChildId = id;
+  }
+  let child = state.children.find(c => c.id === state.activeChildId);
+  if (!child) {
+    child = state.children[0];
+    state.activeChildId = child.id;
+  }
+  return child;
+}
+
+function save(){ try { localStorage.setItem(STORE_V3, JSON.stringify(state)); } catch(e){} }
 
 function getDay(k, create){
-  if (!state.days[k]){
+  const days = getActiveChild().days;
+  if (!days[k]){
     if (!create) return null;
-    state.days[k] = {status:null, symptoms:[], temps:[], meds:[], note:'', diagnosis:'', garden:false, home:false};
+    days[k] = {status:null, symptoms:[], temps:[], meds:[], note:'', diagnosis:'', garden:false, home:false};
   }
-  const r = state.days[k];
+  const r = days[k];
   r.symptoms  = r.symptoms  || [];
   r.temps     = r.temps     || [];
   r.meds      = r.meds      || [];
@@ -1292,7 +1385,8 @@ function getDay(k, create){
 }
 
 function prune(k){
-  const r = state.days[k];
+  const days = getActiveChild().days;
+  const r = days[k];
   if (!r) return;
   const empty = !r.status &&
     !(r.symptoms && r.symptoms.length) &&
@@ -1302,12 +1396,13 @@ function prune(k){
     !(r.diagnosis && r.diagnosis.trim()) &&
     !r.garden &&
     !r.home;
-  if (empty) delete state.days[k];
+  if (empty) delete days[k];
 }
 
 function allDiagnoses(){
+  const days = getActiveChild().days;
   const s = new Set();
-  Object.values(state.days).forEach(r => {
+  Object.values(days).forEach(r => {
     if (r.diagnosis && r.diagnosis.trim()) s.add(r.diagnosis.trim());
   });
   return [...s].sort();
@@ -1327,8 +1422,9 @@ function hasAnyData(r){
 }
 
 function getTopSymptoms(count){
+  const days = getActiveChild().days;
   const freq = {};
-  Object.values(state.days).forEach(r => {
+  Object.values(days).forEach(r => {
     (r.symptoms || []).forEach(id => freq[id] = (freq[id] || 0) + 1);
   });
   return SYMPTOMS
@@ -1398,11 +1494,19 @@ let currentPeriod = 'month';
 let viewMode = 'month';
 let weekAnchor = keyOf(now0);
 let symptomsExpanded = false;
-let chartMode = state.chartMode || 'month';
+let chartMode = getActiveChild().chartMode || 'month';
 
 /* ============================ ТЕМА ============================ */
 function applyTheme(){
   document.documentElement.dataset.theme = state.theme;
+}
+
+function updateHeaderChild() {
+  const child = getActiveChild();
+  const label = document.getElementById('activeChildLabel');
+  if (label) {
+    label.innerHTML = `Трекер здоровья <b>${esc(child.name || 'Без имени')}</b>`;
+  }
 }
 
 /* ============================ МЕНЮ ============================ */
@@ -1414,6 +1518,8 @@ const menuNameInput   = document.getElementById('menuName');
 const menuThemeToggle = document.getElementById('menuThemeToggle');
 const menuThemeIcon   = document.getElementById('menuThemeIcon');
 const menuThemeLabel  = document.getElementById('menuThemeLabel');
+const menuChildrenList = document.getElementById('menuChildrenList');
+const menuAddChildBtn = document.getElementById('menuAddChildBtn');
 
 function updateMenuThemeLabel(){
   if (state.theme === 'dark'){
@@ -1424,6 +1530,62 @@ function updateMenuThemeLabel(){
     menuThemeLabel.textContent = 'Тёмная тема';
   }
 }
+
+function renderMenuChildren() {
+  menuChildrenList.innerHTML = state.children.map(child => `
+    <div class="menu-child-item ${child.id === state.activeChildId ? 'active' : ''}" data-id="${child.id}">
+      <span class="menu-child-name">${esc(child.name) || 'Без имени'}</span>
+      ${state.children.length > 1 ? `<button class="menu-child-del" data-id="${child.id}">✕</button>` : ''}
+    </div>
+  `).join('');
+}
+
+menuChildrenList.addEventListener('click', e => {
+  const delBtn = e.target.closest('.menu-child-del');
+  if (delBtn) {
+    e.stopPropagation();
+    const id = delBtn.dataset.id;
+    if (!confirm('Удалить профиль этого ребёнка? Данные будут потеряны.')) return;
+    state.children = state.children.filter(c => c.id !== id);
+    if (state.activeChildId === id) {
+      state.activeChildId = state.children[0].id;
+    }
+    save();
+    render();
+    renderMenuChildren();
+    menuNameInput.value = getActiveChild().name || '';
+    return;
+  }
+  const item = e.target.closest('.menu-child-item');
+  if (item) {
+    state.activeChildId = item.dataset.id;
+    save();
+    render();
+    renderMenuChildren();
+    menuNameInput.value = getActiveChild().name || '';
+  }
+});
+
+menuAddChildBtn.addEventListener('click', () => {
+  const name = prompt('Как зовут нового ребёнка?');
+  if (!name || !name.trim()) return;
+  const newId = 'child_' + uid();
+  state.children.push({
+    id: newId,
+    name: name.trim(),
+    days: {},
+    copyOptions: { ...DEFAULT_COPY_OPTIONS },
+    symptomFilter: 'all',
+    chartMode: 'month',
+    chartAnchor: keyOf(new Date())
+  });
+  state.activeChildId = newId;
+  save();
+  render();
+  renderMenuChildren();
+  menuNameInput.value = name.trim();
+});
+
 function openMenu(){
   const rect = menuBtn.getBoundingClientRect();
   const menuWidth = Math.min(300, window.innerWidth - 24);
@@ -1433,8 +1595,9 @@ function openMenu(){
   );
   menuPanel.style.top  = (rect.bottom + 8) + 'px';
   menuPanel.style.left = leftPos + 'px';
-  menuNameInput.value = state.childName || '';
+  menuNameInput.value = getActiveChild().name || '';
   updateMenuThemeLabel();
+  renderMenuChildren();
   menuPanel.classList.add('show');
   menuBackdrop.classList.add('show');
   menuBtn.setAttribute('aria-expanded', 'true');
@@ -1456,9 +1619,11 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && menuPanel.classList.contains('show')) closeMenu();
 });
 menuNameInput.addEventListener('input', e => {
-  state.childName = e.target.value.trim();
+  getActiveChild().name = e.target.value.trim();
   save();
+  updateHeaderChild();
   renderDaySummary();
+  renderMenuChildren();
 });
 menuThemeToggle.addEventListener('click', () => {
   state.theme = state.theme === 'dark' ? 'light' : 'dark';
@@ -1466,6 +1631,21 @@ menuThemeToggle.addEventListener('click', () => {
   applyTheme();
   updateMenuThemeLabel();
 });
+
+function switchChild(dir) {
+  if (state.children.length < 2) return;
+  const idx = state.children.findIndex(c => c.id === state.activeChildId);
+  if (idx === -1) return;
+  const nextIdx = (idx + dir + state.children.length) % state.children.length;
+  state.activeChildId = state.children[nextIdx].id;
+  save();
+  render();
+  if (menuPanel.classList.contains('show')) {
+    renderMenuChildren();
+    menuNameInput.value = getActiveChild().name || '';
+  }
+  toast(`Профиль: ${getActiveChild().name || 'Без имени'}`);
+}
 
 /* ============================ ТОСТ ============================ */
 let toastTimer = null;
@@ -1521,7 +1701,8 @@ function conflictFields(dst, options){
 function copyDayDataToKeys(fromKey, targetKeys, options){
   const targets = (targetKeys || []).filter(k => k && k !== fromKey);
   if (!targets.length) return;
-  const src = state.days[fromKey];
+  const days = getActiveChild().days;
+  const src = days[fromKey];
   if (!hasAnyData(src)){ toast('В этом дне нет данных для копирования'); return; }
   const opts = options || state.copyOptions || defaultCopyOptions();
   const keys = Object.keys(opts).filter(k => opts[k]);
@@ -1529,7 +1710,7 @@ function copyDayDataToKeys(fromKey, targetKeys, options){
 
   const conflictsList = [];
   targets.forEach(tk => {
-    const c = conflictFields(state.days[tk], opts);
+    const c = conflictFields(days[tk], opts);
     if (c.length) conflictsList.push({ key: tk, conflicts: c });
   });
   if (conflictsList.length){
@@ -1541,11 +1722,11 @@ function copyDayDataToKeys(fromKey, targetKeys, options){
 
   const prevStates = targets.map(tk => ({
     key: tk,
-    data: state.days[tk] ? JSON.parse(JSON.stringify(state.days[tk])) : null
+    data: days[tk] ? JSON.parse(JSON.stringify(days[tk])) : null
   }));
 
   targets.forEach(tk => {
-    const dst = state.days[tk];
+    const dst = days[tk];
     const base = dst
       ? JSON.parse(JSON.stringify(dst))
       : { status:null, symptoms:[], temps:[], meds:[], note:'', diagnosis:'', garden:false, home:false };
@@ -1560,8 +1741,8 @@ function copyDayDataToKeys(fromKey, targetKeys, options){
     if (opts.meds)      base.meds      = (src.meds || []).map(m => ({...m, id: uid()}));
     if (opts.note)      base.note      = src.note || '';
 
-    if (hasAnyData(base)) state.days[tk] = base;
-    else delete state.days[tk];
+    if (hasAnyData(base)) days[tk] = base;
+    else delete days[tk];
   });
 
   lastCopyUndo = { prevStates };
@@ -1576,10 +1757,11 @@ function copyDayData(fromKey, toKey, options){ copyDayDataToKeys(fromKey, [toKey
 
 function undoLastCopy(){
   if (!lastCopyUndo) return;
+  const days = getActiveChild().days;
   if (lastCopyUndo.prevStates){
     lastCopyUndo.prevStates.forEach(({ key, data }) => {
-      if (data === null) delete state.days[key];
-      else state.days[key] = data;
+      if (data === null) delete days[key];
+      else days[key] = data;
     });
   }
   lastCopyUndo = null;
@@ -1591,11 +1773,11 @@ function undoLastCopy(){
 let copyOptsSourceKey = null;
 function showCopyOptionsDialog(fromKey){
   if (!fromKey) return;
-  if (!hasAnyData(state.days[fromKey])){ toast('В этом дне нет данных для копирования'); return; }
+  if (!hasAnyData(getActiveChild().days[fromKey])){ toast('В этом дне нет данных для копирования'); return; }
   copyOptsSourceKey = fromKey;
   const d = parseK(fromKey);
   document.getElementById('copyOptsDate').textContent = `${d.getDate()} ${MONTHS_G[d.getMonth()]}`;
-  const opts = state.copyOptions || defaultCopyOptions();
+  const opts = getActiveChild().copyOptions || defaultCopyOptions();
   document.querySelectorAll('#copyOpts input[data-key]').forEach(cb => {
     cb.checked = !!opts[cb.dataset.key];
   });
@@ -1625,7 +1807,7 @@ document.getElementById('copyOptsNext').addEventListener('click', () => {
     opts[cb.dataset.key] = cb.checked;
   });
   if (!Object.values(opts).some(v => v)){ toast('Выбери хотя бы один параметр'); return; }
-  state.copyOptions = { ...DEFAULT_COPY_OPTIONS, ...opts };
+  getActiveChild().copyOptions = { ...DEFAULT_COPY_OPTIONS, ...opts };
   save();
   hideCopyOptionsDialog();
   closeSheet();
@@ -1684,11 +1866,12 @@ function renderCalendar(){
   const offset   = (new Date(y, m, 1).getDay() + 6) % 7;
   const total    = new Date(y, m+1, 0).getDate();
   const todayKey = keyOf(new Date());
+  const days = getActiveChild().days;
   let html = '';
   for (let i = 0; i < offset; i++) html += '<div class="day blank"></div>';
   for (let d = 1; d <= total; d++){
     const k    = `${y}-${pad(m+1)}-${pad(d)}`;
-    const rec  = state.days[k];
+    const rec  = days[k];
     const cats = rec ? dayCats(rec) : [];
     const temps = rec && rec.temps && rec.temps.length ? rec.temps.map(t => t.value) : [];
     const maxT = temps.length ? Math.max(...temps) : null;
@@ -1723,12 +1906,13 @@ function renderWeekView(){
   monthTitle.textContent =
     `${monday.getDate()} ${MONTHS_G_SHORT[monday.getMonth()]} — ${sunday.getDate()} ${MONTHS_G_SHORT[sunday.getMonth()]} ${sunday.getFullYear()}`;
   const todayKey = keyOf(new Date());
+  const days = getActiveChild().days;
   let html = '';
   for (let i = 0; i < 7; i++){
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     const k = keyOf(d);
-    const rec = state.days[k];
+    const rec = days[k];
     const temps = rec && rec.temps ? rec.temps.map(t => t.value) : [];
     const maxT = temps.length ? Math.max(...temps) : null;
     const status = rec ? rec.status : null;
@@ -1908,7 +2092,7 @@ function onDayPointerUp(e){
     const targets = range.filter(k => k !== fromKey);
     endDrag();
     if (targets.length > 0){
-      copyDayDataToKeys(fromKey, targets, state.copyOptions || defaultCopyOptions());
+      copyDayDataToKeys(fromKey, targets, getActiveChild().copyOptions || defaultCopyOptions());
     } else {
       toast('Отменено');
     }
@@ -1940,9 +2124,10 @@ daysEl.addEventListener('pointercancel', onDayPointerCancel);
 daysEl.addEventListener('contextmenu', e => e.preventDefault());
 
 /* ============================ СВАЙП ============================ */
-function makeSwipeable(el, onSwipeLeft, onSwipeRight){
+function makeSwipeable(el, onSwipeLeft, onSwipeRight, ignoreSelector){
   let track = null;
   el.addEventListener('pointerdown', e => {
+    if (ignoreSelector && e.target.closest(ignoreSelector)) return;
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     track = { x: e.clientX, y: e.clientY, id: e.pointerId, moved: false, horizontal: false };
   });
@@ -1975,6 +2160,7 @@ function makeSwipeable(el, onSwipeLeft, onSwipeRight){
 
 makeSwipeable(daysWrap, () => shiftPeriod(1, 'right'), () => shiftPeriod(-1, 'left'));
 makeSwipeable(weekDaysWrap, () => shiftPeriod(1, 'right'), () => shiftPeriod(-1, 'left'));
+makeSwipeable(document.querySelector('main'), () => switchChild(1), () => switchChild(-1), '.days-wrap, #weekDaysWrap, .chart-box, .menu-panel, .copy-opts-backdrop, .pdf-custom, .menu-backdrop');
 
 function shiftPeriod(dir, slideFrom){
   if (viewMode === 'month'){
@@ -2010,9 +2196,10 @@ function renderTempChart(){
   chartMonth.textContent = MONTHS[m] + ' ' + y;
   const points = [];
   const sickDays = new Set();
+  const days = getActiveChild().days;
   for (let d = 1; d <= total; d++){
     const k = `${y}-${pad(m+1)}-${pad(d)}`;
-    const rec = state.days[k];
+    const rec = days[k];
     if (!rec) continue;
     if (rec.status === 'sick') sickDays.add(d);
     (rec.temps || []).forEach(t => {
@@ -2080,7 +2267,7 @@ function renderTempChart(){
 /* ============================ ДОЗА ============================ */
 function todayDoseInfo(){
   const k = keyOf(new Date());
-  const rec = state.days[k];
+  const rec = getActiveChild().days[k];
   if (!rec || !rec.temps || !rec.temps.length) return null;
   const list = rec.temps.filter(t => medInterval(t.med) > 0).slice().sort((a,b) => a.time.localeCompare(b.time));
   if (!list.length) return null;
@@ -2174,7 +2361,8 @@ function renderPanel(){
   }
   const k    = selected;
   const d    = parseK(k);
-  const rec  = state.days[k] || {};
+  const days = getActiveChild().days;
+  const rec  = days[k] || {};
   const status = rec.status || '';
   const syms   = rec.symptoms || [];
   const temps  = (rec.temps || []).slice().sort((a,b) => a.time.localeCompare(b.time));
@@ -2325,7 +2513,7 @@ panelEl.addEventListener('click', e => {
   }
   if (act === 'clear'){
     if (confirm('Очистить все отметки за этот день?')){
-      delete state.days[selected];
+      delete getActiveChild().days[selected];
       commit();
     }
   }
@@ -2419,7 +2607,7 @@ setInterval(() => {
   renderDoseBar();
   const el = document.getElementById('nextdose');
   if (el && selected){
-    const rec = state.days[selected];
+    const rec = getActiveChild().days[selected];
     if (rec && rec.temps && rec.temps.length){
       const temps = rec.temps.slice().sort((a,b) => a.time.localeCompare(b.time));
       const html = nextDoseHtml(temps, selected);
@@ -2431,7 +2619,7 @@ setInterval(() => {
 
 /* ============================ ПЕЧАТЬ КАРТОЧКИ ДНЯ ============================ */
 function printDayCard(key){
-  const rec = state.days[key];
+  const rec = getActiveChild().days[key];
   if (!rec || !hasAnyData(rec)){ toast('В этом дне нет данных для печати'); return; }
   const d = parseK(key);
   const dateStr = `${WD_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS_G[d.getMonth()]} ${d.getFullYear()}`;
@@ -2568,7 +2756,7 @@ function renderDaySummary(){
 
   titleEl.innerHTML = `${isToday ? '<span class="ds-today">сегодня</span>' : ''}${WD_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS_G[d.getMonth()]}`;
 
-  const rec = state.days[summaryKey];
+  const rec = getActiveChild().days[summaryKey];
   if (!rec || !hasAnyData(rec)){
     bodyEl.innerHTML = `
       <div class="ds-empty">Нет отметок за этот день</div>
@@ -2577,7 +2765,7 @@ function renderDaySummary(){
     return;
   }
 
-  const name = state.childName ? `<b>${esc(state.childName)}</b>` : 'ребёнок';
+  const name = getActiveChild().name ? `<b>${esc(getActiveChild().name)}</b>` : 'ребёнок';
 
   let datePrefix = isToday ? 'Сегодня' : fmtDate(summaryKey);
 
@@ -2656,9 +2844,10 @@ function renderStats(){
   const total = new Date(y, m+1, 0).getDate();
   let sick = 0, healthy = 0, garden = 0, feverDays = 0, maxT = 0, entries = 0, medsCount = 0;
   const sym = {};
+  const days = getActiveChild().days;
   for (let d = 1; d <= total; d++){
     const k = `${y}-${pad(m+1)}-${pad(d)}`;
-    const r = state.days[k];
+    const r = days[k];
     if (!r) continue;
     if (r.status === 'sick') sick++;
     if (r.status === 'ok') healthy++;
@@ -2707,9 +2896,10 @@ function updateHeroMeta(){
   const { y, m } = view;
   const total = new Date(y, m+1, 0).getDate();
   let sick = 0, garden = 0;
+  const days = getActiveChild().days;
   for (let d = 1; d <= total; d++){
     const k = `${y}-${pad(m+1)}-${pad(d)}`;
-    const r = state.days[k];
+    const r = days[k];
     if (!r) continue;
     if (r.status === 'sick') sick++;
     if (r.garden) garden++;
@@ -2785,8 +2975,8 @@ function renderSymptomBars(list, color, maxItems){
 /* ============================ ГРАФИК БОЛЕЗНЕЙ ============================ */
 function computeSickDaysSeries(mode){
   const labels = [], values = [];
-  const days = state.days;
-  const anchor = safeParseK(state.chartAnchor || keyOf(new Date()));
+  const days = getActiveChild().days;
+  const anchor = safeParseK(getActiveChild().chartAnchor || keyOf(new Date()));
 
   if (mode === 'week'){
     const dow = (anchor.getDay() + 6) % 7;
@@ -2833,7 +3023,7 @@ function computeSickDaysSeries(mode){
 }
 
 function chartTitle(mode){
-  const anchor = safeParseK(state.chartAnchor || keyOf(new Date()));
+  const anchor = safeParseK(getActiveChild().chartAnchor || keyOf(new Date()));
   if (mode === 'week'){
     const dow = (anchor.getDay() + 6) % 7;
     const monday = new Date(anchor);
@@ -2856,21 +3046,22 @@ function chartSubtitle(mode){
 }
 
 function shiftChart(dir){
-  const anchor = safeParseK(state.chartAnchor || keyOf(new Date()));
+  const anchor = safeParseK(getActiveChild().chartAnchor || keyOf(new Date()));
   if (chartMode === 'week') anchor.setDate(anchor.getDate() + 7 * dir);
   else if (chartMode === 'month') anchor.setMonth(anchor.getMonth() + dir);
   else anchor.setFullYear(anchor.getFullYear() + dir);
-  state.chartAnchor = keyOf(anchor);
+  getActiveChild().chartAnchor = keyOf(anchor);
   save();
   renderAnalytics();
 }
 
 /* ============================ АНАЛИТИКА ============================ */
 function filterSymptomList(list){
-  if (state.symptomFilter === 'all') return list;
+  const filter = getActiveChild().symptomFilter || 'all';
+  if (filter === 'all') return list;
   return list.filter(([id]) => {
     const s = SYMPTOMS.find(x => x.id === id);
-    return s && s.cat === state.symptomFilter;
+    return s && s.cat === filter;
   });
 }
 
@@ -2896,7 +3087,7 @@ function buildChartViewToggle(containerEl){
   containerEl.querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', () => {
       chartMode = btn.dataset.m;
-      state.chartMode = chartMode;
+      getActiveChild().chartMode = chartMode;
       save();
       renderAnalytics();
     });
@@ -2922,15 +3113,16 @@ function renderAnalytics(){
     endK   = `${view.y}-12-31`;
     label  = String(view.y);
   } else {
-    const keys = Object.keys(state.days).sort();
+    const keys = Object.keys(getActiveChild().days).sort();
     startK = keys[0] || keyOf(new Date());
     endK   = keys[keys.length-1] || keyOf(new Date());
     label  = 'Всё время';
   }
 
   const filtered = {};
-  Object.keys(state.days).forEach(k => {
-    if (k >= startK && k <= endK) filtered[k] = state.days[k];
+  const days = getActiveChild().days;
+  Object.keys(days).forEach(k => {
+    if (k >= startK && k <= endK) filtered[k] = days[k];
   });
 
   const episodes = getEpisodes(filtered);
@@ -3013,8 +3205,8 @@ function renderAnalytics(){
   `;
 
   const symFilterEl = document.getElementById('symFilter');
-  buildSymFilterChips(symFilterEl, state.symptomFilter, cat => {
-    state.symptomFilter = cat;
+  buildSymFilterChips(symFilterEl, getActiveChild().symptomFilter || 'all', cat => {
+    getActiveChild().symptomFilter = cat;
     save();
     renderAnalytics();
   });
@@ -3024,7 +3216,7 @@ function renderAnalytics(){
 
 /* ============================ PDF ЭКСПОРТ ============================ */
 let pdfPeriodMode = 'month';
-let pdfSymptomFilter = state.symptomFilter;
+let pdfSymptomFilter = 'all';
 let pdfOptions = { ...DEFAULT_PDF_OPTIONS };
 
 function openPdfOpts(){
@@ -3042,7 +3234,7 @@ function openPdfOpts(){
   document.querySelectorAll('#pdfOpts input[data-pdf]').forEach(cb => {
     cb.checked = !!pdfOptions[cb.dataset.pdf];
   });
-  pdfSymptomFilter = state.symptomFilter;
+  pdfSymptomFilter = getActiveChild().symptomFilter || 'all';
   const pdfSymFilterEl = document.getElementById('pdfSymFilter');
   buildSymFilterChips(pdfSymFilterEl, pdfSymptomFilter, cat => { pdfSymptomFilter = cat; });
   pdfOptsModal.classList.add('show');
@@ -3086,7 +3278,7 @@ document.getElementById('pdfGenerate').addEventListener('click', () => {
     endK   = `${view.y}-12-31`;
     label  = String(view.y);
   } else if (pdfPeriodMode === 'all'){
-    const keys = Object.keys(state.days).sort();
+    const keys = Object.keys(getActiveChild().days).sort();
     startK = keys[0] || keyOf(new Date());
     endK   = keys[keys.length-1] || keyOf(new Date());
     label  = 'Всё время';
@@ -3104,8 +3296,9 @@ document.getElementById('pdfGenerate').addEventListener('click', () => {
 
 function generatePdf(startK, endK, periodLabel){
   const filtered = {};
-  Object.keys(state.days).forEach(k => {
-    if (k >= startK && k <= endK) filtered[k] = state.days[k];
+  const days = getActiveChild().days;
+  Object.keys(days).forEach(k => {
+    if (k >= startK && k <= endK) filtered[k] = days[k];
   });
 
   const episodes = getEpisodes(filtered);
@@ -3195,7 +3388,7 @@ function generatePdf(startK, endK, periodLabel){
   parts.push(`
     <header class="pdf-header">
       <div class="pdf-brand">«Ещё одна галочка»</div>
-      <h1>Адаптация к садику</h1>
+      <h1>Адаптация к садику · ${esc(getActiveChild().name || 'Без имени')}</h1>
       <p class="pdf-sub">Период: <strong>${periodLabel}</strong> · сформировано ${new Date().toLocaleDateString('ru-RU')}</p>
     </header>
   `);
@@ -3399,6 +3592,7 @@ ${parts.join('')}
 /* ============================ ОБЩИЙ РЕНДЕР ============================ */
 function render(){
   applyTheme();
+  updateHeaderChild();
   if (viewMode === 'month') renderCalendar();
   else renderWeekView();
   renderDoseBar();
@@ -3466,7 +3660,7 @@ document.querySelectorAll('.period-seg button').forEach(btn => {
     if (currentPeriod === 'month') chartMode = 'month';
     else if (currentPeriod === 'year') chartMode = 'year';
     else chartMode = 'year';
-    state.chartMode = chartMode;
+    getActiveChild().chartMode = chartMode;
     save();
     renderAnalytics();
   });
@@ -3507,7 +3701,7 @@ document.getElementById('todayBtn').addEventListener('click', () => {
   selected = keyOf(n);
   weekAnchor = selected;
   summaryKey = selected;
-  state.chartAnchor = selected;
+  getActiveChild().chartAnchor = selected;
   save();
   render();
   switchView('cal');
@@ -3534,17 +3728,33 @@ fileInput.addEventListener('change', () => {
   reader.onload = () => {
     try {
       const data = JSON.parse(reader.result);
-      if (!data.days || typeof data.days !== 'object') throw new Error('bad file');
-      state.days = data.days;
-      if (data.theme) state.theme = data.theme;
-      if (data.childName !== undefined) state.childName = data.childName;
-      if (data.copyOptions) state.copyOptions = { ...DEFAULT_COPY_OPTIONS, ...data.copyOptions };
-      if (data.symptomFilter) state.symptomFilter = data.symptomFilter;
-      if (data.chartMode) { state.chartMode = data.chartMode; chartMode = data.chartMode; }
-      if (data.chartAnchor) state.chartAnchor = data.chartAnchor;
-      save();
-      render();
-      alert('Данные импортированы.');
+      if (data.version === 3 && data.children) {
+        state = data;
+        if (!state.activeChildId || !state.children.find(c => c.id === state.activeChildId)) {
+          state.activeChildId = state.children[0]?.id;
+        }
+        if (state.theme) applyTheme();
+        save();
+        render();
+        renderMenuChildren();
+        closeMenu();
+        alert('Данные импортированы (все профили).');
+      } else if (data.days && typeof data.days === 'object') {
+        getActiveChild().days = data.days;
+        if (data.theme) state.theme = data.theme;
+        if (data.childName) getActiveChild().name = data.childName;
+        if (data.copyOptions) getActiveChild().copyOptions = { ...DEFAULT_COPY_OPTIONS, ...data.copyOptions };
+        if (data.symptomFilter) getActiveChild().symptomFilter = data.symptomFilter;
+        if (data.chartMode) { getActiveChild().chartMode = data.chartMode; chartMode = data.chartMode; }
+        if (data.chartAnchor) getActiveChild().chartAnchor = data.chartAnchor;
+        save();
+        render();
+        renderMenuChildren();
+        closeMenu();
+        alert('Данные импортированы в текущий профиль.');
+      } else {
+        throw new Error('bad file');
+      }
     } catch(e){
       alert('Не получилось прочитать файл.');
     }
@@ -3553,8 +3763,8 @@ fileInput.addEventListener('change', () => {
   reader.readAsText(f);
 });
 document.getElementById('resetBtn').addEventListener('click', () => {
-  if (!confirm('Удалить все отметки безвозвратно?')) return;
-  state.days = {};
+  if (!confirm('Удалить все отметки текущего ребёнка безвозвратно?')) return;
+  getActiveChild().days = {};
   save();
   render();
 });
