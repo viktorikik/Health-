@@ -1,3 +1,11 @@
+Согласен, сейчас кнопка «Сегодня» занимает целую строку в шапке, а гамбургер висит отдельно. Перенести их — отличная идея.
+
+Я сделал следующее:
+1. **Гамбургер** теперь позиционируется абсолютно в правом верхнем углу карточки-шапки. Он аккуратный, не перекрывает заголовок (добавил отступ справа).
+2. **«Сегодня»** переехала в блок календаря. Теперь она находится прямо под названием месяца («Октябрь 2026»), стала компактной пилюлей и не растягивается на пол-экрана.
+3. Заодно немного поправил выравнивание стрелок `←` и `→`, чтобы они стояли ровно относительно месяца и новой кнопки.
+
+```html
 <!doctype html>
 <html lang="ru" data-theme="light">
 <head>
@@ -70,7 +78,7 @@ h1,h2,h3{margin:0; line-height:1.15; letter-spacing:-.02em}
   box-shadow: var(--shadow);
 }
 .hero::before{content:''; position:absolute; left:0; top:0; bottom:0; width:6px; background:var(--lime);}
-.hero-main{min-width:0; flex:1 1 240px}
+.hero-main{min-width:0; flex:1 1 240px; padding-right:44px;}
 .eyebrow{text-transform:uppercase; letter-spacing:.14em; font-size:.66rem; font-weight:800; color:var(--muted)}
 h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03em}
 .mark{background:var(--lime); color:#292724; padding:0 .14em; box-decoration-break:clone; -webkit-box-decoration-break:clone}
@@ -84,12 +92,10 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 .meta-pill.meta-coral{ background:#F2769120; color:var(--ink); border:1px solid #F2769166; }
 .meta-pill.meta-sage{ background:#687B5922; color:var(--ink); border:1px solid #687B5966; }
 .meta-pill.meta-muted{ background:var(--bg); color:var(--muted); border:1px solid var(--line); }
-.hero-actions{display:flex; gap:6px; flex-wrap:wrap; align-items:center}
+
 @media (max-width:520px){
   .hero{padding:14px 16px 14px 20px}
   .lead{display:none}
-  .hero-actions{width:100%}
-  .hero-actions .btn{flex:1}
 }
 
 .btn{
@@ -106,7 +112,11 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 
 /* ===== v2.6: кнопка-гамбургер ===== */
 .menu-btn{
-  width:42px; height:42px; flex:none;
+  position:absolute;
+  top:14px;
+  right:14px;
+  width:38px;
+  height:38px;
   border-radius:50%;
   border:1.5px solid var(--ink);
   background:var(--surface);
@@ -116,13 +126,14 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
   padding:0;
   touch-action:manipulation;
   transition:background .15s, color .15s, transform .1s;
+  z-index:10;
 }
 .menu-btn:hover{background:var(--lime); color:#292724; transform:translateY(-1px);}
 .menu-btn:active{transform:translateY(0) scale(.94);}
 .menu-btn svg{display:block;}
 
 .navbtn{
-  width:42px; height:42px; border-radius:50%; display:grid; place-items:center;
+  width:42px; height:42px; border-radius:50%; display:grid; place-items:center; flex:none;
   border:1.5px solid var(--line); background:var(--surface); color:var(--ink);
   cursor:pointer; font-size:1.05rem; line-height:1; transition:background .15s, transform .1s;
   touch-action:manipulation;
@@ -168,10 +179,48 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
   border-radius:20px; padding:var(--pad); box-shadow: var(--shadow);
 }
 
-.cal-head{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px}
+/* ===== Обновленный cal-head с кнопкой Сегодня ===== */
+.cal-head{
+  display:flex; 
+  align-items:flex-start; 
+  justify-content:space-between; 
+  gap:8px; 
+  margin-bottom:12px;
+}
+.cal-title-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+}
 .cal-title{
   font-weight:800; font-size:1.08rem; letter-spacing:-.02em;
-  text-transform:capitalize; flex:1; text-align:center;
+  text-transform:capitalize; text-align:center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  width: 100%;
+}
+.today-btn {
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  min-height: 26px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all .15s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.today-btn:hover {
+  background: var(--lime);
+  color: #292724;
+  border-color: var(--ink);
 }
 
 .view-toggle{
@@ -855,21 +904,18 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 <main>
 
   <header class="hero">
+    <button class="menu-btn" id="menuBtn" type="button" aria-label="Настройки" aria-expanded="false" aria-controls="menuPanel">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="2" y1="5" x2="16" y2="5"/>
+        <line x1="2" y1="9" x2="16" y2="9"/>
+        <line x1="2" y1="13" x2="16" y2="13"/>
+      </svg>
+    </button>
     <div class="hero-main">
       <div class="eyebrow">Трекер · «Ещё одна галочка»</div>
       <h1>Адаптация к <span class="mark">садику</span></h1>
       <p class="lead">Болезни, симптомы, температура, препараты и аналитика.</p>
       <div class="hero-meta" id="heroMeta"></div>
-    </div>
-    <div class="hero-actions">
-      <button class="btn" id="todayBtn" type="button">Сегодня</button>
-      <button class="menu-btn" id="menuBtn" type="button" aria-label="Настройки" aria-expanded="false" aria-controls="menuPanel">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <line x1="2" y1="5" x2="16" y2="5"/>
-          <line x1="2" y1="9" x2="16" y2="9"/>
-          <line x1="2" y1="13" x2="16" y2="13"/>
-        </svg>
-      </button>
     </div>
   </header>
 
@@ -883,7 +929,10 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
       <section class="card">
         <div class="cal-head">
           <button class="navbtn" id="prevBtn" type="button" aria-label="Предыдущий период">←</button>
-          <div class="cal-title" id="monthTitle">—</div>
+          <div class="cal-title-group">
+            <div class="cal-title" id="monthTitle">—</div>
+            <button class="today-btn" id="todayBtn" type="button">Сегодня</button>
+          </div>
           <button class="navbtn" id="nextBtn" type="button" aria-label="Следующий период">→</button>
         </div>
 
