@@ -642,6 +642,12 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
   padding:2px 7px; border-radius:999px; border:1px solid var(--line); color:var(--muted);
 }
 .course-badge.active{ background:var(--ok-bg); border-color:var(--ok-line); color:var(--ink); }
+.course-cat-badge{
+  display:inline-block; font-size:.62rem; font-weight:800; letter-spacing:.03em;
+  padding:2px 7px; border-radius:999px;
+  background:var(--surface); color:var(--muted); border:1px solid var(--line);
+  white-space:nowrap;
+}
 .course-item-meta{ font-size:.78rem; color:var(--muted); margin-top:3px; line-height:1.4; }
 .course-item-actions{ display:flex; gap:4px; flex:none; }
 
@@ -1215,19 +1221,10 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
     <input type="hidden" id="courseFormId">
 
     <div class="section-label" style="margin-top:0">Название</div>
-    <input class="inp" id="courseName" list="courseNamesList" placeholder="Например, Витамин D" autocomplete="off">
-    <datalist id="courseNamesList">
-      <option value="Витамин D">
-      <option value="Витамин C">
-      <option value="Мультивитамины">
-      <option value="Омега-3">
-      <option value="Пробиотик">
-      <option value="Антибиотик">
-      <option value="Противовирусное">
-      <option value="Железо">
-      <option value="Магний B6">
-      <option value="Кальций">
-    </datalist>
+    <input class="inp" id="courseName" placeholder="Например, Витамин D3 2000 ME" autocomplete="off" maxlength="60">
+
+    <div class="section-label">Категория</div>
+    <select class="inp" id="courseCategory" aria-label="Категория курса"></select>
 
     <div class="section-label">Доза</div>
     <input class="inp" id="courseDose" placeholder="5 капель, 1 капсула, 5 мл" autocomplete="off">
@@ -1302,6 +1299,16 @@ const MEDS = [
   {id:'probiotic',   label:'Пробиотик',           interval:0},
   {id:'antiviral',   label:'Противовирусное',     interval:0},
   {id:'other',       label:'Другое',              interval:0}
+];
+
+// (v3.1) Категории курсов — необязательная классификация
+const COURSE_CATS = [
+  {id:'',            label:'— не указана —'},
+  {id:'vitamins',    label:'Витамины / БАДы'},
+  {id:'probiotics',  label:'Пробиотики'},
+  {id:'antibiotics', label:'Антибиотики'},
+  {id:'antiviral',   label:'Противовирусные'},
+  {id:'other',       label:'Другое'}
 ];
 
 const HELP = [
@@ -1383,6 +1390,13 @@ function medDisplayName(m){
   if (m.med === 'other' && m.note && m.note.trim()) return m.note.trim();
   return medLabel(m.med);
 }
+
+// (v3.1) Название категории курса по id
+function courseCatLabel(id){
+  const c = COURSE_CATS.find(x => x.id === id);
+  return c ? c.label : '';
+}
+
 function fmtDate(k){ const d = parseK(k); return `${d.getDate()} ${MONTHS_G[d.getMonth()]}`; }
 function fmtDateShort(k){ const d = parseK(k); return `${pad(d.getDate())}.${pad(d.getMonth()+1)}`; }
 function plural(n, one, few, many){
@@ -1413,7 +1427,11 @@ function loadState(){
         activeChildId: s.activeChildId,
         children: (s.children || []).map(c => ({
           ...c,
-          courses: c.courses || []
+          // (v3.1) Миграция курсов: category у старых курсов
+          courses: (c.courses || []).map(course => ({
+            ...course,
+            category: course.category || ''
+          }))
         }))
       };
     }
@@ -1472,7 +1490,7 @@ function getActiveChild() {
     child = state.children[0];
     state.activeChildId = child.id;
   }
-  // (v3.1) Миграция: гарантируем наличие courses[] у каждого профиля
+  // (v3.1) Миграция: гарантируем наличие courses[]
   if (!child.courses) child.courses = [];
   return child;
 }
@@ -3831,6 +3849,7 @@ const courseFormModalEl = document.getElementById('courseFormModal');
 const coursesListEl = document.getElementById('coursesList');
 const courseFormIdEl = document.getElementById('courseFormId');
 const courseNameEl = document.getElementById('courseName');
+const courseCategoryEl = document.getElementById('courseCategory');
 const courseDoseEl = document.getElementById('courseDose');
 const courseStartEl = document.getElementById('courseStart');
 const courseDaysEl = document.getElementById('courseDays');
@@ -3873,11 +3892,13 @@ function renderCoursesList(){
     else if (today < c.startKey){ badge = 'запланирован'; }
     const timesStr = (c.times || []).join(' · ') || '—';
     const done = end < today || c.archived;
+    const catLabel = c.category ? courseCatLabel(c.category) : '';
     return `
       <div class="course-item ${done ? 'done' : ''}">
         <div class="course-item-main">
           <div class="course-item-name">
             ${esc(c.name || 'Без названия')}
+            ${catLabel ? `<span class="course-cat-badge">${esc(catLabel)}</span>` : ''}
             <span class="course-badge ${badgeCls}">${badge}</span>
           </div>
           <div class="course-item-meta">
@@ -3918,6 +3939,15 @@ function openCourseForm(courseId){
 
   courseFormIdEl.value = course ? course.id : '';
   courseNameEl.value = course ? (course.name || '') : '';
+
+  // (v3.1) Заполняем select категорий и выбираем текущую
+  if (courseCategoryEl){
+    courseCategoryEl.innerHTML = COURSE_CATS.map(cat =>
+      `<option value="${cat.id}">${esc(cat.label)}</option>`
+    ).join('');
+    courseCategoryEl.value = course ? (course.category || '') : '';
+  }
+
   courseDoseEl.value = course ? (course.dose || '') : '';
   courseStartEl.value = course ? (course.startKey || keyOf(new Date())) : keyOf(new Date());
   courseDaysEl.value = course ? (course.days || 7) : 7;
@@ -4002,6 +4032,7 @@ document.getElementById('courseFormSave').addEventListener('click', () => {
   const id = courseFormIdEl.value;
   const isEdit = !!id;
   const name = (courseNameEl.value || '').trim();
+  const category = courseCategoryEl ? (courseCategoryEl.value || '') : '';
   const dose = (courseDoseEl.value || '').trim();
   const note = (courseNoteEl.value || '').trim();
   const startKey = courseStartEl.value;
@@ -4027,6 +4058,7 @@ document.getElementById('courseFormSave').addEventListener('click', () => {
     const course = (getActiveChild().courses || []).find(c => c.id === id);
     if (!course) return err('Курс не найден');
     course.name = name;
+    course.category = category;
     course.dose = dose;
     course.note = note;
     course.startKey = startKey;
@@ -4036,7 +4068,7 @@ document.getElementById('courseFormSave').addEventListener('click', () => {
   } else {
     const newCourse = {
       id: 'course_' + uid(),
-      name, dose, note,
+      name, category, dose, note,
       startKey, endKey, days,
       times: times.slice().sort(),
       archived: false,
@@ -4215,7 +4247,13 @@ fileInput.addEventListener('change', () => {
     try {
       const data = JSON.parse(reader.result);
       if (data.version === 3 && data.children) {
-        data.children.forEach(c => { if (!c.courses) c.courses = []; });
+        // (v3.1) Миграция при импорте
+        data.children.forEach(c => {
+          if (!c.courses) c.courses = [];
+          c.courses.forEach(course => {
+            if (course.category === undefined) course.category = '';
+          });
+        });
         state = data;
         if (!state.activeChildId || !state.children.find(c => c.id === state.activeChildId)) {
           state.activeChildId = state.children[0]?.id;
