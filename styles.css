@@ -84,6 +84,18 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 .btn.primary{background:var(--ink); color:var(--surface); padding:9px 14px}
 .btn.primary:hover{background:var(--lime); color:#292724; border-color:var(--ink)}
 
+/* (v3.3) Компактная квадратная кнопка "+" — вместо огромной 52px */
+.btn-add{
+  width: 44px; height: 44px;
+  min-width: 44px; min-height: 44px;
+  padding: 0;
+  border-radius: 12px;
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1;
+  flex: none;
+}
+
 .menu-btn{
   position:absolute; top:14px; right:14px;
   width:38px; height:38px; border-radius:50%;
@@ -455,24 +467,26 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
   background:var(--lime); border-radius:2px;
 }
 
-/* ===== v3.2: Сворачиваемые разделы дня ===== */
+/* ===== v3.3: Сворачиваемые секции дня — чёткая иерархия ===== */
 details.day-section{
-  margin: 10px 0;
-  border: 0;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
 }
 details.day-section > summary{
   list-style: none;
   cursor: pointer;
   user-select: none;
-  padding: 10px 0 6px;
+  padding: 14px 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: .68rem;
+  gap: 10px;
+  font-size: .72rem;
   text-transform: uppercase;
-  letter-spacing: .1em;
+  letter-spacing: .08em;
   font-weight: 800;
-  color: var(--muted);
+  color: var(--ink);
+  min-height: 44px;
   transition: color .15s;
 }
 details.day-section > summary::-webkit-details-marker{ display: none; }
@@ -481,45 +495,65 @@ details.day-section > summary::before{
   content: '';
   display: inline-block;
   width: 3px;
-  height: 12px;
+  height: 14px;
   background: var(--lime);
   border-radius: 2px;
   flex: none;
 }
+/* (v3.3) Чёткая SVG-стрелочка вместо мелкого ▸ */
 details.day-section > summary::after{
-  content: '▸';
+  content: '';
+  display: block;
+  width: 14px;
+  height: 14px;
   margin-left: auto;
-  font-size: 11px;
-  color: var(--muted);
-  transition: transform .15s ease, color .15s;
-}
-details.day-section[open] > summary::after{
-  content: '▾';
+  flex: none;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 3l5 5-5 5' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 3l5 5-5 5' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat;
+  transition: transform .2s ease, opacity .15s;
+  opacity: .55;
 }
 details.day-section > summary:hover{ color: var(--ink); }
-details.day-section > summary:hover::after{ color: var(--ink); }
-details.day-section > .section-body{ padding-top: 2px; }
+details.day-section > summary:hover::after{ opacity: 1; }
+details.day-section[open] > summary::after{
+  transform: rotate(90deg);
+  opacity: 1;
+}
+details.day-section > .section-body{
+  padding: 0 0 16px 13px;
+}
+@media (prefers-reduced-motion: no-preference){
+  details.day-section[open] > .section-body{
+    animation: sectionFadeIn .18s ease;
+  }
+}
+@keyframes sectionFadeIn{
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
 /* Счётчик в заголовке раздела */
 .section-count{
   display: inline-block;
   min-width: 20px;
   height: 18px;
-  padding: 0 6px;
+  padding: 0 7px;
   border-radius: 999px;
   background: var(--bg);
-  color: var(--muted);
+  color: var(--ink);
   border: 1px solid var(--line);
-  font-size: .68rem;
+  font-size: .66rem;
   font-weight: 800;
   letter-spacing: 0;
   text-align: center;
   line-height: 16px;
   text-transform: none;
+  margin-left: 2px;
 }
 [data-theme="dark"] .section-count{ background: var(--bg); }
 
-.chips{display:flex; flex-wrap:wrap; gap:6px}
+.chips{display:flex; flex-wrap:wrap; gap:8px}
 .chip{
   font:inherit; font-size:.82rem; padding:8px 12px; border-radius:999px;
   border:1.5px solid var(--line); background:var(--surface); color:var(--ink);
@@ -541,8 +575,8 @@ details.day-section > .section-body{ padding-top: 2px; }
 }
 .chip-more:hover{ border-color:var(--ink); color:var(--ink); background:var(--surface); }
 
-.addform{display:flex; flex-direction:column; gap:6px}
-.row{display:flex; gap:6px}
+.addform{display:flex; flex-direction:column; gap:8px}
+.row{display:flex; gap:8px}
 .row > *{flex:1 1 0; min-width:0}
 .inp{
   font:inherit; font-size:16px; padding:10px 12px; border-radius:10px;
@@ -554,8 +588,12 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
 .err{color:var(--coral); font-size:.82rem; margin-top:6px}
 
 .nextdose{
-  margin-top:10px; padding:10px 14px; border-radius:0 12px 12px 0;
-  border-left:5px solid var(--sage); background:var(--bg); font-size:.85rem;
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: 0 12px 12px 0;
+  border-left: 5px solid var(--sage);
+  background: var(--bg);
+  font-size: .85rem;
 }
 .nextdose.wait{border-left-color:var(--lime)}
 .nextdose.ready{border-left-color:var(--coral)}
@@ -563,7 +601,7 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
 .nd-main{font-weight:600; line-height:1.4}
 .nd-main strong{font-weight:800}
 
-.tlist{display:flex; flex-direction:column; gap:6px; margin-top:10px}
+.tlist{display:flex; flex-direction:column; gap:8px; margin-top:14px}
 .trow{display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:10px; background:var(--bg); border:1px solid var(--line); font-size:.85rem}
 .ttime{font-weight:800; font-variant-numeric:tabular-nums}
 .tval{font-weight:800; color:var(--coral); font-variant-numeric:tabular-nums; min-width:3.2em}
@@ -576,7 +614,7 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
 .muted{color:var(--muted)}
 .small{font-size:.82rem}
 
-.mlist{display:flex; flex-direction:column; gap:6px; margin-top:10px}
+.mlist{display:flex; flex-direction:column; gap:8px; margin-top:14px}
 .mrow{display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:10px; background:var(--bg); border:1px solid var(--line); font-size:.85rem}
 .mtime{font-weight:800; font-variant-numeric:tabular-nums; min-width:3em}
 .mname{font-weight:700; color:var(--sage)}
@@ -586,12 +624,12 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
 .mcourse{font-size:.9rem; line-height:1; flex:none;}
 
 /* ===== v3.1: Курсы препаратов ===== */
-.courses-today{ display:flex; flex-direction:column; gap:6px; margin-top:4px; }
+.courses-today{ display:flex; flex-direction:column; gap:8px; }
 .course-check{
   display:flex; align-items:center; gap:10px;
-  padding:8px 12px; border-radius:10px;
+  padding:10px 12px; border-radius:10px;
   background:var(--bg); border:1px solid var(--line);
-  cursor:pointer; min-height:40px;
+  cursor:pointer; min-height:44px;
   transition:background .15s, border-color .15s;
 }
 .course-check:hover{ border-color:var(--ink); }
@@ -600,8 +638,8 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
 .cc-time{ font-weight:800; font-variant-numeric:tabular-nums; flex:none; }
 .cc-name{ flex:1; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
 .cc-dose{ color:var(--muted); font-size:.82rem; flex:none; }
-.courses-empty{ margin:6px 0; }
-.courses-manage-btn{ align-self:flex-start; margin-top:4px; }
+.courses-empty{ margin:0; }
+.courses-manage-btn{ align-self:flex-start; }
 
 .courses-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; max-height:50vh; overflow-y:auto; padding-right:2px; }
 .course-item{
@@ -611,7 +649,7 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
 }
 .course-item.done{ opacity:.62; }
 .course-item-main{ flex:1; min-width:0; }
-.course-item-name{ font-weight:800; font-size:.94rem; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.course-item-name{ font-weight:800; font-size:.94rem; display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:4px; }
 .course-badge{
   font-size:.62rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em;
   padding:2px 7px; border-radius:999px; border:1px solid var(--line); color:var(--muted);
@@ -623,7 +661,7 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
   background:var(--surface); color:var(--muted); border:1px solid var(--line);
   white-space:nowrap;
 }
-.course-item-meta{ font-size:.78rem; color:var(--muted); margin-top:3px; line-height:1.4; }
+.course-item-meta{ font-size:.8rem; color:var(--muted); line-height:1.5; }
 .course-item-actions{ display:flex; gap:4px; flex:none; }
 
 .course-time-row{ display:flex; gap:6px; align-items:center; margin-bottom:6px; }
@@ -631,7 +669,9 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
 .course-form-note{ font-size:.76rem; color:var(--muted); margin-top:4px; line-height:1.4; }
 
 .panel-footer{
-  margin-top:20px; padding-top:12px; border-top:1px solid var(--line);
+  margin-top: 4px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
   display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;
 }
 
