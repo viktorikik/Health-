@@ -172,10 +172,10 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 }
 
 .cal-head{
-  display:flex; 
-  align-items:flex-start; 
-  justify-content:space-between; 
-  gap:8px; 
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:8px;
   margin-bottom:12px;
 }
 .cal-title-group {
@@ -299,6 +299,7 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 .gdot, .hdot{ width:5px; height:5px; border-radius:50%; flex:none; }
 .gdot{ background:var(--lime); box-shadow:0 0 0 1px #29272440; }
 .hdot{ background:var(--coral); box-shadow:0 0 0 1px #29272440; }
+.cmark{ font-size:8px; line-height:1; flex:none; }
 
 @media (min-width:880px){
   .day{aspect-ratio:1/1; min-height:0; padding:6px 7px; border-radius:11px}
@@ -307,6 +308,7 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
   .dot{width:6px; height:6px}
   .days{gap:5px}
   .gdot, .hdot{ width:6px; height:6px; }
+  .cmark{ font-size:10px; }
 }
 
 @keyframes slideInFromRight{ from {transform:translateX(24px);opacity:.35;} to {transform:translateX(0);opacity:1;} }
@@ -391,6 +393,13 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
   text-transform: uppercase; letter-spacing: .06em;
   padding: 3px 8px; border-radius: 999px;
   background: var(--coral); color:#fff; flex: none;
+}
+.wday-course{
+  font-size: .64rem; font-weight: 800;
+  text-transform: uppercase; letter-spacing: .06em;
+  padding: 3px 8px; border-radius: 999px;
+  background: var(--bg); color: var(--muted);
+  border: 1px dashed var(--line); flex: none;
 }
 
 .legend{
@@ -599,6 +608,46 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
 [data-theme="dark"] .mname{ color: var(--dot-nose); }
 .mdose{font-size:.78rem; color:var(--muted); padding:2px 7px; border-radius:999px; border:1px solid var(--line); flex:none}
 .mnote{flex:1; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.8rem}
+.mcourse{font-size:.9rem; line-height:1; flex:none;}
+
+/* ===== v3.1: Курсы препаратов ===== */
+.courses-today{ display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+.course-check{
+  display:flex; align-items:center; gap:10px;
+  padding:8px 12px; border-radius:10px;
+  background:var(--bg); border:1px solid var(--line);
+  cursor:pointer; min-height:40px;
+  transition:background .15s, border-color .15s;
+}
+.course-check:hover{ border-color:var(--ink); }
+.course-check.checked{ background:var(--ok-bg); border-color:var(--ok-line); }
+.course-check input{ width:20px; height:20px; accent-color:#687B59; margin:0; flex:none; cursor:pointer; }
+.cc-time{ font-weight:800; font-variant-numeric:tabular-nums; flex:none; }
+.cc-name{ flex:1; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.cc-dose{ color:var(--muted); font-size:.82rem; flex:none; }
+.courses-empty{ margin:6px 0; }
+.courses-manage-btn{ align-self:flex-start; margin-top:4px; }
+
+.courses-list{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; max-height:50vh; overflow-y:auto; padding-right:2px; }
+.course-item{
+  padding:10px 12px; border-radius:10px;
+  background:var(--bg); border:1px solid var(--line);
+  display:flex; justify-content:space-between; gap:10px; align-items:flex-start;
+}
+.course-item.done{ opacity:.62; }
+.course-item-main{ flex:1; min-width:0; }
+.course-item-name{ font-weight:800; font-size:.94rem; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.course-badge{
+  font-size:.62rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em;
+  padding:2px 7px; border-radius:999px; border:1px solid var(--line); color:var(--muted);
+}
+.course-badge.active{ background:var(--ok-bg); border-color:var(--ok-line); color:var(--ink); }
+.course-item-meta{ font-size:.78rem; color:var(--muted); margin-top:3px; line-height:1.4; }
+.course-item-actions{ display:flex; gap:4px; flex:none; }
+
+.course-time-row{ display:flex; gap:6px; align-items:center; margin-bottom:6px; }
+.course-time-row .inp{ flex:1; }
+.course-form-note{ font-size:.76rem; color:var(--muted); margin-top:4px; line-height:1.4; }
 
 .panel-footer{
   margin-top:20px; padding-top:12px; border-top:1px solid var(--line);
@@ -886,7 +935,6 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 .menu-item:hover{ background:var(--bg); border-color:var(--ink); }
 .menu-item-ico{ font-size:1.1rem; }
 
-/* ===== v3: Список детей в меню ===== */
 .menu-children-list {
   display: flex;
   flex-direction: column;
@@ -906,14 +954,8 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
   cursor: pointer;
   transition: background .15s, border-color .15s;
 }
-.menu-child-item:hover {
-  border-color: var(--ink);
-}
-.menu-child-item.active {
-  background: var(--lime);
-  border-color: var(--ink);
-  color: #292724;
-}
+.menu-child-item:hover { border-color: var(--ink); }
+.menu-child-item.active { background: var(--lime); border-color: var(--ink); color: #292724; }
 .menu-child-del {
   background: none;
   border: 0;
@@ -922,9 +964,7 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
   cursor: pointer;
   padding: 2px 6px;
 }
-.menu-child-item.active .menu-child-del {
-  color: #292724;
-}
+.menu-child-item.active .menu-child-del { color: #292724; }
 
 .hidden{display:none !important}
 </style>
@@ -990,6 +1030,7 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
           <b><i style="background:var(--ok-bg); border:1.5px solid var(--ok-line)"></i>здоров</b>
           <b><i class="r" style="background:var(--lime)"></i>в садике</b>
           <b><i class="r" style="background:var(--coral)"></i>дома</b>
+          <b>💊 курс</b>
           <b><i class="r" style="background:var(--dot-nose)"></i>нос</b>
           <b><i class="r" style="background:var(--dot-throat)"></i>горло</b>
           <b><i class="r" style="background:var(--dot-cough)"></i>кашель</b>
@@ -1153,6 +1194,67 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
   </div>
 </div>
 
+<!-- ===== v3.1: Модалка «Курсы препаратов» ===== -->
+<div class="copy-opts-backdrop" id="coursesModal">
+  <div class="copy-opts-card">
+    <h3>Курсы препаратов</h3>
+    <p class="co-sub">Курсовые препараты — витамины, пробиотики, антибиотики. Отмечай приём галочкой в карточке дня.</p>
+    <div class="courses-list" id="coursesList"></div>
+    <div class="copy-opts-actions">
+      <button class="btn" id="coursesClose" type="button">Закрыть</button>
+      <button class="btn primary" id="coursesAddBtn" type="button">➕ Новый курс</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== v3.1: Модалка формы курса ===== -->
+<div class="copy-opts-backdrop" id="courseFormModal">
+  <div class="copy-opts-card">
+    <h3 id="courseFormTitle">Новый курс</h3>
+    <p class="co-sub" id="courseFormSub">Заполни поля — потом отмечай приём в карточке дня</p>
+    <input type="hidden" id="courseFormId">
+
+    <div class="section-label" style="margin-top:0">Название</div>
+    <input class="inp" id="courseName" list="courseNamesList" placeholder="Например, Витамин D" autocomplete="off">
+    <datalist id="courseNamesList">
+      <option value="Витамин D">
+      <option value="Витамин C">
+      <option value="Мультивитамины">
+      <option value="Омега-3">
+      <option value="Пробиотик">
+      <option value="Антибиотик">
+      <option value="Противовирусное">
+      <option value="Железо">
+      <option value="Магний B6">
+      <option value="Кальций">
+    </datalist>
+
+    <div class="section-label">Доза</div>
+    <input class="inp" id="courseDose" placeholder="5 капель, 1 капсула, 5 мл" autocomplete="off">
+
+    <div class="section-label">Период</div>
+    <div class="row">
+      <input class="inp" type="date" id="courseStart">
+      <input class="inp" type="number" id="courseDays" min="1" max="365" placeholder="Дней" value="7">
+    </div>
+    <div class="course-form-note" id="courseEndHint">Дата окончания: —</div>
+
+    <div class="section-label">Время приёма</div>
+    <div id="courseTimesList"></div>
+    <button class="chip-more" type="button" id="courseAddTimeBtn">+ Ещё время</button>
+
+    <div class="section-label">Заметка</div>
+    <input class="inp" id="courseNote" placeholder="Например, после еды" autocomplete="off">
+
+    <div class="err" id="courseFormErr" hidden></div>
+
+    <div class="copy-opts-actions" style="margin-top:14px">
+      <button class="btn" id="courseFormCancel" type="button">Отмена</button>
+      <button class="btn primary" id="courseFormSave" type="button">Сохранить</button>
+    </div>
+  </div>
+</div>
+
 <input type="file" id="fileInput" accept="application/json" hidden>
 
 <script>
@@ -1273,8 +1375,11 @@ function dur(ms){
 }
 function medInterval(medId){ const m = MEDS.find(x => x.id === medId); return m ? m.interval : 0; }
 function medLabel(medId){ const m = MEDS.find(x => x.id === medId); return m ? m.label : ''; }
+
+// (v3.1) Название препарата: customName (курс) > note при «Другое» > label из MEDS
 function medDisplayName(m){
   if (!m) return '';
+  if (m.customName) return m.customName;
   if (m.med === 'other' && m.note && m.note.trim()) return m.note.trim();
   return medLabel(m.med);
 }
@@ -1306,7 +1411,10 @@ function loadState(){
         version: 3,
         theme: s.theme || null,
         activeChildId: s.activeChildId,
-        children: s.children || []
+        children: (s.children || []).map(c => ({
+          ...c,
+          courses: c.courses || []
+        }))
       };
     }
     const raw2 = localStorage.getItem(STORE_V2);
@@ -1321,6 +1429,7 @@ function loadState(){
           id: childId,
           name: s2.childName || '',
           days: s2.days || {},
+          courses: [],
           copyOptions: s2.copyOptions || null,
           symptomFilter: s2.symptomFilter || 'all',
           chartMode: s2.chartMode || null,
@@ -1340,6 +1449,7 @@ function loadState(){
       id: childId,
       name: '',
       days: {},
+      courses: [],
       copyOptions: null,
       symptomFilter: 'all',
       chartMode: null,
@@ -1354,7 +1464,7 @@ if (!state.theme) state.theme = matchMedia('(prefers-color-scheme: dark)').match
 function getActiveChild() {
   if (!state.children || !state.children.length) {
     const id = 'child_' + uid();
-    state.children = [{ id, name: '', days: {}, copyOptions: { ...DEFAULT_COPY_OPTIONS }, symptomFilter: 'all', chartMode: 'month', chartAnchor: keyOf(new Date()) }];
+    state.children = [{ id, name: '', days: {}, courses: [], copyOptions: { ...DEFAULT_COPY_OPTIONS }, symptomFilter: 'all', chartMode: 'month', chartAnchor: keyOf(new Date()) }];
     state.activeChildId = id;
   }
   let child = state.children.find(c => c.id === state.activeChildId);
@@ -1362,6 +1472,8 @@ function getActiveChild() {
     child = state.children[0];
     state.activeChildId = child.id;
   }
+  // (v3.1) Миграция: гарантируем наличие courses[] у каждого профиля
+  if (!child.courses) child.courses = [];
   return child;
 }
 
@@ -1431,6 +1543,42 @@ function getTopSymptoms(count){
     .map((s, i) => ({...s, freq: freq[s.id] || 0, _i: i}))
     .sort((a, b) => b.freq - a.freq || a._i - b._i)
     .slice(0, count);
+}
+
+/* ============================ v3.1: КУРСЫ ============================ */
+function courseEndKey(course){
+  if (!course || !course.startKey) return course && course.endKey || '';
+  const days = Math.max(1, parseInt(course.days, 10) || 1);
+  const d = parseK(course.startKey);
+  d.setDate(d.getDate() + days - 1);
+  return keyOf(d);
+}
+
+function isCourseActiveOn(course, k){
+  if (!course || course.archived) return false;
+  const end = course.endKey || courseEndKey(course);
+  return course.startKey <= k && k <= end;
+}
+
+function getCoursesForDay(k){
+  return (getActiveChild().courses || []).filter(c => isCourseActiveOn(c, k));
+}
+
+function getCourseIntake(courseId, time, k){
+  const rec = getActiveChild().days[k];
+  if (!rec || !rec.meds) return null;
+  return rec.meds.find(m => m.courseId === courseId && m.time === time) || null;
+}
+
+function hasAnyCourseOnDay(k){
+  return getCoursesForDay(k).length > 0;
+}
+
+function courseRangeText(course){
+  const end = course.endKey || courseEndKey(course);
+  if (!course.startKey || !end) return '—';
+  const days = Math.max(1, parseInt(course.days, 10) || 1);
+  return `${fmtDateShort(course.startKey)} — ${fmtDateShort(end)} · ${days} ${plural(days, 'день', 'дня', 'дней')}`;
 }
 
 /* ============================ ЭПИЗОДЫ ============================ */
@@ -1574,6 +1722,7 @@ menuAddChildBtn.addEventListener('click', () => {
     id: newId,
     name: name.trim(),
     days: {},
+    courses: [],
     copyOptions: { ...DEFAULT_COPY_OPTIONS },
     symptomFilter: 'all',
     chartMode: 'month',
@@ -1738,7 +1887,18 @@ function copyDayDataToKeys(fromKey, targetKeys, options){
     if (opts.diagnosis) base.diagnosis = src.diagnosis || '';
     if (opts.symptoms)  base.symptoms  = (src.symptoms || []).slice();
     if (opts.temps)     base.temps     = (src.temps || []).map(t => ({...t, id: uid()}));
-    if (opts.meds)      base.meds      = (src.meds || []).map(m => ({...m, id: uid()}));
+    if (opts.meds)      base.meds      = (src.meds || []).map(m => {
+      // (v3.1) Курсовые приёмы в целевой день становятся разовыми
+      const copy = { ...m, id: uid() };
+      if (copy.courseId){
+        if (copy.customName && copy.med === 'other' && (!copy.note || !copy.note.trim())){
+          copy.note = copy.customName;
+        }
+        delete copy.courseId;
+        delete copy.customName;
+      }
+      return copy;
+    });
     if (opts.note)      base.note      = src.note || '';
 
     if (hasAnyData(base)) days[tk] = base;
@@ -1797,6 +1957,8 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape'){
     if (copyOptsModal.classList.contains('show')) hideCopyOptionsDialog();
     if (pdfOptsModal.classList.contains('show')) hidePdfOpts();
+    if (courseFormModalEl.classList.contains('show')) closeCourseForm();
+    else if (coursesModalEl.classList.contains('show')) closeCoursesModal();
   }
 });
 document.getElementById('copyOptsNext').addEventListener('click', () => {
@@ -1881,8 +2043,11 @@ function renderCalendar(){
     if (k === todayKey) cls.push('today');
     if (k === selected) cls.push('sel');
     if (copyMode && k === copyMode.fromKey) cls.push('copy-source');
+    // (v3.1) Есть ли активный курс в этот день
+    const hasCourse = hasAnyCourseOnDay(k);
     const marks = (rec && rec.garden ? '<i class="gdot" title="был в садике"></i>' : '')
-                + (rec && rec.home   ? '<i class="hdot" title="остался дома"></i>' : '');
+                + (rec && rec.home   ? '<i class="hdot" title="остался дома"></i>' : '')
+                + (hasCourse ? '<span class="cmark" title="есть курс">💊</span>' : '');
     html += `<button type="button" class="${cls.join(' ')}" data-key="${k}" aria-label="${d} ${MONTHS_G[m]}">
       <span class="day-top">
         <span class="dnum">${d}</span>
@@ -1919,6 +2084,7 @@ function renderWeekView(){
     const diag = rec ? rec.diagnosis : '';
     const garden = rec && rec.garden;
     const home = rec && rec.home;
+    const hasCourse = hasAnyCourseOnDay(k);
     const isToday = k === todayKey;
     const isSel = k === selected;
     const statusCls = status === 'sick' ? 'sick' : status === 'ok' ? 'ok' : 'none';
@@ -1952,9 +2118,10 @@ function renderWeekView(){
           ${maxT !== null ? `<span class="wday-temp">${fmtT(maxT)}°</span>` : ''}
         </div>` : ''}
       </div>
-      ${garden || home ? `<div class="wday-badges">
+      ${garden || home || hasCourse ? `<div class="wday-badges">
         ${garden ? '<span class="wday-garden">сад</span>' : ''}
         ${home ? '<span class="wday-home">дома</span>' : ''}
+        ${hasCourse ? '<span class="wday-course">💊 курс</span>' : ''}
       </div>` : ''}
     </button>`;
   }
@@ -2344,14 +2511,49 @@ function tempRow(t){
 
 function medRow(m){
   const displayName = medDisplayName(m);
-  const showNote = m.note && m.note.trim() && m.med !== 'other';
+  const showNote = m.note && m.note.trim() && m.med !== 'other' && !m.customName;
+  const courseIcon = m.courseId ? '<span class="mcourse" title="приём из курса">💊</span>' : '';
   return `<div class="mrow">
     <span class="mtime">${m.time}</span>
+    ${courseIcon}
     <span class="mname">${esc(displayName)}</span>
     ${m.dose ? `<span class="mdose">${esc(m.dose)}</span>` : ''}
     ${showNote ? `<span class="mnote">${esc(m.note)}</span>` : ''}
     <button class="iconbtn tiny" type="button" data-act="delmed" data-id="${m.id}" title="Удалить">×</button>
   </div>`;
+}
+
+// (v3.1) Блок «Курсы на сегодня» для выбранного дня
+function renderCoursesToday(k){
+  const courses = getCoursesForDay(k);
+  if (!courses.length){
+    return `
+      <div class="courses-today">
+        <p class="muted small courses-empty">Нет активных курсов на этот день.</p>
+        <button class="btn courses-manage-btn" type="button" data-act="open-courses">⚙ Управление курсами</button>
+      </div>
+    `;
+  }
+  let rows = '';
+  courses.forEach(course => {
+    const times = (course.times || []).slice().sort();
+    times.forEach(time => {
+      const intake = getCourseIntake(course.id, time, k);
+      const checked = !!intake;
+      rows += `<label class="course-check ${checked ? 'checked' : ''}">
+        <input type="checkbox" data-act="course-check" data-course-id="${course.id}" data-time="${time}" ${checked ? 'checked' : ''}>
+        <span class="cc-time">${time}</span>
+        <span class="cc-name">${esc(course.name)}</span>
+        ${course.dose ? `<span class="cc-dose">${esc(course.dose)}</span>` : ''}
+      </label>`;
+    });
+  });
+  return `
+    <div class="courses-today">
+      ${rows}
+      <button class="btn courses-manage-btn" type="button" data-act="open-courses">⚙ Управление курсами</button>
+    </div>
+  `;
 }
 
 function renderPanel(){
@@ -2445,6 +2647,9 @@ function renderPanel(){
         : '<p class="muted small" style="margin:8px 0 0">Пока нет замеров.</p>'}
     </div>
 
+    <div class="section-label">Курсы на сегодня</div>
+    ${renderCoursesToday(k)}
+
     <div class="section-label">Препараты (журнал)</div>
     <div class="addform">
       <div class="row">
@@ -2483,6 +2688,7 @@ panelEl.addEventListener('click', e => {
   const act = btn.dataset.act;
   if (act === 'sym-more'){ symptomsExpanded = true; renderPanel(); return; }
   if (act === 'sym-less'){ symptomsExpanded = false; renderPanel(); return; }
+  if (act === 'open-courses'){ openCoursesModal(); return; }
 
   if (act === 'status'){
     const rec = getDay(selected, true);
@@ -2522,14 +2728,44 @@ panelEl.addEventListener('click', e => {
 });
 
 panelEl.addEventListener('change', e => {
-  if (e.target.dataset.act === 'garden' && selected){
+  const act = e.target.dataset.act;
+  if (act === 'garden' && selected){
     const rec = getDay(selected, true);
     rec.garden = e.target.checked;
     commit();
   }
-  if (e.target.dataset.act === 'home' && selected){
+  if (act === 'home' && selected){
     const rec = getDay(selected, true);
     rec.home = e.target.checked;
+    commit();
+  }
+  // (v3.1) Отметка приёма из курса
+  if (act === 'course-check' && selected){
+    const courseId = e.target.dataset.courseId;
+    const time = e.target.dataset.time;
+    const checked = e.target.checked;
+    const rec = getDay(selected, true);
+    if (checked){
+      const course = (getActiveChild().courses || []).find(c => c.id === courseId);
+      if (course){
+        const exists = rec.meds.some(m => m.courseId === courseId && m.time === time);
+        if (!exists){
+          rec.meds.push({
+            id: uid(),
+            time: time,
+            med: 'other',
+            dose: course.dose || '',
+            note: course.note || '',
+            courseId: course.id,
+            customName: course.name
+          });
+          rec.meds.sort((a,b) => a.time.localeCompare(b.time));
+          if (!rec.status) rec.status = 'sick';
+        }
+      }
+    } else {
+      rec.meds = rec.meds.filter(m => !(m.courseId === courseId && m.time === time));
+    }
     commit();
   }
 });
@@ -2656,7 +2892,7 @@ function printDayCard(key){
       <thead><tr><th>Время</th><th>Препарат</th><th>Доза</th><th>Заметка</th></tr></thead>
       <tbody>${meds.map(m => {
         const displayName = medDisplayName(m);
-        const showNote = m.note && m.note.trim() && m.med !== 'other';
+        const showNote = m.note && m.note.trim() && m.med !== 'other' && !m.customName;
         return `<tr>
           <td>${m.time}</td>
           <td><strong>${esc(displayName)}</strong></td>
@@ -3372,7 +3608,7 @@ function generatePdf(startK, endK, periodLabel){
   const allMeds = [];
   Object.keys(filtered).sort().forEach(k => {
     (filtered[k].meds || []).forEach(m => {
-      allMeds.push({ date: k, time: m.time, med: m.med, dose: m.dose, note: m.note });
+      allMeds.push({ date: k, time: m.time, med: m.med, dose: m.dose, note: m.note, customName: m.customName, courseId: m.courseId });
     });
   });
 
@@ -3498,7 +3734,7 @@ function generatePdf(startK, endK, periodLabel){
           <tbody>
             ${allMeds.map(m => {
               const displayName = medDisplayName(m);
-              const showNote = m.note && m.note.trim() && m.med !== 'other';
+              const showNote = m.note && m.note.trim() && m.med !== 'other' && !m.customName;
               return `<tr>
                 <td>${fmtDateShort(m.date)}</td>
                 <td>${m.time}</td>
@@ -3589,6 +3825,256 @@ ${parts.join('')}
   win.document.close();
 }
 
+/* ============================ v3.1: МОДАЛКИ КУРСОВ ============================ */
+const coursesModalEl = document.getElementById('coursesModal');
+const courseFormModalEl = document.getElementById('courseFormModal');
+const coursesListEl = document.getElementById('coursesList');
+const courseFormIdEl = document.getElementById('courseFormId');
+const courseNameEl = document.getElementById('courseName');
+const courseDoseEl = document.getElementById('courseDose');
+const courseStartEl = document.getElementById('courseStart');
+const courseDaysEl = document.getElementById('courseDays');
+const courseNoteEl = document.getElementById('courseNote');
+const courseTimesListEl = document.getElementById('courseTimesList');
+const courseEndHintEl = document.getElementById('courseEndHint');
+const courseFormErrEl = document.getElementById('courseFormErr');
+const courseFormTitleEl = document.getElementById('courseFormTitle');
+const courseFormSubEl = document.getElementById('courseFormSub');
+
+// Универсальный переключатель body.no-scroll с учётом sheet и всех модалок
+function syncBodyScroll(){
+  const anyModal = document.querySelector('.copy-opts-backdrop.show');
+  const sheetOpen = sheet.classList.contains('open');
+  document.body.classList.toggle('no-scroll', !!(anyModal || sheetOpen));
+}
+
+function openCoursesModal(){
+  renderCoursesList();
+  coursesModalEl.classList.add('show');
+  syncBodyScroll();
+}
+function closeCoursesModal(){
+  coursesModalEl.classList.remove('show');
+  syncBodyScroll();
+}
+
+function renderCoursesList(){
+  const courses = (getActiveChild().courses || []).slice().sort((a,b) => (b.startKey || '').localeCompare(a.startKey || ''));
+  if (!courses.length){
+    coursesListEl.innerHTML = '<p class="muted small">Пока нет курсов. Добавь первый — например, витамин D на 30 дней.</p>';
+    return;
+  }
+  const today = keyOf(new Date());
+  coursesListEl.innerHTML = courses.map(c => {
+    const end = c.endKey || courseEndKey(c);
+    let badge = 'завершён';
+    let badgeCls = '';
+    if (c.startKey <= today && today <= end && !c.archived){ badge = 'активен'; badgeCls = 'active'; }
+    else if (today < c.startKey){ badge = 'запланирован'; }
+    const timesStr = (c.times || []).join(' · ') || '—';
+    const done = end < today || c.archived;
+    return `
+      <div class="course-item ${done ? 'done' : ''}">
+        <div class="course-item-main">
+          <div class="course-item-name">
+            ${esc(c.name || 'Без названия')}
+            <span class="course-badge ${badgeCls}">${badge}</span>
+          </div>
+          <div class="course-item-meta">
+            ${courseRangeText(c)}${c.dose ? ' · ' + esc(c.dose) : ''}<br>
+            Время: ${timesStr}${c.note ? ' · ' + esc(c.note) : ''}
+          </div>
+        </div>
+        <div class="course-item-actions">
+          <button class="iconbtn tiny" type="button" data-course-edit="${c.id}" title="Редактировать">✎</button>
+          <button class="iconbtn tiny" type="button" data-course-del="${c.id}" title="Удалить">×</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+coursesListEl.addEventListener('click', e => {
+  const editBtn = e.target.closest('[data-course-edit]');
+  if (editBtn){ openCourseForm(editBtn.dataset.courseEdit); return; }
+  const delBtn = e.target.closest('[data-course-del]');
+  if (delBtn){ deleteCourse(delBtn.dataset.courseDel); return; }
+});
+
+document.getElementById('coursesClose').addEventListener('click', closeCoursesModal);
+document.getElementById('coursesAddBtn').addEventListener('click', () => openCourseForm(null));
+coursesModalEl.addEventListener('click', e => {
+  if (e.target === coursesModalEl) closeCoursesModal();
+});
+
+function openCourseForm(courseId){
+  const isEdit = !!courseId;
+  const course = isEdit
+    ? (getActiveChild().courses || []).find(c => c.id === courseId)
+    : null;
+
+  courseFormTitleEl.textContent = isEdit ? 'Редактировать курс' : 'Новый курс';
+  courseFormSubEl.textContent = isEdit ? 'Изменения сохранятся для будущих дней' : 'Заполни поля — потом отмечай приём в карточке дня';
+
+  courseFormIdEl.value = course ? course.id : '';
+  courseNameEl.value = course ? (course.name || '') : '';
+  courseDoseEl.value = course ? (course.dose || '') : '';
+  courseStartEl.value = course ? (course.startKey || keyOf(new Date())) : keyOf(new Date());
+  courseDaysEl.value = course ? (course.days || 7) : 7;
+  courseNoteEl.value = course ? (course.note || '') : '';
+  courseFormErrEl.hidden = true;
+  courseFormErrEl.textContent = '';
+
+  // Времена приёма
+  const times = course && course.times && course.times.length
+    ? course.times.slice()
+    : [pad(new Date().getHours()) + ':' + pad(new Date().getMinutes())];
+  renderCourseTimes(times);
+
+  updateCourseEndHint();
+  courseFormModalEl.classList.add('show');
+  syncBodyScroll();
+  setTimeout(() => courseNameEl.focus(), 50);
+}
+
+function closeCourseForm(){
+  courseFormModalEl.classList.remove('show');
+  syncBodyScroll();
+}
+
+function renderCourseTimes(times){
+  courseTimesListEl.innerHTML = times.map((t, i) => `
+    <div class="course-time-row">
+      <input class="inp" type="time" value="${esc(t)}" data-time-input>
+      ${i > 0 ? `<button class="iconbtn tiny" type="button" data-time-del title="Убрать">×</button>` : '<span style="width:34px"></span>'}
+    </div>
+  `).join('');
+}
+
+function getCourseTimesFromForm(){
+  return [...courseTimesListEl.querySelectorAll('[data-time-input]')]
+    .map(inp => (inp.value || '').trim())
+    .filter(Boolean);
+}
+
+courseTimesListEl.addEventListener('click', e => {
+  const btn = e.target.closest('[data-time-del]');
+  if (!btn) return;
+  const row = btn.closest('.course-time-row');
+  if (row) row.remove();
+});
+
+document.getElementById('courseAddTimeBtn').addEventListener('click', () => {
+  const current = getCourseTimesFromForm();
+  // Берём текущее время для нового поля; если оно уже есть — плюс 8 часов
+  const used = new Set(current);
+  const d = new Date();
+  for (let i = 0; i < 24; i++){
+    d.setHours(d.getHours() + (i === 0 ? 0 : 1));
+    const t = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    if (!used.has(t)){
+      current.push(t);
+      break;
+    }
+  }
+  renderCourseTimes(current);
+});
+
+courseStartEl.addEventListener('change', updateCourseEndHint);
+courseDaysEl.addEventListener('input', updateCourseEndHint);
+
+function updateCourseEndHint(){
+  const start = courseStartEl.value;
+  const days = Math.max(1, parseInt(courseDaysEl.value, 10) || 1);
+  if (!start){ courseEndHintEl.textContent = 'Дата окончания: —'; return; }
+  const d = parseK(start);
+  if (isNaN(d.getTime())){ courseEndHintEl.textContent = 'Дата окончания: —'; return; }
+  d.setDate(d.getDate() + days - 1);
+  courseEndHintEl.textContent = `Дата окончания: ${fmtDate(keyOf(d))} ${d.getFullYear()} (${days} ${plural(days, 'день', 'дня', 'дней')})`;
+}
+
+document.getElementById('courseFormCancel').addEventListener('click', closeCourseForm);
+courseFormModalEl.addEventListener('click', e => {
+  if (e.target === courseFormModalEl) closeCourseForm();
+});
+
+document.getElementById('courseFormSave').addEventListener('click', () => {
+  const id = courseFormIdEl.value;
+  const isEdit = !!id;
+  const name = (courseNameEl.value || '').trim();
+  const dose = (courseDoseEl.value || '').trim();
+  const note = (courseNoteEl.value || '').trim();
+  const startKey = courseStartEl.value;
+  const days = Math.max(1, Math.min(365, parseInt(courseDaysEl.value, 10) || 0));
+  const times = getCourseTimesFromForm();
+
+  const err = (msg) => { courseFormErrEl.hidden = false; courseFormErrEl.textContent = msg; };
+
+  if (!name) return err('Введи название курса');
+  if (!startKey) return err('Укажи дату начала');
+  if (!days || days < 1) return err('Количество дней — минимум 1');
+  if (!times.length) return err('Добавь хотя бы одно время приёма');
+  if (times.some(t => !/^\d{2}:\d{2}$/.test(t))) return err('Проверь времена приёма');
+
+  courseFormErrEl.hidden = true;
+
+  const startD = parseK(startKey);
+  const endD = new Date(startD);
+  endD.setDate(startD.getDate() + days - 1);
+  const endKey = keyOf(endD);
+
+  if (isEdit){
+    const course = (getActiveChild().courses || []).find(c => c.id === id);
+    if (!course) return err('Курс не найден');
+    course.name = name;
+    course.dose = dose;
+    course.note = note;
+    course.startKey = startKey;
+    course.endKey = endKey;
+    course.days = days;
+    course.times = times.slice().sort();
+  } else {
+    const newCourse = {
+      id: 'course_' + uid(),
+      name, dose, note,
+      startKey, endKey, days,
+      times: times.slice().sort(),
+      archived: false,
+      createdAt: new Date().toISOString()
+    };
+    getActiveChild().courses = getActiveChild().courses || [];
+    getActiveChild().courses.push(newCourse);
+  }
+
+  save();
+  closeCourseForm();
+  renderCoursesList();
+  render();
+  toast(isEdit ? 'Курс обновлён' : 'Курс добавлен');
+});
+
+function deleteCourse(courseId){
+  if (!confirm('Удалить курс? Записи в журнале препаратов останутся как разовые.')) return;
+  const child = getActiveChild();
+  child.courses = (child.courses || []).filter(c => c.id !== courseId);
+  // Превращаем связанные Med в разовые приёмы
+  Object.values(child.days || {}).forEach(rec => {
+    (rec.meds || []).forEach(m => {
+      if (m.courseId === courseId){
+        if (m.customName && m.med === 'other' && (!m.note || !m.note.trim())){
+          m.note = m.customName;
+        }
+        delete m.courseId;
+        delete m.customName;
+      }
+    });
+  });
+  save();
+  renderCoursesList();
+  render();
+  toast('Курс удалён');
+}
+
 /* ============================ ОБЩИЙ РЕНДЕР ============================ */
 function render(){
   applyTheme();
@@ -3613,13 +4099,13 @@ function commit(){
 function openSheet(){
   sheet.classList.add('open');
   backdrop.classList.add('open');
-  document.body.classList.add('no-scroll');
+  syncBodyScroll();
   sheet.scrollTop = 0;
 }
 function closeSheet(){
   sheet.classList.remove('open');
   backdrop.classList.remove('open');
-  document.body.classList.remove('no-scroll');
+  syncBodyScroll();
   renderDoseBar();
 }
 backdrop.addEventListener('click', closeSheet);
@@ -3729,6 +4215,7 @@ fileInput.addEventListener('change', () => {
     try {
       const data = JSON.parse(reader.result);
       if (data.version === 3 && data.children) {
+        data.children.forEach(c => { if (!c.courses) c.courses = []; });
         state = data;
         if (!state.activeChildId || !state.children.find(c => c.id === state.activeChildId)) {
           state.activeChildId = state.children[0]?.id;
