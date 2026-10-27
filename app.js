@@ -725,4 +725,2405 @@ function showCopyOptionsDialog(fromKey){
   if (!hasAnyData(getActiveChild().days[fromKey])){ toast('В этом дне нет данных для копирования'); return; }
   copyOptsSourceKey = fromKey;
   const d = parseK(fromKey);
- 
+  document.getElementById('copyOptsDate').textContent = `${d.getDate()} ${MONTHS_G[d.getMonth()]}`;
+  const opts = getActiveChild().copyOptions || defaultCopyOptions();
+  document.querySelectorAll('#copyOpts input[data-key]').forEach(cb => {
+    cb.checked = !!opts[cb.dataset.key];
+  });
+  copyOptsModal.classList.add('show');
+  document.body.classList.add('no-scroll');
+}
+function hideCopyOptionsDialog(){
+  copyOptsModal.classList.remove('show');
+  document.body.classList.remove('no-scroll');
+  copyOptsSourceKey = null;
+}
+document.getElementById('copyOptsCancel').addEventListener('click', hideCopyOptionsDialog);
+copyOptsModal.addEventListener('click', e => {
+  if (e.target === copyOptsModal) hideCopyOptionsDialog();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape'){
+    if (copyOptsModal.classList.contains('show')) hideCopyOptionsDialog();
+    if (pdfOptsModal.classList.contains('show')) hidePdfOpts();
+    if (courseFormModalEl.classList.contains('show')) closeCourseForm();
+    else if (coursesModalEl.classList.contains('show')) closeCoursesModal();
+  }
+});
+document.getElementById('copyOptsNext').addEventListener('click', () => {
+  const fromKey = copyOptsSourceKey;
+  if (!fromKey) return;
+  const opts = {};
+  document.querySelectorAll('#copyOpts input[data-key]').forEach(cb => {
+    opts[cb.dataset.key] = cb.checked;
+  });
+  if (!Object.values(opts).some(v => v)){ toast('Выбери хотя бы один параметр'); return; }
+  getActiveChild().copyOptions = { ...DEFAULT_COPY_OPTIONS, ...opts };
+  save();
+  hideCopyOptionsDialog();
+  closeSheet();
+  enterCopyMode(fromKey, opts);
+  toast('Тапни целевой день');
+});
+
+function enterCopyMode(fromKey, options){
+  copyMode = { fromKey, options: options || state.copyOptions || defaultCopyOptions() };
+  closeSheet();
+  updateCopyBanner();
+  renderCalendar();
+  if (viewMode === 'week') renderWeekView();
+}
+function exitCopyMode(){
+  copyMode = null;
+  updateCopyBanner();
+  renderCalendar();
+  if (viewMode === 'week') renderWeekView();
+}
+function updateCopyBanner(){
+  let banner = document.getElementById('copyBanner');
+  if (!banner){ banner = document.createElement('div'); banner.id = 'copyBanner'; document.body.appendChild(banner); }
+  if (copyMode){
+    const labels = Object.keys(copyMode.options)
+      .filter(k => copyMode.options[k]).map(k => COPY_OPT_LABELS[k]).join(' · ');
+    banner.innerHTML = `
+      <span class="cb-txt">
+        Куда скопировать <strong>${fmtDate(copyMode.fromKey)}</strong>?<br>
+        <span style="font-weight:600; opacity:.7; font-size:.78rem">${labels || '—'}</span>
+      </span>
+      <button type="button" id="copyCancel">Отмена</button>
+    `;
+    banner.classList.add('show');
+    document.getElementById('copyCancel').onclick = () => { exitCopyMode(); toast('Отменено'); };
+  } else {
+    banner.classList.remove('show');
+    banner.innerHTML = '';
+  }
+}
+
+/* ============================ КАЛЕНДАРЬ ============================ */
+function dayCats(rec){
+  const s = new Set();
+  (rec.symptoms || []).forEach(id => {
+    const x = SYMPTOMS.find(v => v.id === id);
+    if (x) s.add(x.cat);
+  });
+  if ((rec.temps || []).some(t => t.value >= 37.5)) s.add('fever');
+  return [...s];
+}
+
+function renderCalendar(){
+  const { y, m } = view;
+  monthTitle.textContent = MONTHS[m] + ' ' + y;
+  const offset   = (new Date(y, m, 1).getDay() + 6) % 7;
+  const total    = new Date(y, m+1, 0).getDate();
+  const todayKey = keyOf(new Date());
+  const days = getActiveChild().days;
+  let html = '';
+  for (let i = 0; i < offset; i++) html += '<div class="day blank"></div>';
+  for (let d = 1; d <= total; d++){
+    const k    = `${y}-${pad(m+1)}-${pad(d)}`;
+    const rec  = days[k];
+    const cats = rec ? dayCats(rec) : [];
+    const temps = rec && rec.temps && rec.temps.length ? rec.temps.map(t => t.value) : [];
+    const maxT = temps.length ? Math.max(...temps) : null;
+    const cls = ['day'];
+    if (rec && rec.status === 'sick') cls.push('sick');
+    else if (rec && rec.status === 'ok') cls.push('ok');
+    if (k === todayKey) cls.push('today');
+    if (k === selected) cls.push('sel');
+    if (copyMode && k === copyMode.fromKey) cls.push('copy-source');
+    const hasCourse = hasAnyCourseOnDay(k);
+    const marks = (rec && rec.garden ? '<i class="gdot" title="был в садике"></i>' : '')
+                + (rec && rec.home   ? '<i class="hdot" title="остался дома"></i>' : '')
+                + (hasCourse ? '<span class="cmark" title="есть курс">💊</span>' : '');
+    html += `<button type="button" class="${cls.join(' ')}" data-key="${k}" aria-label="${d} ${MONTHS_G[m]}">
+      <span class="day-top">
+        <span class="dnum">${d}</span>
+        ${maxT !== null ? `<span class="dtemp">${fmtT(maxT)}°</span>` : ''}
+      </span>
+      <span class="dots">${cats.map(c => `<i class="dot ${c}"></i>`).join('')}</span>
+      ${marks ? `<span class="day-marks">${marks}</span>` : ''}
+    </button>`;
+  }
+  daysEl.innerHTML = html;
+}
+
+function renderWeekView(){
+  if (!weekAnchor) weekAnchor = selected || keyOf(new Date());
+  const anchor = parseK(weekAnchor);
+  const dow    = (anchor.getDay() + 6) % 7;
+  const monday = new Date(anchor);
+  monday.setDate(anchor.getDate() - dow);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  monthTitle.textContent =
+    `${monday.getDate()} ${MONTHS_G_SHORT[monday.getMonth()]} — ${sunday.getDate()} ${MONTHS_G_SHORT[sunday.getMonth()]} ${sunday.getFullYear()}`;
+  const todayKey = keyOf(new Date());
+  const days = getActiveChild().days;
+  let html = '';
+  for (let i = 0; i < 7; i++){
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const k = keyOf(d);
+    const rec = days[k];
+    const temps = rec && rec.temps ? rec.temps.map(t => t.value) : [];
+    const maxT = temps.length ? Math.max(...temps) : null;
+    const status = rec ? rec.status : null;
+    const diag = rec ? rec.diagnosis : '';
+    const garden = rec && rec.garden;
+    const home = rec && rec.home;
+    const hasCourse = hasAnyCourseOnDay(k);
+    const isToday = k === todayKey;
+    const isSel = k === selected;
+    const statusCls = status === 'sick' ? 'sick' : status === 'ok' ? 'ok' : 'none';
+    const statusLabel = status === 'sick' ? 'Болеет' : status === 'ok' ? 'Здоров' : 'Не отмечено';
+    const cls = ['week-day', statusCls];
+    if (isToday) cls.push('today');
+    if (isSel) cls.push('sel');
+    if (copyMode && k === copyMode.fromKey) cls.push('copy-source');
+
+    const symLabels = (rec && rec.symptoms ? rec.symptoms.map(id => {
+      const s = SYMPTOMS.find(x => x.id === id);
+      return s ? s.label : '';
+    }).filter(Boolean) : []);
+    let symsText = '';
+    if (symLabels.length){
+      symsText = symLabels.slice(0, 3).join(', ');
+      if (symLabels.length > 3) symsText += '…';
+    }
+
+    html += `<button type="button" class="${cls.join(' ')}" data-key="${k}">
+      <div class="wday-date">
+        <span class="wday-name">${WD_SHORT[i]}</span>
+        <span class="wday-num">${d.getDate()}</span>
+      </div>
+      <div class="wday-main">
+        <div class="wday-status">
+          ${statusLabel}${diag ? `<span class="wday-diag">· ${esc(diag)}</span>` : ''}
+        </div>
+        ${symsText || maxT !== null ? `<div class="wday-meta">
+          ${symsText ? `<span class="wday-syms">${esc(symsText)}</span>` : ''}
+          ${maxT !== null ? `<span class="wday-temp">${fmtT(maxT)}°</span>` : ''}
+        </div>` : ''}
+      </div>
+      ${garden || home || hasCourse ? `<div class="wday-badges">
+        ${garden ? '<span class="wday-garden">сад</span>' : ''}
+        ${home ? '<span class="wday-home">дома</span>' : ''}
+        ${hasCourse ? '<span class="wday-course">💊 курс</span>' : ''}
+      </div>` : ''}
+    </button>`;
+  }
+  weekDaysEl.innerHTML = html;
+}
+
+/* ============================ КЛИК ПО ДНЮ ============================ */
+let suppressClick = false;
+let dragState = null;
+let dragBadgeEl = null;
+
+function ensureDragBadge(){
+  if (!dragBadgeEl){
+    dragBadgeEl = document.createElement('div');
+    dragBadgeEl.className = 'drag-badge';
+    document.body.appendChild(dragBadgeEl);
+  }
+  return dragBadgeEl;
+}
+
+daysEl.addEventListener('click', e => {
+  if (suppressClick) return;
+  const btn = e.target.closest('.day');
+  if (!btn || btn.classList.contains('blank')) return;
+  if (copyMode){
+    const fromKey = copyMode.fromKey;
+    const opts    = copyMode.options;
+    const toKey   = btn.dataset.key;
+    exitCopyMode();
+    if (toKey !== fromKey) copyDayData(fromKey, toKey, opts);
+    else toast('Отменено');
+    return;
+  }
+  selected = btn.dataset.key;
+  renderCalendar();
+  renderPanel();
+  if (isMobile()) openSheet();
+});
+
+weekDaysEl.addEventListener('click', e => {
+  if (suppressClick) return;
+  const btn = e.target.closest('.week-day');
+  if (!btn) return;
+  if (copyMode){
+    const fromKey = copyMode.fromKey;
+    const opts    = copyMode.options;
+    const toKey   = btn.dataset.key;
+    exitCopyMode();
+    if (toKey !== fromKey) copyDayData(fromKey, toKey, opts);
+    else toast('Отменено');
+    return;
+  }
+  selected = btn.dataset.key;
+  weekAnchor = selected;
+  renderWeekView();
+  renderPanel();
+  if (isMobile()) openSheet();
+});
+
+/* ============================ DRAG-КОПИРОВАНИЕ ============================ */
+const LONG_PRESS_MS = 500;
+const MOVE_CANCEL_PX = 10;
+
+function onDayPointerDown(e){
+  if (copyMode) return;
+  if (viewMode !== 'month') return;
+  const day = e.target.closest('.day:not(.blank)');
+  if (!day) return;
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  dragState = {
+    fromKey: day.dataset.key,
+    startX: e.clientX, startY: e.clientY,
+    sourceEl: day, pointerId: e.pointerId,
+    lastTargetKey: null, rangeKeys: [], active: false,
+    timer: setTimeout(() => beginDrag(), LONG_PRESS_MS)
+  };
+}
+function beginDrag(){
+  if (!dragState || dragState.active) return;
+  dragState.active = true;
+  dragState.sourceEl.classList.add('dragging');
+  dragState.sourceEl.style.touchAction = 'none';
+  if (daysEl) daysEl.style.touchAction = 'none';
+  document.body.classList.add('is-dragging');
+  try { dragState.sourceEl.setPointerCapture(dragState.pointerId); } catch(err){}
+  if (navigator.vibrate){ try { navigator.vibrate(20); } catch(e){} }
+}
+function onDayPointerMove(e){
+  if (!dragState) return;
+  const dx = e.clientX - dragState.startX;
+  const dy = e.clientY - dragState.startY;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  if (!dragState.active){
+    if (dist > MOVE_CANCEL_PX){
+      clearTimeout(dragState.timer);
+      dragState = null;
+    }
+    return;
+  }
+  if (e.cancelable) e.preventDefault();
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const day = el && el.closest('.day:not(.blank)');
+  const newKey = day ? day.dataset.key : null;
+  if (newKey === dragState.lastTargetKey) return;
+  dragState.lastTargetKey = newKey;
+  document.querySelectorAll('.day.drag-over').forEach(el => el.classList.remove('drag-over'));
+  if (!newKey){ dragState.rangeKeys = []; if (dragBadgeEl) dragBadgeEl.classList.remove('show'); return; }
+  const range = datesBetween(dragState.fromKey, newKey);
+  dragState.rangeKeys = range;
+  range.forEach(k => {
+    if (k === dragState.fromKey) return;
+    const el2 = daysEl.querySelector(`.day[data-key="${k}"]`);
+    if (el2) el2.classList.add('drag-over');
+  });
+  const nTargets = range.length - 1;
+  if (nTargets > 0){
+    const badge = ensureDragBadge();
+    badge.textContent = `→ ${nTargets} ${plural(nTargets, 'день', 'дня', 'дней')}`;
+    badge.style.left = e.clientX + 'px';
+    badge.style.top = e.clientY + 'px';
+    badge.classList.add('show');
+  } else {
+    if (dragBadgeEl) dragBadgeEl.classList.remove('show');
+  }
+}
+function onDayPointerUp(e){
+  if (!dragState) return;
+  clearTimeout(dragState.timer);
+  if (dragState.active){
+    if (e.cancelable) e.preventDefault();
+    suppressClick = true;
+    setTimeout(() => { suppressClick = false; }, 300);
+    const fromKey = dragState.fromKey;
+    const range = dragState.rangeKeys || [];
+    const targets = range.filter(k => k !== fromKey);
+    endDrag();
+    if (targets.length > 0){
+      copyDayDataToKeys(fromKey, targets, getActiveChild().copyOptions || defaultCopyOptions());
+    } else {
+      toast('Отменено');
+    }
+  }
+  dragState = null;
+}
+function onDayPointerCancel(){
+  if (!dragState) return;
+  clearTimeout(dragState.timer);
+  endDrag();
+  dragState = null;
+}
+function endDrag(){
+  if (!dragState) return;
+  if (dragState.sourceEl){
+    dragState.sourceEl.classList.remove('dragging');
+    dragState.sourceEl.style.touchAction = '';
+  }
+  if (daysEl) daysEl.style.touchAction = '';
+  document.querySelectorAll('.day.drag-over, .week-day.drag-over').forEach(el => el.classList.remove('drag-over'));
+  document.body.classList.remove('is-dragging');
+  if (dragBadgeEl) dragBadgeEl.classList.remove('show');
+}
+
+daysEl.addEventListener('pointerdown', onDayPointerDown);
+daysEl.addEventListener('pointermove', onDayPointerMove);
+daysEl.addEventListener('pointerup', onDayPointerUp);
+daysEl.addEventListener('pointercancel', onDayPointerCancel);
+daysEl.addEventListener('contextmenu', e => e.preventDefault());
+
+/* ============================ СВАЙП ============================ */
+function makeSwipeable(el, onSwipeLeft, onSwipeRight, ignoreSelector){
+  let track = null;
+  el.addEventListener('pointerdown', e => {
+    if (ignoreSelector && e.target.closest(ignoreSelector)) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    track = { x: e.clientX, y: e.clientY, id: e.pointerId, moved: false, horizontal: false };
+  });
+  el.addEventListener('pointermove', e => {
+    if (!track || e.pointerId !== track.id) return;
+    const dx = e.clientX - track.x;
+    const dy = e.clientY - track.y;
+    if (!track.moved && Math.hypot(dx, dy) > 15){
+      track.moved = true;
+      track.horizontal = Math.abs(dx) > Math.abs(dy) * 1.3;
+      if (track.horizontal && dragState && !dragState.active){
+        clearTimeout(dragState.timer);
+        dragState = null;
+      }
+    }
+  });
+  el.addEventListener('pointerup', e => {
+    if (!track || e.pointerId !== track.id) { track = null; return; }
+    const dx = e.clientX - track.x;
+    const dy = e.clientY - track.y;
+    if (track.horizontal && Math.abs(dx) > 60){
+      if (dx < 0) onSwipeLeft(); else onSwipeRight();
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 300);
+    }
+    track = null;
+  });
+  el.addEventListener('pointercancel', () => { track = null; });
+}
+
+makeSwipeable(daysWrap, () => shiftPeriod(1, 'right'), () => shiftPeriod(-1, 'left'));
+makeSwipeable(weekDaysWrap, () => shiftPeriod(1, 'right'), () => shiftPeriod(-1, 'left'));
+makeSwipeable(document.querySelector('main'), () => switchChild(1), () => switchChild(-1), '.days-wrap, #weekDaysWrap, .chart-box, .menu-panel, .copy-opts-backdrop, .pdf-custom, .menu-backdrop');
+
+function shiftPeriod(dir, slideFrom){
+  if (viewMode === 'month'){
+    view.m += dir;
+    if (view.m > 11){ view.m = 0; view.y++; }
+    if (view.m < 0) { view.m = 11; view.y--; }
+    renderCalendar();
+    slideAnim(daysEl, slideFrom);
+  } else {
+    const anchor = weekAnchor ? parseK(weekAnchor) : new Date();
+    anchor.setDate(anchor.getDate() + 7 * dir);
+    weekAnchor = keyOf(anchor);
+    view = { y: anchor.getFullYear(), m: anchor.getMonth() };
+    renderWeekView();
+    slideAnim(weekDaysEl, slideFrom);
+  }
+  renderTempChart();
+  renderStats();
+  renderAnalytics();
+  updateHeroMeta();
+}
+function slideAnim(el, from){
+  if (!el) return;
+  el.classList.remove('slide-from-right','slide-from-left');
+  void el.offsetWidth;
+  el.classList.add(from === 'right' ? 'slide-from-right' : 'slide-from-left');
+}
+
+/* ============================ ГРАФИК ТЕМПЕРАТУРЫ ============================ */
+function renderTempChart(){
+  const { y, m } = view;
+  const total = new Date(y, m+1, 0).getDate();
+  chartMonth.textContent = MONTHS[m] + ' ' + y;
+  const points = [];
+  const sickDays = new Set();
+  const days = getActiveChild().days;
+  for (let d = 1; d <= total; d++){
+    const k = `${y}-${pad(m+1)}-${pad(d)}`;
+    const rec = days[k];
+    if (!rec) continue;
+    if (rec.status === 'sick') sickDays.add(d);
+    (rec.temps || []).forEach(t => {
+      const [hh, mm] = t.time.split(':').map(Number);
+      points.push({ day: d, minutes: (d-1)*1440 + hh*60 + mm, value: t.value });
+    });
+  }
+  if (!points.length){
+    chartEl.innerHTML = '<p class="muted small" style="margin:14px 0; text-align:center">Нет замеров температуры за этот месяц</p>';
+    return;
+  }
+  const W = 340, H = 180;
+  const padL = 30, padR = 10, padT = 12, padB = 24;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const minVal = Math.min(36, ...points.map(p => p.value));
+  const maxVal = Math.max(40, ...points.map(p => p.value));
+  const yMin = Math.floor((minVal - 0.2) * 10) / 10;
+  const yMax = Math.ceil((maxVal + 0.2) * 10) / 10;
+  const xStart = 0, xEnd = total * 1440;
+  const px = min => padL + (min - xStart) / (xEnd - xStart) * plotW;
+  const py = val => padT + (1 - (val - yMin) / (yMax - yMin)) * plotH;
+  let bands = '';
+  sickDays.forEach(d => {
+    const x1 = padL + ((d-1)/total) * plotW;
+    const x2 = padL + (d/total) * plotW;
+    bands += `<rect x="${x1.toFixed(1)}" y="${padT}" width="${(x2-x1).toFixed(1)}" height="${plotH}" fill="#F2769140"/>`;
+  });
+  let grid = '';
+  for (let v = Math.ceil(yMin); v <= yMax; v++){
+    const yy = py(v);
+    grid += `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="currentColor" stroke-width="0.5" opacity="0.15"/>`;
+    grid += `<text x="${padL-4}" y="${(yy+3).toFixed(1)}" font-size="8" text-anchor="end" fill="currentColor" opacity="0.6">${v}</text>`;
+  }
+  let threshold = '';
+  if (37.5 >= yMin && 37.5 <= yMax){
+    const yy = py(37.5);
+    threshold = `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="#DCEB32" stroke-width="1.2" stroke-dasharray="3 3"/>`;
+  }
+  let xLabels = '';
+  const step = total > 20 ? 5 : (total > 10 ? 3 : 1);
+  for (let d = 1; d <= total; d += step){
+    const x = padL + ((d-0.5)/total) * plotW;
+    xLabels += `<text x="${x.toFixed(1)}" y="${H-padB+12}" font-size="8" text-anchor="middle" fill="currentColor" opacity="0.6">${d}</text>`;
+  }
+  points.sort((a,b) => a.minutes - b.minutes);
+  let pathD = '';
+  points.forEach((p, i) => {
+    const x = px(p.minutes), y = py(p.value);
+    pathD += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1) + ' ';
+  });
+  const dots = points.map(p => {
+    const x = px(p.minutes), y = py(p.value);
+    const c = p.value >= 38.5 ? '#F27691' : (p.value >= 37.5 ? '#E8A0B4' : '#687B59');
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="${c}" stroke="#fffaf1" stroke-width="0.9"/>`;
+  }).join('');
+  chartEl.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="График температуры">
+      ${bands}${grid}${threshold}${xLabels}
+      <path d="${pathD}" fill="none" stroke="#F27691" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}
+    </svg>`;
+}
+
+/* ============================ ДОЗА ============================ */
+function todayDoseInfo(){
+  const k = keyOf(new Date());
+  const rec = getActiveChild().days[k];
+  if (!rec || !rec.temps || !rec.temps.length) return null;
+  const list = rec.temps.filter(t => medInterval(t.med) > 0).slice().sort((a,b) => a.time.localeCompare(b.time));
+  if (!list.length) return null;
+  const last = list[list.length - 1];
+  const med  = MEDS.find(x => x.id === last.med);
+  const d    = parseK(k);
+  const [h, mi] = last.time.split(':').map(Number);
+  const at   = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, mi);
+  const next = new Date(at.getTime() + med.interval * 60000);
+  const diff = next - Date.now();
+  if (diff < -30 * 60000) return null;
+  return { med, last, next, diff };
+}
+function renderDoseBar(){
+  const info = todayDoseInfo();
+  if (!info){ doseBar.classList.remove('show','wait','ready'); doseBar.innerHTML=''; return; }
+  const hhmm = pad(info.next.getHours()) + ':' + pad(info.next.getMinutes());
+  let text, cls;
+  if (info.diff > 0){
+    cls = 'wait';
+    text = `<strong>${info.med.label}</strong> · следующая доза не раньше <strong>${hhmm}</strong> · через <strong>${dur(info.diff)}</strong>`;
+  } else {
+    cls = 'ready';
+    text = `<strong>${info.med.label}</strong> · интервал выдержан, можно давать`;
+  }
+  doseBar.className = 'dose-bar show ' + cls;
+  doseBar.innerHTML = `<span class="dose-ico">💊</span><span class="dose-text">${text}</span>`;
+}
+doseBar.addEventListener('click', () => {
+  selected = keyOf(new Date());
+  weekAnchor = selected;
+  render();
+  if (isMobile()) openSheet();
+});
+
+/* ============================ ПАНЕЛЬ ДНЯ ============================ */
+function nextDoseHtml(temps, key){
+  const list = temps.filter(t => medInterval(t.med) > 0);
+  if (!list.length) return '';
+  const last = list[list.length - 1];
+  const med  = MEDS.find(x => x.id === last.med);
+  const d    = parseK(key);
+  const [h, mi] = last.time.split(':').map(Number);
+  const at   = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, mi);
+  const next = new Date(at.getTime() + med.interval * 60000);
+  const diff = next - new Date();
+  const hhmm = pad(next.getHours()) + ':' + pad(next.getMinutes());
+  const tomorrow = next.getDate() !== at.getDate() || next.getMonth() !== at.getMonth();
+  let cls, text;
+  if (diff > 0){
+    cls  = 'wait';
+    text = `следующая доза не раньше <strong>${hhmm}</strong>${tomorrow ? ' (завтра)' : ''} · через <strong>${dur(diff)}</strong>`;
+  } else {
+    cls  = 'ready';
+    text = `интервал между дозами выдержан: прошло <strong>${dur(-diff)}</strong>`;
+  }
+  return `<div class="nextdose ${cls}" id="nextdose">
+    <div class="nd-top">Последнее: <strong>${med.label}</strong> в ${last.time}${last.value ? ' · ' + fmtT(last.value) + '°' : ''}</div>
+    <div class="nd-main">${text}</div>
+  </div>`;
+}
+
+function tempRow(t){
+  const med  = MEDS.find(x => x.id === t.med);
+  const help = HELP.find(x => x.id === t.helped);
+  return `<div class="trow">
+    <span class="ttime">${t.time}</span>
+    <span class="tval">${fmtT(t.value)}°</span>
+    <span class="tmed">${med && med.id ? med.label : ''}</span>
+    ${help && help.id ? `<span class="thelp ${t.helped}">${help.label.toLowerCase()}</span>` : ''}
+    <button class="iconbtn tiny" type="button" data-act="deltemp" data-id="${t.id}" title="Удалить">×</button>
+  </div>`;
+}
+
+function medRow(m){
+  const displayName = medDisplayName(m);
+  const showNote = m.note && m.note.trim() && m.med !== 'other' && !m.customName;
+  const courseIcon = m.courseId ? '<span class="mcourse" title="приём из курса">💊</span>' : '';
+  return `<div class="mrow">
+    <span class="mtime">${m.time}</span>
+    ${courseIcon}
+    <span class="mname">${esc(displayName)}</span>
+    ${m.dose ? `<span class="mdose">${esc(m.dose)}</span>` : ''}
+    ${showNote ? `<span class="mnote">${esc(m.note)}</span>` : ''}
+    <button class="iconbtn tiny" type="button" data-act="delmed" data-id="${m.id}" title="Удалить">×</button>
+  </div>`;
+}
+
+function renderCoursesToday(k){
+  const courses = getCoursesForDay(k);
+  if (!courses.length){
+    return `
+      <div class="courses-today">
+        <p class="muted small courses-empty">Нет активных курсов на этот день.</p>
+        <button class="btn courses-manage-btn" type="button" data-act="open-courses">⚙ Управление курсами</button>
+      </div>
+    `;
+  }
+  let rows = '';
+  courses.forEach(course => {
+    const times = (course.times || []).slice().sort();
+    times.forEach(time => {
+      const intake = getCourseIntake(course.id, time, k);
+      const checked = !!intake;
+      rows += `<label class="course-check ${checked ? 'checked' : ''}">
+        <input type="checkbox" data-act="course-check" data-course-id="${course.id}" data-time="${time}" ${checked ? 'checked' : ''}>
+        <span class="cc-time">${time}</span>
+        <span class="cc-name">${esc(course.name)}</span>
+        ${course.dose ? `<span class="cc-dose">${esc(course.dose)}</span>` : ''}
+      </label>`;
+    });
+  });
+  return `
+    <div class="courses-today">
+      ${rows}
+      <button class="btn courses-manage-btn" type="button" data-act="open-courses">⚙ Управление курсами</button>
+    </div>
+  `;
+}
+
+// (v3.2) Универсальный заголовок сворачиваемого раздела
+function sectionOpen(key, autoDefault){
+  return sectionIsOpen(key, autoDefault) ? 'open' : '';
+}
+function sectionHeadHtml(key, label, count){
+  const badge = (count > 0) ? `<span class="section-count">${count}</span>` : '';
+  return `<summary><span>${label}</span>${badge}</summary>`;
+}
+
+function renderPanel(){
+  if (!selected){
+    panelEl.innerHTML = `<h3>Выбери день</h3><p class="muted small">Нажми на любую дату в календаре.</p>`;
+    return;
+  }
+  const k    = selected;
+  const d    = parseK(k);
+  const days = getActiveChild().days;
+  const rec  = days[k] || {};
+  const status = rec.status || '';
+  const syms   = rec.symptoms || [];
+  const temps  = (rec.temps || []).slice().sort((a,b) => a.time.localeCompare(b.time));
+  const meds   = (rec.meds  || []).slice().sort((a,b) => a.time.localeCompare(b.time));
+  const isToday = k === keyOf(new Date());
+  const nowTime = pad(new Date().getHours()) + ':' + pad(new Date().getMinutes());
+  const diags = allDiagnoses();
+
+  // (v3.2) Авто-дефолты для сворачивания
+  const uncheckedCourses = countUncheckedCourses(k);
+  const autoDiag    = false;
+  const autoSyms    = true;
+  const autoTemps   = temps.length > 0;
+  const autoCourses = uncheckedCourses > 0;
+  const autoMeds    = false;
+  const autoNote    = false;
+
+  const openDiag    = sectionOpen('diagnosis', autoDiag);
+  const openSyms    = sectionOpen('symptoms',  autoSyms);
+  const openTemps   = sectionOpen('temps',     autoTemps);
+  const openCourses = sectionOpen('courses',   autoCourses);
+  const openMeds    = sectionOpen('meds',      autoMeds);
+  const openNote    = sectionOpen('note',      autoNote);
+
+  const diagCount  = (rec.diagnosis && rec.diagnosis.trim()) ? 1 : 0;
+  const noteCount  = (rec.note && rec.note.trim()) ? 1 : 0;
+
+  let visibleSymptoms;
+  if (symptomsExpanded){
+    visibleSymptoms = SYMPTOMS;
+  } else {
+    const top5 = getTopSymptoms(5).map(s => s.id);
+    const visibleIds = new Set([...top5, ...syms]);
+    visibleSymptoms = SYMPTOMS.filter(s => visibleIds.has(s.id));
+  }
+  const hiddenCount = SYMPTOMS.length - visibleSymptoms.length;
+  let toggleBtn = '';
+  if (symptomsExpanded){
+    toggleBtn = `<button type="button" class="chip-more" data-act="sym-less">← Свернуть</button>`;
+  } else if (hiddenCount > 0){
+    toggleBtn = `<button type="button" class="chip-more" data-act="sym-more">Другие симптомы (${hiddenCount}) →</button>`;
+  }
+
+  const medOptions = MEDS.slice(1).map(x => `<option value="${x.id}">${x.label}</option>`).join('');
+
+  panelEl.innerHTML = `
+    <div class="panel-head">
+      <div>
+        <div class="eyebrow">${WD_FULL[d.getDay()]}</div>
+        <div class="panel-date">${d.getDate()} ${MONTHS_G[d.getMonth()]}</div>
+      </div>
+      <div class="panel-head-right">
+        ${isToday ? '<span class="tag lime">сегодня</span>' : ''}
+      </div>
+    </div>
+
+    <div class="seg" role="group" aria-label="Состояние">
+      <button type="button" data-act="status" data-v="ok"   class="${status === 'ok'   ? 'on ok'   : ''}">Здоров</button>
+      <button type="button" data-act="status" data-v="sick" class="${status === 'sick' ? 'on sick' : ''}">Болеет</button>
+    </div>
+
+    <label class="check">
+      <input type="checkbox" data-act="garden" ${rec.garden ? 'checked' : ''}>
+      <span>Был в садике</span>
+    </label>
+    <label class="check">
+      <input type="checkbox" data-act="home" ${rec.home ? 'checked' : ''}>
+      <span>Остался дома</span>
+    </label>
+
+    <details class="day-section" data-section="diagnosis" ${openDiag}>
+      ${sectionHeadHtml('diagnosis', 'Диагноз', diagCount)}
+      <div class="section-body">
+        <input class="inp" list="diagList" data-act="diagnosis" value="${esc(rec.diagnosis || '')}" placeholder="Например, ОРВИ, ангина…">
+        <datalist id="diagList">${diags.map(x => `<option value="${esc(x)}">`).join('')}</datalist>
+      </div>
+    </details>
+
+    <details class="day-section" data-section="symptoms" ${openSyms}>
+      ${sectionHeadHtml('symptoms', 'Симптомы', syms.length)}
+      <div class="section-body">
+        <div class="chips">
+          ${visibleSymptoms.map(s => `<button type="button" class="chip ${syms.includes(s.id) ? 'on' : ''}"
+              data-act="sym" data-id="${s.id}" style="--dotc:${CAT_DOT[s.cat]}">${s.label}</button>`).join('')}
+          ${toggleBtn}
+        </div>
+      </div>
+    </details>
+
+    <details class="day-section" data-section="temps" ${openTemps}>
+      ${sectionHeadHtml('temps', 'Температура', temps.length)}
+      <div class="section-body">
+        <div class="addform">
+          <div class="row">
+            <input class="inp" type="time" id="tTime" value="${isToday ? nowTime : '09:00'}" aria-label="Время">
+            <input class="inp" type="text" inputmode="decimal" id="tVal" placeholder="38,5" autocomplete="off" aria-label="Температура">
+            <button class="btn primary" type="button" data-act="addtemp" style="flex:0 0 auto; min-width:52px">+</button>
+          </div>
+          <div class="row">
+            <select class="inp" id="tMed" aria-label="Лекарство">${MEDS.map(x => `<option value="${x.id}">${x.label}</option>`).join('')}</select>
+            <select class="inp" id="tHelp" aria-label="Помогло ли">${HELP.map(x => `<option value="${x.id}">${x.label}</option>`).join('')}</select>
+          </div>
+        </div>
+        <div class="err" id="tErr" hidden></div>
+        ${nextDoseHtml(temps, k)}
+        <div class="tlist">
+          ${temps.length
+            ? temps.map(tempRow).join('')
+            : '<p class="muted small" style="margin:8px 0 0">Пока нет замеров.</p>'}
+        </div>
+      </div>
+    </details>
+
+    <details class="day-section" data-section="courses" ${openCourses}>
+      ${sectionHeadHtml('courses', 'Курсы на сегодня', uncheckedCourses)}
+      <div class="section-body">
+        ${renderCoursesToday(k)}
+      </div>
+    </details>
+
+    <details class="day-section" data-section="meds" ${openMeds}>
+      ${sectionHeadHtml('meds', 'Препараты', meds.length)}
+      <div class="section-body">
+        <div class="addform">
+          <div class="row">
+            <input class="inp" type="time" id="mTime" value="${isToday ? nowTime : '09:00'}" aria-label="Время">
+            <select class="inp" id="mMed" aria-label="Препарат">${medOptions}</select>
+            <button class="btn primary" type="button" data-act="addmed" style="flex:0 0 auto; min-width:52px">+</button>
+          </div>
+          <div class="row">
+            <input class="inp" type="text" id="mDose" placeholder="Доза (напр. 5 мл)" autocomplete="off" aria-label="Доза">
+            <input class="inp" type="text" id="mNote" placeholder="Заметка" autocomplete="off" aria-label="Заметка">
+          </div>
+        </div>
+        <div class="err" id="mErr" hidden></div>
+        <div class="mlist">
+          ${meds.length
+            ? meds.map(medRow).join('')
+            : '<p class="muted small" style="margin:8px 0 0">Пока нет записей.</p>'}
+        </div>
+      </div>
+    </details>
+
+    <details class="day-section" data-section="note" ${openNote}>
+      ${sectionHeadHtml('note', 'Заметка', noteCount)}
+      <div class="section-body">
+        <textarea class="inp" data-act="note" rows="2" placeholder="Что помогло, настроение, аппетит…">${esc(rec.note || '')}</textarea>
+      </div>
+    </details>
+
+    <div class="panel-footer">
+      <div style="display:flex; gap:8px; flex-wrap:wrap">
+        <button class="btn" type="button" data-act="copyto">📋 Скопировать</button>
+        <button class="btn" type="button" data-act="print">🖨 Печать</button>
+      </div>
+      <button class="link danger" type="button" data-act="clear">Очистить</button>
+    </div>
+  `;
+}
+
+// (v3.2) Сохранение состояния сворачивания при toggle <details>
+// Используем capture, потому что событие toggle не всплывает
+panelEl.addEventListener('toggle', e => {
+  const det = e.target;
+  if (!det || det.tagName !== 'DETAILS') return;
+  const key = det.dataset.section;
+  if (!key) return;
+  sectionsState[key] = !!det.open;
+  saveSections();
+}, true);
+
+panelEl.addEventListener('click', e => {
+  const btn = e.target.closest('[data-act]');
+  if (!btn || !selected) return;
+  const act = btn.dataset.act;
+  if (act === 'sym-more'){ symptomsExpanded = true; renderPanel(); return; }
+  if (act === 'sym-less'){ symptomsExpanded = false; renderPanel(); return; }
+  if (act === 'open-courses'){ openCoursesModal(); return; }
+
+  if (act === 'status'){
+    const rec = getDay(selected, true);
+    const v = btn.dataset.v;
+    rec.status = rec.status === v ? null : v;
+    commit();
+  }
+  if (act === 'sym'){
+    const rec = getDay(selected, true);
+    const id = btn.dataset.id;
+    const i = rec.symptoms.indexOf(id);
+    if (i >= 0) rec.symptoms.splice(i, 1);
+    else rec.symptoms.push(id);
+    if (rec.symptoms.length && !rec.status) rec.status = 'sick';
+    commit();
+  }
+  if (act === 'addtemp') addTemp();
+  if (act === 'deltemp'){
+    const rec = getDay(selected, true);
+    rec.temps = rec.temps.filter(t => t.id !== btn.dataset.id);
+    commit();
+  }
+  if (act === 'addmed') addMed();
+  if (act === 'delmed'){
+    const rec = getDay(selected, true);
+    rec.meds = rec.meds.filter(m => m.id !== btn.dataset.id);
+    commit();
+  }
+  if (act === 'clear'){
+    if (confirm('Очистить все отметки за этот день?')){
+      delete getActiveChild().days[selected];
+      commit();
+    }
+  }
+  if (act === 'copyto') showCopyOptionsDialog(selected);
+  if (act === 'print') printDayCard(selected);
+});
+
+panelEl.addEventListener('change', e => {
+  const act = e.target.dataset.act;
+  if (act === 'garden' && selected){
+    const rec = getDay(selected, true);
+    rec.garden = e.target.checked;
+    commit();
+  }
+  if (act === 'home' && selected){
+    const rec = getDay(selected, true);
+    rec.home = e.target.checked;
+    commit();
+  }
+  if (act === 'course-check' && selected){
+    const courseId = e.target.dataset.courseId;
+    const time = e.target.dataset.time;
+    const checked = e.target.checked;
+    const rec = getDay(selected, true);
+    if (checked){
+      const course = (getActiveChild().courses || []).find(c => c.id === courseId);
+      if (course){
+        const exists = rec.meds.some(m => m.courseId === courseId && m.time === time);
+        if (!exists){
+          rec.meds.push({
+            id: uid(),
+            time: time,
+            med: 'other',
+            dose: course.dose || '',
+            note: course.note || '',
+            courseId: course.id,
+            customName: course.name
+          });
+          rec.meds.sort((a,b) => a.time.localeCompare(b.time));
+          if (!rec.status) rec.status = 'sick';
+        }
+      }
+    } else {
+      rec.meds = rec.meds.filter(m => !(m.courseId === courseId && m.time === time));
+    }
+    commit();
+  }
+});
+
+panelEl.addEventListener('input', e => {
+  const act = e.target.dataset.act;
+  if (!selected) return;
+  if (act === 'note'){
+    const rec = getDay(selected, true);
+    rec.note = e.target.value;
+    save();
+  }
+  if (act === 'diagnosis'){
+    const rec = getDay(selected, true);
+    rec.diagnosis = e.target.value;
+    save();
+  }
+});
+
+function addTemp(){
+  const timeEl = document.getElementById('tTime');
+  const valEl  = document.getElementById('tVal');
+  const medEl  = document.getElementById('tMed');
+  const helpEl = document.getElementById('tHelp');
+  const errEl  = document.getElementById('tErr');
+  if (!timeEl || !valEl) return;
+  const raw = (valEl.value || '').replace(',', '.').trim();
+  const val = parseFloat(raw);
+  if (!raw || isNaN(val) || val < 30 || val > 43){
+    errEl.hidden = false;
+    errEl.textContent = 'Введи температуру числом от 30 до 43, например 38,5';
+    valEl.focus();
+    return;
+  }
+  const rec = getDay(selected, true);
+  rec.temps.push({
+    id: uid(),
+    time: timeEl.value || (pad(new Date().getHours()) + ':' + pad(new Date().getMinutes())),
+    value: Math.round(val * 10) / 10,
+    med: medEl ? medEl.value : '',
+    helped: helpEl ? helpEl.value : ''
+  });
+  rec.temps.sort((a,b) => a.time.localeCompare(b.time));
+  if (val >= 37.5){
+    if (!rec.status) rec.status = 'sick';
+    if (!rec.symptoms.includes('fever')) rec.symptoms.push('fever');
+  }
+  commit();
+}
+
+function addMed(){
+  const timeEl = document.getElementById('mTime');
+  const medEl  = document.getElementById('mMed');
+  const doseEl = document.getElementById('mDose');
+  const noteEl = document.getElementById('mNote');
+  const errEl  = document.getElementById('mErr');
+  if (!medEl || !medEl.value){
+    if (errEl){ errEl.hidden = false; errEl.textContent = 'Выбери препарат'; }
+    return;
+  }
+  const rec = getDay(selected, true);
+  rec.meds.push({
+    id: uid(),
+    time: timeEl && timeEl.value ? timeEl.value : (pad(new Date().getHours()) + ':' + pad(new Date().getMinutes())),
+    med: medEl.value,
+    dose: doseEl ? doseEl.value.trim() : '',
+    note: noteEl ? noteEl.value.trim() : ''
+  });
+  rec.meds.sort((a,b) => a.time.localeCompare(b.time));
+  if (!rec.status) rec.status = 'sick';
+  commit();
+}
+
+setInterval(() => {
+  renderDoseBar();
+  const el = document.getElementById('nextdose');
+  if (el && selected){
+    const rec = getActiveChild().days[selected];
+    if (rec && rec.temps && rec.temps.length){
+      const temps = rec.temps.slice().sort((a,b) => a.time.localeCompare(b.time));
+      const html = nextDoseHtml(temps, selected);
+      if (html) el.outerHTML = html;
+      else el.remove();
+    }
+  }
+}, 30000);
+
+/* ============================ ПЕЧАТЬ КАРТОЧКИ ДНЯ ============================ */
+function printDayCard(key){
+  const rec = getActiveChild().days[key];
+  if (!rec || !hasAnyData(rec)){ toast('В этом дне нет данных для печати'); return; }
+  const d = parseK(key);
+  const dateStr = `${WD_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS_G[d.getMonth()]} ${d.getFullYear()}`;
+
+  const statusLabel = rec.status === 'sick' ? 'Болеет' : rec.status === 'ok' ? 'Здоров' : '—';
+  const statusColor = rec.status === 'sick' ? '#F27691' : rec.status === 'ok' ? '#687B59' : '#a49c90';
+
+  const syms = (rec.symptoms || []).map(id => SYMPTOMS.find(s => s.id === id)).filter(Boolean);
+  const symsText = syms.length ? syms.map(s => s.label).join(', ') : '—';
+
+  const temps = (rec.temps || []).slice().sort((a,b) => a.time.localeCompare(b.time));
+  const meds  = (rec.meds  || []).slice().sort((a,b) => a.time.localeCompare(b.time));
+
+  let tempsHtml = '';
+  if (temps.length){
+    tempsHtml = `<table class="card-table">
+      <thead><tr><th>Время</th><th>Темп.</th><th>Лекарство</th><th>Помогло</th></tr></thead>
+      <tbody>${temps.map(t => {
+        const med  = MEDS.find(m => m.id === t.med);
+        const help = HELP.find(h => h.id === t.helped);
+        return `<tr>
+          <td>${t.time}</td>
+          <td><strong>${fmtT(t.value)}°</strong></td>
+          <td>${med && med.id ? esc(med.label) : '—'}</td>
+          <td>${help && help.id ? esc(help.label.toLowerCase()) : '—'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
+
+  let medsHtml = '';
+  if (meds.length){
+    medsHtml = `<table class="card-table">
+      <thead><tr><th>Время</th><th>Препарат</th><th>Доза</th><th>Заметка</th></tr></thead>
+      <tbody>${meds.map(m => {
+        const displayName = medDisplayName(m);
+        const showNote = m.note && m.note.trim() && m.med !== 'other' && !m.customName;
+        return `<tr>
+          <td>${m.time}</td>
+          <td><strong>${esc(displayName)}</strong></td>
+          <td>${m.dose ? esc(m.dose) : '—'}</td>
+          <td>${showNote ? esc(m.note) : '—'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>Карточка дня · ${fmtDateShort(key)}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #292724; background: #fff; margin: 0; padding: 12mm; line-height: 1.5; font-size: 11pt; }
+  .card { max-width: 148mm; margin: 0 auto; border: 1.5pt solid #292724; border-radius: 12pt; padding: 12pt 14pt 10pt; position: relative; }
+  .card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4pt; background: #DCEB32; border-radius: 12pt 0 0 12pt; }
+  .brand { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.12em; color: #756f65; font-weight: 800; }
+  .date { font-size: 16pt; font-weight: 800; letter-spacing: -0.02em; margin: 2pt 0 6pt; text-transform: capitalize; }
+  .status-row { display: flex; flex-wrap: wrap; gap: 6pt; align-items: center; margin-bottom: 8pt; }
+  .status-badge { display: inline-block; padding: 3pt 10pt; border-radius: 999pt; font-weight: 700; font-size: 10pt; border: 1pt solid currentColor; }
+  .mark-badge { display: inline-block; padding: 3pt 10pt; border-radius: 999pt; font-weight: 700; font-size: 9pt; }
+  .mark-badge.garden { background: #DCEB32; color: #292724; }
+  .mark-badge.home { background: #F27691; color: #fff; }
+  .section { margin-bottom: 8pt; }
+  .section-label { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 800; color: #756f65; margin-bottom: 3pt; }
+  .section-text { font-size: 10.5pt; }
+  .note-block { padding: 6pt 10pt; background: #F4EBDD; border-radius: 6pt; border-left: 3pt solid #DCEB32; font-size: 10pt; white-space: pre-wrap; }
+  table.card-table { width: 100%; border-collapse: collapse; font-size: 9.5pt; border: 0.5pt solid #dfd4c4; border-radius: 4pt; overflow: hidden; }
+  table.card-table th { background: #fffaf1; padding: 4pt 6pt; text-align: left; border-bottom: 0.5pt solid #dfd4c4; font-weight: 700; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.04em; color: #756f65; }
+  table.card-table td { padding: 4pt 6pt; border-bottom: 0.5pt solid #ece0d0; }
+  table.card-table tr:last-child td { border-bottom: 0; }
+  .footer { margin-top: 10pt; padding-top: 6pt; border-top: 0.5pt solid #dfd4c4; color: #a49c90; font-size: 8pt; text-align: center; }
+  @media print {
+    body { padding: 0; }
+    @page { size: A5; margin: 8mm; }
+  }
+</style></head>
+<body><div class="card">
+  <div class="brand">«Ещё одна галочка» · Адаптация к садику</div>
+  <div class="date">${dateStr}</div>
+  <div class="status-row">
+    <span class="status-badge" style="color:${statusColor}">${statusLabel}</span>
+    ${rec.garden ? '<span class="mark-badge garden">🏫 был в садике</span>' : ''}
+    ${rec.home ? '<span class="mark-badge home">🏠 остался дома</span>' : ''}
+  </div>
+  <div class="section">
+    <div class="section-label">Диагноз</div>
+    <div class="section-text">${rec.diagnosis ? esc(rec.diagnosis) : '—'}</div>
+  </div>
+  <div class="section">
+    <div class="section-label">Симптомы</div>
+    <div class="section-text">${symsText}</div>
+  </div>
+  ${temps.length ? `<div class="section">
+    <div class="section-label">Температура</div>
+    ${tempsHtml}
+  </div>` : ''}
+  ${meds.length ? `<div class="section">
+    <div class="section-label">Препараты</div>
+    ${medsHtml}
+  </div>` : ''}
+  ${rec.note && rec.note.trim() ? `<div class="section">
+    <div class="section-label">Заметка</div>
+    <div class="note-block">${esc(rec.note).replace(/\n/g, '<br>')}</div>
+  </div>` : ''}
+  <div class="footer">Сформировано ${new Date().toLocaleDateString('ru-RU')} · «Ещё одна галочка»</div>
+</div>
+<script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 300); });<\/script>
+</body></html>`;
+
+  const win = window.open('', '_blank');
+  if (!win){
+    const blob = new Blob([html], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'day-' + key + '.html';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast('Браузер заблокировал окно — файл сохранён');
+    return;
+  }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+}
+
+/* ============================ СВОДКА ЗА ДЕНЬ ============================ */
+function renderDaySummary(){
+  const titleEl = document.getElementById('dsTitle');
+  const bodyEl  = document.getElementById('dsBody');
+  if (!titleEl || !bodyEl) return;
+  const d = parseK(summaryKey);
+  const todayKey = keyOf(new Date());
+  const isToday = summaryKey === todayKey;
+
+  titleEl.innerHTML = `${isToday ? '<span class="ds-today">сегодня</span>' : ''}${WD_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS_G[d.getMonth()]}`;
+
+  const rec = getActiveChild().days[summaryKey];
+  if (!rec || !hasAnyData(rec)){
+    bodyEl.innerHTML = `
+      <div class="ds-empty">Нет отметок за этот день</div>
+      <button class="btn primary ds-open" type="button" data-ds-open>Открыть день →</button>
+    `;
+    return;
+  }
+
+  const name = getActiveChild().name ? `<b>${esc(getActiveChild().name)}</b>` : 'ребёнок';
+
+  let datePrefix = isToday ? 'Сегодня' : fmtDate(summaryKey);
+
+  const statusLabel = rec.status === 'sick' ? 'болеет' : rec.status === 'ok' ? 'здоров' : '';
+
+  let locParts = [];
+  if (rec.garden) locParts.push('в садике');
+  if (rec.home) locParts.push('дома');
+  let locStr = locParts.join(' и ');
+
+  let mainParts = [];
+  if (locStr) mainParts.push(locStr);
+  if (statusLabel) mainParts.push(statusLabel);
+
+  let sentence = '';
+  if (mainParts.length) {
+     sentence = `<b>${datePrefix}</b> ${name} <b>${mainParts.join(', ')}</b>.`;
+  } else {
+     sentence = `<b>${datePrefix}</b> у ${name} есть отметки.`;
+  }
+
+  let detailsHtml = '';
+
+  const syms = (rec.symptoms || []).map(id => SYMPTOMS.find(s => s.id === id)).filter(Boolean);
+  if (syms.length) {
+    detailsHtml += `<div><b>Симптомы:</b> ${syms.map(s => s.label).join(', ')}.</div>`;
+  }
+
+  const temps = rec.temps || [];
+  if (temps.length) {
+     const maxT = Math.max(...temps.map(t => t.value));
+     detailsHtml += `<div><b>Температура:</b> до ${fmtT(maxT)}° (${temps.length} ${plural(temps.length, 'замер', 'замера', 'замеров')}).</div>`;
+  }
+
+  if (rec.meds && rec.meds.length) {
+     const medsStr = rec.meds.map(m => `${esc(medDisplayName(m))}${m.dose ? ' ' + m.dose : ''} (${m.time})`).join(', ');
+     detailsHtml += `<div><b>Препараты:</b> ${medsStr}.</div>`;
+  }
+
+  if (rec.diagnosis && rec.diagnosis.trim()) {
+     detailsHtml += `<div><b>Диагноз:</b> ${esc(rec.diagnosis)}.</div>`;
+  }
+
+  bodyEl.innerHTML = `
+    <div class="ds-narrative">
+      <p class="ds-sentence">${sentence}</p>
+      ${detailsHtml ? `<div class="ds-details">${detailsHtml}</div>` : ''}
+    </div>
+    <button class="btn primary ds-open" type="button" data-ds-open>Открыть день →</button>
+  `;
+}
+
+function shiftSummary(dir){
+  const d = parseK(summaryKey);
+  d.setDate(d.getDate() + dir);
+  summaryKey = keyOf(d);
+  renderDaySummary();
+}
+document.getElementById('dsPrev').addEventListener('click', () => shiftSummary(-1));
+document.getElementById('dsNext').addEventListener('click', () => shiftSummary(1));
+document.getElementById('dsBody').addEventListener('click', e => {
+  if (!e.target.closest('[data-ds-open]')) return;
+  selected = summaryKey;
+  weekAnchor = selected;
+  const dd = parseK(selected);
+  view = { y: dd.getFullYear(), m: dd.getMonth() };
+  if (viewMode === 'month') renderCalendar();
+  else renderWeekView();
+  renderPanel();
+  if (isMobile()) openSheet();
+});
+
+/* ============================ СТАТИСТИКА МЕСЯЦА ============================ */
+function renderStats(){
+  const { y, m } = view;
+  const total = new Date(y, m+1, 0).getDate();
+  let sick = 0, healthy = 0, garden = 0, feverDays = 0, maxT = 0, entries = 0, medsCount = 0;
+  const sym = {};
+  const days = getActiveChild().days;
+  for (let d = 1; d <= total; d++){
+    const k = `${y}-${pad(m+1)}-${pad(d)}`;
+    const r = days[k];
+    if (!r) continue;
+    if (r.status === 'sick') sick++;
+    if (r.status === 'ok') healthy++;
+    if (r.garden) garden++;
+    medsCount += (r.meds || []).length;
+    const ts = r.temps || [];
+    if (ts.length){
+      entries += ts.length;
+      const mx = Math.max(...ts.map(t => t.value));
+      if (mx > maxT) maxT = mx;
+      if (mx >= 37.5) feverDays++;
+    }
+    (r.symptoms || []).forEach(id => { if (id !== 'fever') sym[id] = (sym[id] || 0) + 1; });
+  }
+  const top = Object.entries(sym).sort((a,b) => b[1] - a[1]).slice(0, 4)
+    .map(([id, n]) => {
+      const s = SYMPTOMS.find(x => x.id === id);
+      return s ? `${s.label.toLowerCase()} · ${n}` : '';
+    }).filter(Boolean);
+
+  statsEl.innerHTML = `
+    <div class="stat"><span class="sval" style="color:var(--coral)">${sick}</span><span class="slab">дней болел</span></div>
+    <div class="stat"><span class="sval" style="color:var(--sage)">${garden}</span><span class="slab">дней в садике</span></div>
+    <div class="stat"><span class="sval" style="color:#8aa63a">${healthy}</span><span class="slab">дней здоров</span></div>
+    <div class="stat"><span class="sval">${feverDays}</span><span class="slab">дней с температурой</span></div>
+    <div class="stat"><span class="sval">${medsCount}</span><span class="slab">препаратов</span></div>
+    <div class="stat"><span class="sval">${maxT ? fmtT(maxT) + '°' : '—'}</span><span class="slab">максимум</span></div>
+
+    <div class="stat wide">
+      <div class="bar"><i style="width:${total ? Math.min(100, sick/total*100) : 0}%"></i></div>
+      <div class="slab" style="margin-top:8px">
+        ${MONTHS[m]}: болел <strong>${sick}</strong> из ${total} дней${total ? ` · ${Math.round(sick/total*100)}%` : ''}${entries ? ` · ${entries} замер(ов)` : ''}
+      </div>
+    </div>
+
+    <div class="stat wide">
+      <div class="slab" style="margin-bottom:8px">Частые симптомы</div>
+      ${top.length
+        ? `<div class="chips">${top.map(t => `<span class="pill">${t}</span>`).join('')}</div>`
+        : '<span class="muted small">Пока нет данных</span>'}
+    </div>
+  `;
+}
+
+function updateHeroMeta(){
+  const { y, m } = view;
+  const total = new Date(y, m+1, 0).getDate();
+  let sick = 0, garden = 0;
+  const days = getActiveChild().days;
+  for (let d = 1; d <= total; d++){
+    const k = `${y}-${pad(m+1)}-${pad(d)}`;
+    const r = days[k];
+    if (!r) continue;
+    if (r.status === 'sick') sick++;
+    if (r.garden) garden++;
+  }
+  let html = `<span class="meta-pill">${MONTHS[m]} ${y}</span>`;
+  if (sick) html += `<span class="meta-pill meta-coral">${sick} ${plural(sick, 'день', 'дня', 'дней')} болезни</span>`;
+  if (garden) html += `<span class="meta-pill meta-sage">${garden} ${plural(garden, 'день', 'дня', 'дней')} в садике</span>`;
+  if (!sick && !garden) html += `<span class="meta-pill meta-muted">пока без отметок</span>`;
+  heroMetaEl.innerHTML = html;
+}
+
+/* ============================ ГРАФИКИ АНАЛИТИКИ ============================ */
+function renderBarChart(labels, values, color){
+  const W = 340, H = 150;
+  const padL = 8, padR = 8, padT = 14, padB = 24;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const maxV = Math.max(1, ...values);
+  const rawBarW = plotW / Math.max(1, labels.length);
+  const barW = Math.min(52, rawBarW * 0.82);
+  const totalW = barW * labels.length;
+  const startX = padL + (plotW - totalW) / 2;
+  const step = labels.length > 1 ? totalW / (labels.length - 1) : 0;
+  const cx = i => labels.length === 1 ? padL + plotW / 2 : startX + i * step;
+  let grid = '';
+  for (let g = 0; g <= 4; g++){
+    const val = Math.round(maxV * g / 4);
+    const yy = padT + plotH - (val / maxV) * plotH;
+    grid += `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="currentColor" stroke-width="0.5" opacity="0.1"/>`;
+  }
+  let bars = '';
+  labels.forEach((lbl, i) => {
+    const v = values[i];
+    const x = cx(i) - barW / 2;
+    const h = (v / maxV) * plotH;
+    const y = padT + plotH - h;
+    if (v > 0){
+      bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="4" fill="${color}" opacity="0.85"/>`;
+      bars += `<text x="${cx(i).toFixed(1)}" y="${(y - 4).toFixed(1)}" font-size="9" text-anchor="middle" fill="currentColor" opacity="0.8" font-weight="700">${v}</text>`;
+    } else {
+      bars += `<rect x="${x.toFixed(1)}" y="${(padT + plotH - 2).toFixed(1)}" width="${barW.toFixed(1)}" height="2" rx="1" fill="${color}" opacity="0.2"/>`;
+    }
+    if (labels.length <= 12){
+      bars += `<text x="${cx(i).toFixed(1)}" y="${H - padB + 13}" font-size="8" text-anchor="middle" fill="currentColor" opacity="0.6">${lbl}</text>`;
+    }
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img">${grid}${bars}</svg>`;
+}
+
+function renderSymptomBars(list, color, maxItems){
+  if (!list.length) return '';
+  const items = list.slice(0, maxItems || 8);
+  const W = 340, rowH = 22;
+  const padL = 110, padR = 32, padT = 4, padB = 4;
+  const H = items.length * rowH + padT + padB;
+  const plotW = W - padL - padR;
+  const maxV = Math.max(...items.map(([, n]) => n));
+  let rows = '';
+  items.forEach(([id, n], i) => {
+    const s = SYMPTOMS.find(x => x.id === id);
+    if (!s) return;
+    const y = padT + i * rowH;
+    const barW = (n / maxV) * plotW;
+    const label = s.label.length > 14 ? s.label.slice(0, 13) + '…' : s.label;
+    rows += `<text x="${padL - 6}" y="${y + rowH / 2 + 3}" font-size="10" text-anchor="end" fill="currentColor" opacity="0.85">${esc(label)}</text>`;
+    rows += `<rect x="${padL}" y="${y + 4}" width="${plotW}" height="${rowH - 10}" rx="4" fill="currentColor" opacity="0.06"/>`;
+    rows += `<rect x="${padL}" y="${y + 4}" width="${barW.toFixed(1)}" height="${rowH - 10}" rx="4" fill="${color}" opacity="0.8"/>`;
+    rows += `<text x="${padL + plotW + 6}" y="${y + rowH / 2 + 3}" font-size="10" fill="currentColor" opacity="0.8" font-weight="700">${n}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" style="display:block;width:100%;height:auto">${rows}</svg>`;
+}
+
+/* ============================ ГРАФИК БОЛЕЗНЕЙ ============================ */
+function computeSickDaysSeries(mode){
+  const labels = [], values = [];
+  const days = getActiveChild().days;
+  const anchor = safeParseK(getActiveChild().chartAnchor || keyOf(new Date()));
+
+  if (mode === 'week'){
+    const dow = (anchor.getDay() + 6) % 7;
+    const monday = new Date(anchor);
+    monday.setDate(anchor.getDate() - dow);
+    for (let i = 0; i < 7; i++){
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const k = keyOf(d);
+      const rec = days[k];
+      const sickDay = rec && rec.status === 'sick' ? 1 : 0;
+      labels.push(WD_SHORT[i]);
+      values.push(sickDay);
+    }
+  } else if (mode === 'month'){
+    const y = anchor.getFullYear(), m = anchor.getMonth();
+    const total = new Date(y, m+1, 0).getDate();
+    const weeks = Math.ceil(total / 7);
+    for (let w = 0; w < weeks; w++){
+      const start = w * 7 + 1;
+      const end = Math.min((w + 1) * 7, total);
+      let count = 0;
+      for (let d = start; d <= end; d++){
+        const k = `${y}-${pad(m+1)}-${pad(d)}`;
+        if (days[k] && days[k].status === 'sick') count++;
+      }
+      labels.push(`${start}–${end}`);
+      values.push(count);
+    }
+  } else {
+    const y = anchor.getFullYear();
+    for (let m = 0; m < 12; m++){
+      let count = 0;
+      const total = new Date(y, m+1, 0).getDate();
+      for (let d = 1; d <= total; d++){
+        const k = `${y}-${pad(m+1)}-${pad(d)}`;
+        if (days[k] && days[k].status === 'sick') count++;
+      }
+      labels.push(MONTHS_G_SHORT[m]);
+      values.push(count);
+    }
+  }
+  return { labels, values };
+}
+
+function chartTitle(mode){
+  const anchor = safeParseK(getActiveChild().chartAnchor || keyOf(new Date()));
+  if (mode === 'week'){
+    const dow = (anchor.getDay() + 6) % 7;
+    const monday = new Date(anchor);
+    monday.setDate(anchor.getDate() - dow);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    if (monday.getMonth() === sunday.getMonth()){
+      return `Неделя ${monday.getDate()}–${sunday.getDate()} ${MONTHS_G_SHORT[monday.getMonth()]}`;
+    }
+    return `Неделя ${monday.getDate()} ${MONTHS_G_SHORT[monday.getMonth()]} — ${sunday.getDate()} ${MONTHS_G_SHORT[sunday.getMonth()]}`;
+  }
+  if (mode === 'month') return `${MONTHS[anchor.getMonth()]} ${anchor.getFullYear()}`;
+  return `Год ${anchor.getFullYear()}`;
+}
+
+function chartSubtitle(mode){
+  if (mode === 'week')  return 'Дни болезни по дням недели (Пн–Вс)';
+  if (mode === 'month') return 'Сколько дней болезни в каждой неделе месяца (1–7, 8–14, …)';
+  return 'Сколько дней болезни в каждом месяце года';
+}
+
+function shiftChart(dir){
+  const anchor = safeParseK(getActiveChild().chartAnchor || keyOf(new Date()));
+  if (chartMode === 'week') anchor.setDate(anchor.getDate() + 7 * dir);
+  else if (chartMode === 'month') anchor.setMonth(anchor.getMonth() + dir);
+  else anchor.setFullYear(anchor.getFullYear() + dir);
+  getActiveChild().chartAnchor = keyOf(anchor);
+  save();
+  renderAnalytics();
+}
+
+/* ============================ АНАЛИТИКА ============================ */
+function filterSymptomList(list){
+  const filter = getActiveChild().symptomFilter || 'all';
+  if (filter === 'all') return list;
+  return list.filter(([id]) => {
+    const s = SYMPTOMS.find(x => x.id === id);
+    return s && s.cat === filter;
+  });
+}
+
+function buildSymFilterChips(targetEl, currentValue, onChange){
+  targetEl.innerHTML = SYM_CATS.map(c =>
+    `<button type="button" data-cat="${c.id}" class="${c.id === currentValue ? 'on' : ''}">${c.label}</button>`
+  ).join('');
+  targetEl.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      targetEl.querySelectorAll('button').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      onChange(btn.dataset.cat);
+    });
+  });
+}
+
+function buildChartViewToggle(containerEl){
+  containerEl.innerHTML = `
+    <button type="button" data-m="week" class="${chartMode === 'week' ? 'on' : ''}">Неделя</button>
+    <button type="button" data-m="month" class="${chartMode === 'month' ? 'on' : ''}">Месяц</button>
+    <button type="button" data-m="year" class="${chartMode === 'year' ? 'on' : ''}">Год</button>
+  `;
+  containerEl.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      chartMode = btn.dataset.m;
+      getActiveChild().chartMode = chartMode;
+      save();
+      renderAnalytics();
+    });
+  });
+}
+
+analyticsEl.addEventListener('click', e => {
+  const btn = e.target.closest('[data-chart-nav]');
+  if (!btn) return;
+  shiftChart(parseInt(btn.dataset.chartNav, 10));
+});
+
+function renderAnalytics(){
+  const period = currentPeriod;
+  let startK, endK, label;
+  if (period === 'month'){
+    const total = new Date(view.y, view.m+1, 0).getDate();
+    startK = `${view.y}-${pad(view.m+1)}-01`;
+    endK   = `${view.y}-${pad(view.m+1)}-${pad(total)}`;
+    label  = MONTHS[view.m] + ' ' + view.y;
+  } else if (period === 'year'){
+    startK = `${view.y}-01-01`;
+    endK   = `${view.y}-12-31`;
+    label  = String(view.y);
+  } else {
+    const keys = Object.keys(getActiveChild().days).sort();
+    startK = keys[0] || keyOf(new Date());
+    endK   = keys[keys.length-1] || keyOf(new Date());
+    label  = 'Всё время';
+  }
+
+  const filtered = {};
+  const days = getActiveChild().days;
+  Object.keys(days).forEach(k => {
+    if (k >= startK && k <= endK) filtered[k] = days[k];
+  });
+
+  const episodes = getEpisodes(filtered);
+  const sickDays = Object.values(filtered).filter(r => r.status === 'sick').length;
+  const healthyDays = Object.values(filtered).filter(r => r.status === 'ok').length;
+  const avgLen = episodes.length ? episodes.reduce((s,e) => s + e.days, 0) / episodes.length : 0;
+
+  const diagCount = {};
+  episodes.forEach(ep => { ep.diagnoses.forEach(d => { diagCount[d] = (diagCount[d] || 0) + 1; }); });
+  const diagList = Object.entries(diagCount).sort((a,b) => b[1] - a[1]);
+  const noDiag = episodes.filter(ep => ep.diagnoses.length === 0).length;
+
+  const symCount = {};
+  Object.values(filtered).forEach(r => {
+    (r.symptoms || []).forEach(id => { if (id !== 'fever') symCount[id] = (symCount[id] || 0) + 1; });
+  });
+  const symList = filterSymptomList(Object.entries(symCount).sort((a,b) => b[1] - a[1]));
+
+  const periodLabel = period === 'month' ? 'за месяц' : (period === 'year' ? 'за год' : 'за всё время');
+
+  const sickSeries = computeSickDaysSeries(chartMode);
+  const sickChartHtml = sickSeries.labels.length
+    ? renderBarChart(sickSeries.labels, sickSeries.values, '#F27691')
+    : '<p class="muted small" style="margin:8px 0">Нет данных за период</p>';
+
+  const symChartHtml = symList.length
+    ? renderSymptomBars(symList, '#687B59')
+    : '<p class="muted small" style="margin:8px 0">Симптомов по этому фильтру пока нет</p>';
+
+  analyticsEl.innerHTML = `
+    <div class="stat wide" style="margin-bottom:12px">
+      <span class="sval" style="color:var(--coral)">${episodes.length}</span>
+      <span class="slab">эпизодов болезни ${periodLabel} · ${label}</span>
+    </div>
+
+    <div class="stats-wrap" style="margin-top:0">
+      <div class="stat"><span class="sval">${sickDays}</span><span class="slab">дней болезни</span></div>
+      <div class="stat"><span class="sval" style="color:#8aa63a">${healthyDays}</span><span class="slab">дней здоров</span></div>
+      <div class="stat"><span class="sval">${avgLen ? avgLen.toFixed(1).replace('.', ',') : '—'}</span><span class="slab">средняя длительность</span></div>
+      <div class="stat"><span class="sval">${episodes.length ? Math.max(...episodes.map(e=>e.days)) : 0}</span><span class="slab">макс. длительность</span></div>
+      <div class="stat"><span class="sval">${noDiag}</span><span class="slab">без диагноза</span></div>
+    </div>
+
+    <div class="section-label" style="margin-top:18px">График болезней</div>
+    <div class="chart-box">
+      <div class="chart-nav">
+        <button class="chart-nav-btn" type="button" data-chart-nav="-1" aria-label="Предыдущий период">←</button>
+        <div class="chart-nav-title" id="chartTitle">${chartTitle(chartMode)}</div>
+        <button class="chart-nav-btn" type="button" data-chart-nav="1" aria-label="Следующий период">→</button>
+      </div>
+      <div class="chart-sub" id="chartSub">${chartSubtitle(chartMode)}</div>
+      <div class="chart-view-toggle" id="chartViewToggle"></div>
+      ${sickChartHtml}
+    </div>
+
+    <div class="section-label">Частота симптомов</div>
+    <div class="symptom-filter" id="symFilter"></div>
+    <div class="chart-box">
+      <div class="chart-title">Топ симптомов ${periodLabel}</div>
+      ${symChartHtml}
+    </div>
+
+    <div class="section-label">Болезни</div>
+    ${diagList.length
+      ? `<div class="chips">${diagList.map(([d, n]) =>
+          `<span class="pill coral">${esc(d)} · ${n}</span>`).join('')}</div>`
+      : '<p class="muted small" style="margin:6px 0">Диагнозов пока нет.</p>'}
+
+    <div class="section-label">Список эпизодов</div>
+    ${episodes.length
+      ? `<div class="ep-list">${episodes.slice().reverse().map(ep => `
+          <div class="ep-item">
+            <div class="ep-main">
+              <div class="ep-dates">${fmtDate(ep.start)}${ep.start !== ep.end ? ' — ' + fmtDate(ep.end) : ''}</div>
+              <div class="ep-diag">${ep.diagnoses.length ? esc(ep.diagnoses.join(', ')) : '<span class="muted">без диагноза</span>'}</div>
+            </div>
+            <span class="ep-len">${ep.days} дн.</span>
+          </div>`).join('')}</div>`
+      : '<p class="muted small" style="margin:6px 0">Эпизодов пока нет</p>'}
+  `;
+
+  const symFilterEl = document.getElementById('symFilter');
+  buildSymFilterChips(symFilterEl, getActiveChild().symptomFilter || 'all', cat => {
+    getActiveChild().symptomFilter = cat;
+    save();
+    renderAnalytics();
+  });
+  const chartToggleEl = document.getElementById('chartViewToggle');
+  buildChartViewToggle(chartToggleEl);
+}
+
+/* ============================ PDF ЭКСПОРТ ============================ */
+let pdfPeriodMode = 'month';
+let pdfSymptomFilter = 'all';
+let pdfOptions = { ...DEFAULT_PDF_OPTIONS };
+
+function openPdfOpts(){
+  pdfPeriodMode = currentPeriod;
+  document.querySelectorAll('#pdfPeriod button').forEach(b => {
+    b.classList.toggle('on', b.dataset.v === pdfPeriodMode);
+  });
+  document.getElementById('pdfCustom').classList.toggle('hidden', pdfPeriodMode !== 'custom');
+  if (!document.getElementById('pdfDateFrom').value){
+    const m = view.m + 1;
+    document.getElementById('pdfDateFrom').value = `${view.y}-${pad(m)}-01`;
+    const total = new Date(view.y, view.m+1, 0).getDate();
+    document.getElementById('pdfDateTo').value = `${view.y}-${pad(m)}-${pad(total)}`;
+  }
+  document.querySelectorAll('#pdfOpts input[data-pdf]').forEach(cb => {
+    cb.checked = !!pdfOptions[cb.dataset.pdf];
+  });
+  pdfSymptomFilter = getActiveChild().symptomFilter || 'all';
+  const pdfSymFilterEl = document.getElementById('pdfSymFilter');
+  buildSymFilterChips(pdfSymFilterEl, pdfSymptomFilter, cat => { pdfSymptomFilter = cat; });
+  pdfOptsModal.classList.add('show');
+  document.body.classList.add('no-scroll');
+}
+function hidePdfOpts(){
+  pdfOptsModal.classList.remove('show');
+  document.body.classList.remove('no-scroll');
+}
+document.getElementById('pdfBtn').addEventListener('click', openPdfOpts);
+document.getElementById('pdfCancel').addEventListener('click', hidePdfOpts);
+pdfOptsModal.addEventListener('click', e => {
+  if (e.target === pdfOptsModal) hidePdfOpts();
+});
+
+document.querySelectorAll('#pdfPeriod button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#pdfPeriod button').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    pdfPeriodMode = btn.dataset.v;
+    document.getElementById('pdfCustom').classList.toggle('hidden', pdfPeriodMode !== 'custom');
+  });
+});
+
+document.getElementById('pdfGenerate').addEventListener('click', () => {
+  const opts = {};
+  document.querySelectorAll('#pdfOpts input[data-pdf]').forEach(cb => {
+    opts[cb.dataset.pdf] = cb.checked;
+  });
+  if (!Object.values(opts).some(v => v)){ toast('Выбери хотя бы один раздел'); return; }
+  pdfOptions = { ...DEFAULT_PDF_OPTIONS, ...opts };
+
+  let startK, endK, label;
+  if (pdfPeriodMode === 'month'){
+    const total = new Date(view.y, view.m+1, 0).getDate();
+    startK = `${view.y}-${pad(view.m+1)}-01`;
+    endK   = `${view.y}-${pad(view.m+1)}-${pad(total)}`;
+    label  = MONTHS[view.m] + ' ' + view.y;
+  } else if (pdfPeriodMode === 'year'){
+    startK = `${view.y}-01-01`;
+    endK   = `${view.y}-12-31`;
+    label  = String(view.y);
+  } else if (pdfPeriodMode === 'all'){
+    const keys = Object.keys(getActiveChild().days).sort();
+    startK = keys[0] || keyOf(new Date());
+    endK   = keys[keys.length-1] || keyOf(new Date());
+    label  = 'Всё время';
+  } else {
+    const from = document.getElementById('pdfDateFrom').value;
+    const to   = document.getElementById('pdfDateTo').value;
+    if (!from || !to){ toast('Укажи обе даты'); return; }
+    startK = from <= to ? from : to;
+    endK   = from <= to ? to : from;
+    label  = `${fmtDateShort(startK)} — ${fmtDateShort(endK)}`;
+  }
+  hidePdfOpts();
+  generatePdf(startK, endK, label);
+});
+
+function generatePdf(startK, endK, periodLabel){
+  const filtered = {};
+  const days = getActiveChild().days;
+  Object.keys(days).forEach(k => {
+    if (k >= startK && k <= endK) filtered[k] = days[k];
+  });
+
+  const episodes = getEpisodes(filtered);
+  const sickDays = Object.values(filtered).filter(r => r.status === 'sick').length;
+  const healthyDays = Object.values(filtered).filter(r => r.status === 'ok').length;
+  const gardenDays = Object.values(filtered).filter(r => r.garden).length;
+  const avgLen = episodes.length ? episodes.reduce((s,e) => s + e.days, 0) / episodes.length : 0;
+
+  const diagCount = {};
+  episodes.forEach(ep => { ep.diagnoses.forEach(d => { diagCount[d] = (diagCount[d] || 0) + 1; }); });
+  const diagList = Object.entries(diagCount).sort((a,b) => b[1] - a[1]);
+  const noDiag = episodes.filter(ep => ep.diagnoses.length === 0).length;
+
+  const symCount = {};
+  Object.values(filtered).forEach(r => {
+    (r.symptoms || []).forEach(id => { if (id !== 'fever') symCount[id] = (symCount[id] || 0) + 1; });
+  });
+  let symList = Object.entries(symCount).sort((a,b) => b[1] - a[1]);
+  if (pdfSymptomFilter !== 'all'){
+    symList = symList.filter(([id]) => {
+      const s = SYMPTOMS.find(x => x.id === id);
+      return s && s.cat === pdfSymptomFilter;
+    });
+  }
+
+  const sickSeries = (function(){
+    const startD = parseK(startK), endD = parseK(endK);
+    const daysDiff = Math.round((endD - startD) / 86400000) + 1;
+    if (daysDiff <= 62){
+      const labels = [], values = [];
+      const weeks = Math.ceil(daysDiff / 7);
+      for (let w = 0; w < weeks; w++){
+        let count = 0;
+        let sDay = w * 7 + 1;
+        let eDay = Math.min((w + 1) * 7, daysDiff);
+        for (let i = 0; i < 7; i++){
+          const d = new Date(startD);
+          d.setDate(startD.getDate() + w * 7 + i);
+          if (d > endD) break;
+          const k = keyOf(d);
+          if (filtered[k] && filtered[k].status === 'sick') count++;
+        }
+        labels.push(`${sDay}–${eDay}`);
+        values.push(count);
+      }
+      return { labels, values };
+    }
+    const monthMap = {};
+    Object.keys(filtered).forEach(k => {
+      if (filtered[k].status === 'sick'){
+        const mk = k.slice(0, 7);
+        monthMap[mk] = (monthMap[mk] || 0) + 1;
+      }
+    });
+    const labels = [], values = [];
+    Object.keys(monthMap).sort().forEach(mk => {
+      const [y, m] = mk.split('-').map(Number);
+      labels.push(MONTHS_G_SHORT[m-1] + ' ' + String(y).slice(2));
+      values.push(monthMap[mk]);
+    });
+    return { labels, values };
+  })();
+
+  const allTemps = [];
+  Object.keys(filtered).sort().forEach(k => {
+    (filtered[k].temps || []).forEach(t => {
+      allTemps.push({ date: k, time: t.time, value: t.value, med: t.med, helped: t.helped });
+    });
+  });
+
+  const allMeds = [];
+  Object.keys(filtered).sort().forEach(k => {
+    (filtered[k].meds || []).forEach(m => {
+      allMeds.push({ date: k, time: m.time, med: m.med, dose: m.dose, note: m.note, customName: m.customName, courseId: m.courseId });
+    });
+  });
+
+  const notes = [];
+  Object.keys(filtered).sort().forEach(k => {
+    if (filtered[k].note && filtered[k].note.trim()){
+      notes.push({ date: k, note: filtered[k].note.trim(), diag: filtered[k].diagnosis || '' });
+    }
+  });
+
+  const parts = [];
+
+  parts.push(`
+    <header class="pdf-header">
+      <div class="pdf-brand">«Ещё одна галочка»</div>
+      <h1>Адаптация к садику · ${esc(getActiveChild().name || 'Без имени')}</h1>
+      <p class="pdf-sub">Период: <strong>${periodLabel}</strong> · сформировано ${new Date().toLocaleDateString('ru-RU')}</p>
+    </header>
+  `);
+
+  if (pdfOptions.summary){
+    parts.push(`
+      <section class="pdf-section">
+        <h2>Сводка</h2>
+        <div class="pdf-stats">
+          <div class="pdf-stat"><span class="pdf-sv">${episodes.length}</span><span class="pdf-sl">эпизодов</span></div>
+          <div class="pdf-stat"><span class="pdf-sv">${sickDays}</span><span class="pdf-sl">дней болезни</span></div>
+          <div class="pdf-stat"><span class="pdf-sv">${healthyDays}</span><span class="pdf-sl">дней здоров</span></div>
+          <div class="pdf-stat"><span class="pdf-sv">${gardenDays}</span><span class="pdf-sl">дней в садике</span></div>
+          <div class="pdf-stat"><span class="pdf-sv">${avgLen ? avgLen.toFixed(1).replace('.', ',') : '—'}</span><span class="pdf-sl">ср. длит., дн.</span></div>
+          <div class="pdf-stat"><span class="pdf-sv">${episodes.length ? Math.max(...episodes.map(e => e.days)) : 0}</span><span class="pdf-sl">макс. длит.</span></div>
+          <div class="pdf-stat"><span class="pdf-sv">${noDiag}</span><span class="pdf-sl">без диагноза</span></div>
+          <div class="pdf-stat"><span class="pdf-sv">${allMeds.length}</span><span class="pdf-sl">препаратов</span></div>
+        </div>
+      </section>
+    `);
+  }
+
+  if (pdfOptions.sickChart && sickSeries.labels.length){
+    parts.push(`
+      <section class="pdf-section">
+        <h2>График болезней</h2>
+        <p class="pdf-muted" style="margin:0 0 8pt">Дни болезни по неделям месяца (1–7, 8–14, …) или по месяцам</p>
+        ${renderBarChart(sickSeries.labels, sickSeries.values, '#F27691')}
+      </section>
+    `);
+  }
+
+  if (pdfOptions.symChart && symList.length){
+    parts.push(`
+      <section class="pdf-section">
+        <h2>Частота симптомов${pdfSymptomFilter !== 'all' ? ' · ' + (SYM_CATS.find(c => c.id === pdfSymptomFilter)?.label || '') : ''}</h2>
+        ${renderSymptomBars(symList, '#687B59', 15)}
+      </section>
+    `);
+  }
+
+  if (pdfOptions.diagnoses){
+    parts.push(`
+      <section class="pdf-section">
+        <h2>Болезни</h2>
+        ${diagList.length
+          ? `<ul class="pdf-diag-list">${diagList.map(([d, n]) =>
+              `<li><strong>${esc(d)}</strong> — ${n} ${plural(n, 'эпизод', 'эпизода', 'эпизодов')}</li>`).join('')}</ul>`
+          : '<p class="pdf-muted">Диагнозов за период нет.</p>'}
+      </section>
+    `);
+  }
+
+  if (pdfOptions.episodes){
+    parts.push(`
+      <section class="pdf-section">
+        <h2>Список эпизодов</h2>
+        ${episodes.length
+          ? `<table class="pdf-table">
+              <thead><tr><th>Начало</th><th>Конец</th><th>Дней</th><th>Диагнозы</th></tr></thead>
+              <tbody>
+                ${episodes.slice().reverse().map(ep => `
+                  <tr>
+                    <td>${fmtDateShort(ep.start)}</td>
+                    <td>${ep.start !== ep.end ? fmtDateShort(ep.end) : '—'}</td>
+                    <td>${ep.days}</td>
+                    <td>${ep.diagnoses.length ? esc(ep.diagnoses.join(', ')) : '<span class="pdf-muted">без диагноза</span>'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>`
+          : '<p class="pdf-muted">Эпизодов за период нет.</p>'}
+      </section>
+    `);
+  }
+
+  if (pdfOptions.temps && allTemps.length){
+    parts.push(`
+      <section class="pdf-section">
+        <h2>Замеры температуры</h2>
+        <table class="pdf-table">
+          <thead><tr><th>Дата</th><th>Время</th><th>Темп.</th><th>Лекарство</th><th>Помогло</th></tr></thead>
+          <tbody>
+            ${allTemps.map(t => {
+              const med = MEDS.find(m => m.id === t.med);
+              const help = HELP.find(h => h.id === t.helped);
+              return `<tr>
+                <td>${fmtDateShort(t.date)}</td>
+                <td>${t.time}</td>
+                <td><strong>${fmtT(t.value)}°</strong></td>
+                <td>${med && med.id ? esc(med.label) : '—'}</td>
+                <td>${help && help.id ? esc(help.label.toLowerCase()) : '—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </section>
+    `);
+  }
+
+  if (pdfOptions.meds && allMeds.length){
+    parts.push(`
+      <section class="pdf-section">
+        <h2>Журнал препаратов</h2>
+        <table class="pdf-table">
+          <thead><tr><th>Дата</th><th>Время</th><th>Препарат</th><th>Доза</th><th>Заметка</th></tr></thead>
+          <tbody>
+            ${allMeds.map(m => {
+              const displayName = medDisplayName(m);
+              const showNote = m.note && m.note.trim() && m.med !== 'other' && !m.customName;
+              return `<tr>
+                <td>${fmtDateShort(m.date)}</td>
+                <td>${m.time}</td>
+                <td><strong>${esc(displayName)}</strong></td>
+                <td>${m.dose ? esc(m.dose) : '—'}</td>
+                <td>${showNote ? esc(m.note) : '—'}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </section>
+    `);
+  }
+
+  if (pdfOptions.notes && notes.length){
+    parts.push(`
+      <section class="pdf-section">
+        <h2>Заметки по дням</h2>
+        ${notes.map(n => `
+          <div class="pdf-note-item">
+            <div class="pdf-note-date">${fmtDate(n.date)}${n.diag ? ' · ' + esc(n.diag) : ''}</div>
+            <div class="pdf-note-text">${esc(n.note).replace(/\n/g, '<br>')}</div>
+          </div>
+        `).join('')}
+      </section>
+    `);
+  }
+
+  const fullHtml = `<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><title>Аналитика · ${periodLabel}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #292724; background: #fff; margin: 0; padding: 24px; line-height: 1.5; font-size: 12pt; }
+  .pdf-page { max-width: 720px; margin: 0 auto; }
+  .pdf-header { border-bottom: 2pt solid #DCEB32; padding-bottom: 12pt; margin-bottom: 18pt; }
+  .pdf-brand { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.12em; color: #756f65; font-weight: 800; }
+  .pdf-header h1 { font-size: 22pt; margin: 4pt 0 6pt; letter-spacing: -0.02em; }
+  .pdf-sub { color: #756f65; font-size: 10pt; margin: 0; }
+  .pdf-section { margin-bottom: 18pt; page-break-inside: avoid; }
+  .pdf-section h2 { font-size: 14pt; margin: 0 0 8pt; padding-left: 10pt; position: relative; letter-spacing: -0.01em; }
+  .pdf-section h2::before { content: ''; position: absolute; left: 0; top: 3pt; bottom: 3pt; width: 4pt; background: #DCEB32; border-radius: 2pt; }
+  .pdf-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8pt; }
+  .pdf-stat { padding: 8pt 10pt; border: 0.5pt solid #dfd4c4; border-radius: 6pt; background: #fffaf1; }
+  .pdf-sv { display: block; font-size: 18pt; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; color: #292724; }
+  .pdf-sl { font-size: 8.5pt; color: #756f65; }
+  .pdf-table { width: 100%; border-collapse: collapse; font-size: 10pt; border: 0.5pt solid #dfd4c4; border-radius: 6pt; overflow: hidden; }
+  .pdf-table th { background: #fffaf1; padding: 6pt 8pt; text-align: left; border-bottom: 0.5pt solid #dfd4c4; font-weight: 700; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.04em; color: #756f65; }
+  .pdf-table td { padding: 6pt 8pt; border-bottom: 0.5pt solid #ece0d0; vertical-align: top; }
+  .pdf-table tr:last-child td { border-bottom: 0; }
+  .pdf-diag-list { padding-left: 16pt; margin: 0; }
+  .pdf-diag-list li { margin-bottom: 3pt; }
+  .pdf-muted { color: #a49c90; font-style: italic; }
+  .pdf-note-item { padding: 6pt 10pt; border-left: 3pt solid #DCEB32; background: #fffaf1; margin-bottom: 6pt; border-radius: 0 4pt 4pt 0; page-break-inside: avoid; }
+  .pdf-note-date { font-weight: 700; font-size: 10pt; margin-bottom: 2pt; }
+  .pdf-note-text { font-size: 10pt; color: #4a4139; }
+  svg { display: block; width: 100%; height: auto; max-width: 480px; }
+  .pdf-footer { margin-top: 24pt; padding-top: 12pt; border-top: 0.5pt solid #dfd4c4; color: #a49c90; font-size: 9pt; text-align: center; }
+  @media print {
+    body { padding: 0; font-size: 11pt; }
+    .pdf-page { max-width: 100%; }
+    .pdf-section { page-break-inside: avoid; }
+    .pdf-table { page-break-inside: auto; }
+    tr { page-break-inside: avoid; }
+    @page { size: A4; margin: 15mm 12mm; }
+  }
+</style></head>
+<body><div class="pdf-page">
+${parts.join('')}
+<div class="pdf-footer">«Ещё одна галочка» · Трекер адаптации к садику · ${new Date().toLocaleDateString('ru-RU')}</div>
+</div>
+<script>window.addEventListener('load', function(){ setTimeout(function(){ window.print(); }, 400); });<\/script>
+</body></html>`;
+
+  const win = window.open('', '_blank');
+  if (!win){
+    const blob = new Blob([fullHtml], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'analytics-' + startK + '_' + endK + '.html';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast('Браузер заблокировал окно — файл сохранён');
+    return;
+  }
+  win.document.open();
+  win.document.write(fullHtml);
+  win.document.close();
+}
+
+/* ============================ МОДАЛКИ КУРСОВ ============================ */
+const coursesModalEl = document.getElementById('coursesModal');
+const courseFormModalEl = document.getElementById('courseFormModal');
+const coursesListEl = document.getElementById('coursesList');
+const courseFormIdEl = document.getElementById('courseFormId');
+const courseNameEl = document.getElementById('courseName');
+const courseCategoryEl = document.getElementById('courseCategory');
+const courseDoseEl = document.getElementById('courseDose');
+const courseStartEl = document.getElementById('courseStart');
+const courseDaysEl = document.getElementById('courseDays');
+const courseNoteEl = document.getElementById('courseNote');
+const courseTimesListEl = document.getElementById('courseTimesList');
+const courseEndHintEl = document.getElementById('courseEndHint');
+const courseFormErrEl = document.getElementById('courseFormErr');
+const courseFormTitleEl = document.getElementById('courseFormTitle');
+const courseFormSubEl = document.getElementById('courseFormSub');
+
+function syncBodyScroll(){
+  const anyModal = document.querySelector('.copy-opts-backdrop.show');
+  const sheetOpen = sheet.classList.contains('open');
+  document.body.classList.toggle('no-scroll', !!(anyModal || sheetOpen));
+}
+
+function openCoursesModal(){
+  renderCoursesList();
+  coursesModalEl.classList.add('show');
+  syncBodyScroll();
+}
+function closeCoursesModal(){
+  coursesModalEl.classList.remove('show');
+  syncBodyScroll();
+}
+
+function renderCoursesList(){
+  const courses = (getActiveChild().courses || []).slice().sort((a,b) => (b.startKey || '').localeCompare(a.startKey || ''));
+  if (!courses.length){
+    coursesListEl.innerHTML = '<p class="muted small">Пока нет курсов. Добавь первый — например, витамин D на 30 дней.</p>';
+    return;
+  }
+  const today = keyOf(new Date());
+  coursesListEl.innerHTML = courses.map(c => {
+    const end = c.endKey || courseEndKey(c);
+    let badge = 'завершён';
+    let badgeCls = '';
+    if (c.startKey <= today && today <= end && !c.archived){ badge = 'активен'; badgeCls = 'active'; }
+    else if (today < c.startKey){ badge = 'запланирован'; }
+    const timesStr = (c.times || []).join(' · ') || '—';
+    const done = end < today || c.archived;
+    const catLabel = c.category ? courseCatLabel(c.category) : '';
+    return `
+      <div class="course-item ${done ? 'done' : ''}">
+        <div class="course-item-main">
+          <div class="course-item-name">
+            ${esc(c.name || 'Без названия')}
+            ${catLabel ? `<span class="course-cat-badge">${esc(catLabel)}</span>` : ''}
+            <span class="course-badge ${badgeCls}">${badge}</span>
+          </div>
+          <div class="course-item-meta">
+            ${courseRangeText(c)}${c.dose ? ' · ' + esc(c.dose) : ''}<br>
+            Время: ${timesStr}${c.note ? ' · ' + esc(c.note) : ''}
+          </div>
+        </div>
+        <div class="course-item-actions">
+          <button class="iconbtn tiny" type="button" data-course-edit="${c.id}" title="Редактировать">✎</button>
+          <button class="iconbtn tiny" type="button" data-course-del="${c.id}" title="Удалить">×</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+coursesListEl.addEventListener('click', e => {
+  const editBtn = e.target.closest('[data-course-edit]');
+  if (editBtn){ openCourseForm(editBtn.dataset.courseEdit); return; }
+  const delBtn = e.target.closest('[data-course-del]');
+  if (delBtn){ deleteCourse(delBtn.dataset.courseDel); return; }
+});
+
+document.getElementById('coursesClose').addEventListener('click', closeCoursesModal);
+document.getElementById('coursesAddBtn').addEventListener('click', () => openCourseForm(null));
+coursesModalEl.addEventListener('click', e => {
+  if (e.target === coursesModalEl) closeCoursesModal();
+});
+
+function openCourseForm(courseId){
+  const isEdit = !!courseId;
+  const course = isEdit
+    ? (getActiveChild().courses || []).find(c => c.id === courseId)
+    : null;
+
+  courseFormTitleEl.textContent = isEdit ? 'Редактировать курс' : 'Новый курс';
+  courseFormSubEl.textContent = isEdit ? 'Изменения сохранятся для будущих дней' : 'Заполни поля — потом отмечай приём в карточке дня';
+
+  courseFormIdEl.value = course ? course.id : '';
+  courseNameEl.value = course ? (course.name || '') : '';
+
+  if (courseCategoryEl){
+    courseCategoryEl.innerHTML = COURSE_CATS.map(cat =>
+      `<option value="${cat.id}">${esc(cat.label)}</option>`
+    ).join('');
+    courseCategoryEl.value = course ? (course.category || '') : '';
+  }
+
+  courseDoseEl.value = course ? (course.dose || '') : '';
+  courseStartEl.value = course ? (course.startKey || keyOf(new Date())) : keyOf(new Date());
+  courseDaysEl.value = course ? (course.days || 7) : 7;
+  courseNoteEl.value = course ? (course.note || '') : '';
+  courseFormErrEl.hidden = true;
+  courseFormErrEl.textContent = '';
+
+  const times = course && course.times && course.times.length
+    ? course.times.slice()
+    : [pad(new Date().getHours()) + ':' + pad(new Date().getMinutes())];
+  renderCourseTimes(times);
+
+  updateCourseEndHint();
+  courseFormModalEl.classList.add('show');
+  syncBodyScroll();
+  setTimeout(() => courseNameEl.focus(), 50);
+}
+
+function closeCourseForm(){
+  courseFormModalEl.classList.remove('show');
+  syncBodyScroll();
+}
+
+function renderCourseTimes(times){
+  courseTimesListEl.innerHTML = times.map((t, i) => `
+    <div class="course-time-row">
+      <input class="inp" type="time" value="${esc(t)}" data-time-input>
+      ${i > 0 ? `<button class="iconbtn tiny" type="button" data-time-del title="Убрать">×</button>` : '<span style="width:34px"></span>'}
+    </div>
+  `).join('');
+}
+
+function getCourseTimesFromForm(){
+  return [...courseTimesListEl.querySelectorAll('[data-time-input]')]
+    .map(inp => (inp.value || '').trim())
+    .filter(Boolean);
+}
+
+courseTimesListEl.addEventListener('click', e => {
+  const btn = e.target.closest('[data-time-del]');
+  if (!btn) return;
+  const row = btn.closest('.course-time-row');
+  if (row) row.remove();
+});
+
+document.getElementById('courseAddTimeBtn').addEventListener('click', () => {
+  const current = getCourseTimesFromForm();
+  const used = new Set(current);
+  const d = new Date();
+  for (let i = 0; i < 24; i++){
+    d.setHours(d.getHours() + (i === 0 ? 0 : 1));
+    const t = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    if (!used.has(t)){
+      current.push(t);
+      break;
+    }
+  }
+  renderCourseTimes(current);
+});
+
+courseStartEl.addEventListener('change', updateCourseEndHint);
+courseDaysEl.addEventListener('input', updateCourseEndHint);
+
+function updateCourseEndHint(){
+  const start = courseStartEl.value;
+  const days = Math.max(1, parseInt(courseDaysEl.value, 10) || 1);
+  if (!start){ courseEndHintEl.textContent = 'Дата окончания: —'; return; }
+  const d = parseK(start);
+  if (isNaN(d.getTime())){ courseEndHintEl.textContent = 'Дата окончания: —'; return; }
+  d.setDate(d.getDate() + days - 1);
+  courseEndHintEl.textContent = `Дата окончания: ${fmtDate(keyOf(d))} ${d.getFullYear()} (${days} ${plural(days, 'день', 'дня', 'дней')})`;
+}
+
+document.getElementById('courseFormCancel').addEventListener('click', closeCourseForm);
+courseFormModalEl.addEventListener('click', e => {
+  if (e.target === courseFormModalEl) closeCourseForm();
+});
+
+document.getElementById('courseFormSave').addEventListener('click', () => {
+  const id = courseFormIdEl.value;
+  const isEdit = !!id;
+  const name = (courseNameEl.value || '').trim();
+  const category = courseCategoryEl ? (courseCategoryEl.value || '') : '';
+  const dose = (courseDoseEl.value || '').trim();
+  const note = (courseNoteEl.value || '').trim();
+  const startKey = courseStartEl.value;
+  const days = Math.max(1, Math.min(365, parseInt(courseDaysEl.value, 10) || 0));
+  const times = getCourseTimesFromForm();
+
+  const err = (msg) => { courseFormErrEl.hidden = false; courseFormErrEl.textContent = msg; };
+
+  if (!name) return err('Введи название курса');
+  if (!startKey) return err('Укажи дату начала');
+  if (!days || days < 1) return err('Количество дней — минимум 1');
+  if (!times.length) return err('Добавь хотя бы одно время приёма');
+  if (times.some(t => !/^\d{2}:\d{2}$/.test(t))) return err('Проверь времена приёма');
+
+  courseFormErrEl.hidden = true;
+
+  const startD = parseK(startKey);
+  const endD = new Date(startD);
+  endD.setDate(startD.getDate() + days - 1);
+  const endKey = keyOf(endD);
+
+  if (isEdit){
+    const course = (getActiveChild().courses || []).find(c => c.id === id);
+    if (!course) return err('Курс не найден');
+    course.name = name;
+    course.category = category;
+    course.dose = dose;
+    course.note = note;
+    course.startKey = startKey;
+    course.endKey = endKey;
+    course.days = days;
+    course.times = times.slice().sort();
+  } else {
+    const newCourse = {
+      id: 'course_' + uid(),
+      name, category, dose, note,
+      startKey, endKey, days,
+      times: times.slice().sort(),
+      archived: false,
+      createdAt: new Date().toISOString()
+    };
+    getActiveChild().courses = getActiveChild().courses || [];
+    getActiveChild().courses.push(newCourse);
+  }
+
+  save();
+  closeCourseForm();
+  renderCoursesList();
+  render();
+  toast(isEdit ? 'Курс обновлён' : 'Курс добавлен');
+});
+
+function deleteCourse(courseId){
+  if (!confirm('Удалить курс? Записи в журнале препаратов останутся как разовые.')) return;
+  const child = getActiveChild();
+  child.courses = (child.courses || []).filter(c => c.id !== courseId);
+  Object.values(child.days || {}).forEach(rec => {
+    (rec.meds || []).forEach(m => {
+      if (m.courseId === courseId){
+        if (m.customName && m.med === 'other' && (!m.note || !m.note.trim())){
+          m.note = m.customName;
+        }
+        delete m.courseId;
+        delete m.customName;
+      }
+    });
+  });
+  save();
+  renderCoursesList();
+  render();
+  toast('Курс удалён');
+}
+
+/* ============================ ОБЩИЙ РЕНДЕР ============================ */
+function render(){
+  applyTheme();
+  updateHeaderChild();
+  if (viewMode === 'month') renderCalendar();
+  else renderWeekView();
+  renderDoseBar();
+  renderPanel();
+  renderStats();
+  renderDaySummary();
+  renderTempChart();
+  renderAnalytics();
+  updateHeroMeta();
+}
+function commit(){
+  prune(selected);
+  save();
+  render();
+}
+
+/* ============================ BOTTOM SHEET ============================ */
+function openSheet(){
+  sheet.classList.add('open');
+  backdrop.classList.add('open');
+  syncBodyScroll();
+  sheet.scrollTop = 0;
+}
+function closeSheet(){
+  sheet.classList.remove('open');
+  backdrop.classList.remove('open');
+  syncBodyScroll();
+  renderDoseBar();
+}
+backdrop.addEventListener('click', closeSheet);
+sheetClose.addEventListener('click', closeSheet);
+grip.addEventListener('click', closeSheet);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && sheet.classList.contains('open')) closeSheet();
+});
+
+/* ============================ ВКЛАДКИ ============================ */
+const viewCalEl   = document.getElementById('viewCal');
+const viewStatsEl = document.getElementById('viewStats');
+const tabCal      = document.getElementById('tabCal');
+const tabStats    = document.getElementById('tabStats');
+function switchView(name){
+  if (name === 'stats'){
+    viewCalEl.classList.add('hidden');
+    viewStatsEl.classList.remove('hidden');
+    tabCal.classList.remove('on');
+    tabStats.classList.add('on');
+    closeSheet();
+    renderAnalytics();
+  } else {
+    viewStatsEl.classList.add('hidden');
+    viewCalEl.classList.remove('hidden');
+    tabStats.classList.remove('on');
+    tabCal.classList.add('on');
+  }
+}
+tabCal.addEventListener('click', () => switchView('cal'));
+tabStats.addEventListener('click', () => switchView('stats'));
+
+document.querySelectorAll('.period-seg button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.period-seg button').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    currentPeriod = btn.dataset.period;
+    if (currentPeriod === 'month') chartMode = 'month';
+    else if (currentPeriod === 'year') chartMode = 'year';
+    else chartMode = 'year';
+    getActiveChild().chartMode = chartMode;
+    save();
+    renderAnalytics();
+  });
+});
+
+document.querySelectorAll('.view-toggle button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const mode = btn.dataset.view;
+    if (mode === viewMode) return;
+    viewMode = mode;
+    document.querySelectorAll('.view-toggle button').forEach(b => b.classList.toggle('on', b === btn));
+    if (mode === 'week'){
+      weekAnchor = selected || keyOf(new Date());
+      monthViewEl.classList.add('hidden');
+      weekViewEl.classList.remove('hidden');
+      renderWeekView();
+    } else {
+      if (weekAnchor){
+        const d = parseK(weekAnchor);
+        view = { y: d.getFullYear(), m: d.getMonth() };
+      }
+      weekViewEl.classList.add('hidden');
+      monthViewEl.classList.remove('hidden');
+      renderCalendar();
+    }
+    renderTempChart();
+    renderStats();
+    renderAnalytics();
+    updateHeroMeta();
+  });
+});
+
+document.getElementById('prevBtn').addEventListener('click', () => shiftPeriod(-1, 'left'));
+document.getElementById('nextBtn').addEventListener('click', () => shiftPeriod(1, 'right'));
+document.getElementById('todayBtn').addEventListener('click', () => {
+  const n = new Date();
+  view = { y: n.getFullYear(), m: n.getMonth() };
+  selected = keyOf(n);
+  weekAnchor = selected;
+  summaryKey = selected;
+  getActiveChild().chartAnchor = selected;
+  save();
+  render();
+  switchView('cal');
+  if (isMobile()) openSheet();
+});
+
+/* ============================ ЭКСПОРТ / ИМПОРТ JSON ============================ */
+document.getElementById('exportBtn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'galochka-sad-' + keyOf(new Date()) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+const fileInput = document.getElementById('fileInput');
+document.getElementById('importBtn').addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  const f = fileInput.files && fileInput.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (data.version === 3 && data.children) {
+        data.children.forEach(c => {
+          if (!c.courses) c.courses = [];
+          c.courses.forEach(course => {
+            if (course.category === undefined) course.category = '';
+          });
+        });
+        state = data;
+        if (!state.activeChildId || !state.children.find(c => c.id === state.activeChildId)) {
+          state.activeChildId = state.children[0]?.id;
+        }
+        if (state.theme) applyTheme();
+        save();
+        render();
+        renderMenuChildren();
+        closeMenu();
+        alert('Данные импортированы (все профили).');
+      } else if (data.days && typeof data.days === 'object') {
+        getActiveChild().days = data.days;
+        if (data.theme) state.theme = data.theme;
+        if (data.childName) getActiveChild().name = data.childName;
+        if (data.copyOptions) getActiveChild().copyOptions = { ...DEFAULT_COPY_OPTIONS, ...data.copyOptions };
+        if (data.symptomFilter) getActiveChild().symptomFilter = data.symptomFilter;
+        if (data.chartMode) { getActiveChild().chartMode = data.chartMode; chartMode = data.chartMode; }
+        if (data.chartAnchor) getActiveChild().chartAnchor = data.chartAnchor;
+        save();
+        render();
+        renderMenuChildren();
+        closeMenu();
+        alert('Данные импортированы в текущий профиль.');
+      } else {
+        throw new Error('bad file');
+      }
+    } catch(e){
+      alert('Не получилось прочитать файл.');
+    }
+    fileInput.value = '';
+  };
+  reader.readAsText(f);
+});
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (!confirm('Удалить все отметки текущего ребёнка безвозвратно?')) return;
+  getActiveChild().days = {};
+  save();
+  render();
+});
+
+/* ============================ PWA ============================ */
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+
+render();
