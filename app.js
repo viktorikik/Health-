@@ -944,7 +944,7 @@ daysEl.addEventListener('click', e => {
   }
   selected = btn.dataset.key;
   renderCalendar();
-  renderTempChart(); // (v3.3) обновляем график при выборе дня
+  renderTempChart();
   renderPanel();
   if (isMobile()) openSheet();
 });
@@ -965,7 +965,7 @@ weekDaysEl.addEventListener('click', e => {
   selected = btn.dataset.key;
   weekAnchor = selected;
   renderWeekView();
-  renderTempChart(); // (v3.3) обновляем график при выборе дня
+  renderTempChart();
   renderPanel();
   if (isMobile()) openSheet();
 });
@@ -1145,7 +1145,9 @@ function slideAnim(el, from){
   el.classList.add(from === 'right' ? 'slide-from-right' : 'slide-from-left');
 }
 
-/* ============================ ГРАФИК ТЕМПЕРАТУРЫ (v3.3 ДНЕВНОЙ) ============================ */
+/* ============================ ГРАФИК ТЕМПЕРАТУРЫ ============================ */
+let activeTooltipData = null;
+
 function renderTempChart(){
   const k = selected;
   const d = parseK(k);
@@ -1155,83 +1157,221 @@ function renderTempChart(){
   const temps = (rec && rec.temps) ? rec.temps.slice().sort((a,b) => a.time.localeCompare(b.time)) : [];
 
   if (!temps.length){
-    chartEl.innerHTML = '<p class="muted small" style="margin:14px 0; text-align:center">Нет замеров температуры за этот день</p>';
+    chartEl.innerHTML = '<p class="muted small" style="margin:20px 0; text-align:center">Нет замеров температуры за этот день</p>';
     return;
   }
 
-  const W = 340, H = 150;
-  const padL = 26, padR = 16, padT = 24, padB = 20;
-  const plotW = W - padL - padR;
-  const plotH = H - padT - padB;
-
-  const minVal = Math.min(36.0, ...temps.map(t => t.value));
-  const maxVal = Math.max(39.0, ...temps.map(t => t.value));
-  const yMin = Math.floor(minVal * 10) / 10 - 0.2;
-  const yMax = Math.ceil(maxVal * 10) / 10 + 0.2;
-
-  // X: от 00:00 до 24:00 (в минутах)
-  const xStart = 0;
-  const xEnd = 24 * 60;
-  const px = min => padL + (min - xStart) / (xEnd - xStart) * plotW;
-  const py = val => padT + (1 - (val - yMin) / (yMax - yMin)) * plotH;
-
-  let grid = '';
-  // Сетка по Y (целые значения)
-  for (let v = Math.ceil(yMin); v <= yMax; v++){
-    const yy = py(v);
-    grid += `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="currentColor" stroke-width="0.5" opacity="0.15"/>`;
-    grid += `<text x="${padL-6}" y="${(yy+3).toFixed(1)}" font-size="8" text-anchor="end" fill="currentColor" opacity="0.6">${v}</text>`;
-  }
+  const vals = temps.map(t => t.value);
+  const minV = Math.min(...vals);
+  const maxV = Math.max(...vals);
+  const avgV = vals.reduce((a,b) => a+b, 0) / vals.length;
   
-  // Сетка по X (каждые 6 часов)
-  for (let h = 0; h <= 24; h += 6){
-    const xx = px(h * 60);
-    grid += `<line x1="${xx.toFixed(1)}" y1="${padT}" x2="${xx.toFixed(1)}" y2="${H-padB}" stroke="currentColor" stroke-width="0.5" opacity="0.1"/>`;
-    grid += `<text x="${xx.toFixed(1)}" y="${H-padB+12}" font-size="8" text-anchor="middle" fill="currentColor" opacity="0.6">${pad(h)}:00</text>`;
+  const minItem = temps.find(t => t.value === minV);
+  const maxItem = temps.find(t => t.value === maxV);
+
+  // Ограничиваем Y-ось: минимум 36, максимум 39.5 (или шире, если выходит за рамки)
+  const yMin = Math.min(36, minV - 0.2);
+  const yMax = Math.max(39, maxV + 0.2);
+
+  const W = 400, H = 260;
+  const padLeft = 40, padRight = 20, padTop = 20, padBottom = 30;
+  const chartW = W - padLeft - padRight;
+  const chartH = H - padTop - padBottom;
+
+  function tempToY(t) {
+    return padTop + chartH - ((t - yMin) / (yMax - yMin)) * chartH;
+  }
+  function timeToX(timeStr) {
+    const [h, m] = timeStr.split(':').map(Number);
+    const minutes = h * 60 + m;
+    return padLeft + (minutes / (24 * 60)) * chartW;
   }
 
-  // Линия порога 37.5
-  let threshold = '';
-  if (37.5 >= yMin && 37.5 <= yMax){
-    const yy = py(37.5);
-    threshold = `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="#DCEB32" stroke-width="1.2" stroke-dasharray="3 3"/>`;
+  let zonesHtml = '';
+  const zones = [
+    { from: yMin, to: 37, color: '#4CAF50', label: 'Норма' },
+    { from: 37, to: 37.5, color: '#FF9800', label: 'Субфебрильная' },
+    { from: 37.5, to: 38, color: '#FF5722', label: 'Высокая' },
+    { from: 38, to: yMax, color: '#F44336', label: 'Опасная' }
+  ];
+  zones.forEach(z => {
+    const f = Math.max(z.from, yMin);
+    const t = Math.min(z.to, yMax);
+    if (f >= t) return;
+    const y1 = tempToY(t);
+    const y2 = tempToY(f);
+    zonesHtml += `<rect x="${padLeft}" y="${y1}" width="${chartW}" height="${y2 - y1}" fill="${z.color}" opacity="0.06"/>`;
+    zonesHtml += `<text x="${padLeft + 6}" y="${y1 + 12}" class="temp-zone-label" fill="${z.color}">${z.label}</text>`;
+  });
+
+  let gridHtml = '';
+  for (let t = Math.ceil(yMin); t <= yMax; t++) {
+    const y = tempToY(t);
+    gridHtml += `<line x1="${padLeft}" y1="${y}" x2="${W - padRight}" y2="${y}" class="temp-grid-line"/>`;
+    gridHtml += `<text x="${padLeft - 8}" y="${y + 4}" text-anchor="end" class="temp-time-label">${t}</text>`;
   }
 
-  // Точки и линия
+  let xLabels = '';
+  ['00:00', '06:00', '12:00', '18:00', '24:00'].forEach((t, i) => {
+    const x = padLeft + (i / 4) * chartW;
+    xLabels += `<text x="${x}" y="${H - 8}" text-anchor="middle" class="temp-time-label">${t}</text>`;
+  });
+
+  let threshHtml = '';
+  if (37.5 >= yMin && 37.5 <= yMax) {
+    const threshY = tempToY(37.5);
+    threshHtml = `<line x1="${padLeft}" y1="${threshY}" x2="${W - padRight}" y2="${threshY}" class="temp-threshold-line"/>`;
+  }
+
   let pathD = '';
-  let dots = '';
-  
+  let areaD = '';
+  let dotsHtml = '';
+
   temps.forEach((t, i) => {
-    const [hh, mm] = t.time.split(':').map(Number);
-    const minutes = hh * 60 + mm;
-    const x = px(minutes);
-    const y = py(t.value);
+    const x = timeToX(t.time);
+    const y = tempToY(t.value);
+    pathD += (i === 0 ? 'M' : 'L') + ` ${x} ${y}`;
+    areaD += (i === 0 ? 'M' : 'L') + ` ${x} ${y}`;
     
-    pathD += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1) + ' ';
+    const isHot = t.value >= 37.5;
+    const status = getStatus(t.value);
+    const color = isHot ? '#e96478' : (t.value >= 37 ? '#FF9800' : '#4CAF50');
     
-    const color = t.value >= 37.5 ? '#F27691' : '#687B59';
-    const stroke = t.value >= 37.5 ? '#FBE2E2' : '#f3f8cc';
-    
-    // Интерактивная подсказка
-    const medText = t.med ? ` · ${medLabel(t.med)}` : '';
-    const helpText = t.helped ? ` (${HELP.find(x => x.id === t.helped)?.label})` : '';
-    const tooltip = `${t.time} · ${fmtT(t.value)}°${medText}${helpText}`;
-    
-    dots += `
-      <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${color}" stroke="#fff" stroke-width="1.5">
-        <title>${tooltip}</title>
-      </circle>
-      <text x="${x.toFixed(1)}" y="${(y - 8).toFixed(1)}" font-size="9" text-anchor="middle" fill="${color}" font-weight="700">${fmtT(t.value)}</text>
-      ${i === 0 ? `<text x="${x.toFixed(1)}" y="${(y + 14).toFixed(1)}" font-size="7" text-anchor="middle" fill="currentColor" opacity="0.6">${t.time}</text>` : ''}
+    let pulse = '';
+    if (isHot) {
+      pulse = `<circle cx="${x}" cy="${y}" r="12" fill="${color}" class="temp-point-pulse"/>`;
+    }
+
+    dotsHtml += `
+      <g class="temp-data-point" data-i="${i}">
+        ${pulse}
+        <circle cx="${x}" cy="${y}" r="10" fill="#fff" stroke="${color}" stroke-width="2.5"/>
+        <circle cx="${x}" cy="${y}" r="5" fill="${color}"/>
+        <text x="${x}" y="${y - 16}" text-anchor="middle" class="temp-val-label" fill="${color}">${fmtT(t.value)}</text>
+      </g>
     `;
   });
 
+  const firstX = timeToX(temps[0].time);
+  const lastX = timeToX(temps[temps.length-1].time);
+  areaD += ` L ${lastX} ${padTop + chartH} L ${firstX} ${padTop + chartH} Z`;
+
   chartEl.innerHTML = `
-    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="График температуры">
-      ${grid}${threshold}
-      <path d="${pathD}" fill="none" stroke="#F27691" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-      ${dots}
-    </svg>`;
+    <div class="temp-stats">
+      <div class="temp-stat-card">
+        <div class="temp-stat-label">Мин</div>
+        <div class="temp-stat-val" style="color:#4CAF50">${fmtT(minV)}</div>
+        <div class="temp-stat-sub">${minItem.time}</div>
+      </div>
+      <div class="temp-stat-card">
+        <div class="temp-stat-label">Макс</div>
+        <div class="temp-stat-val" style="color:#e96478">${fmtT(maxV)}</div>
+        <div class="temp-stat-sub">${maxItem.time}</div>
+      </div>
+      <div class="temp-stat-card">
+        <div class="temp-stat-label">Средняя</div>
+        <div class="temp-stat-val" style="color:#FF9800">${fmtT(avgV)}</div>
+        <div class="temp-stat-sub">за день</div>
+      </div>
+    </div>
+    <div class="temp-chart-wrap" id="tempChartWrap">
+      <svg class="temp-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#e96478"/><stop offset="100%" stop-color="#f093a0"/>
+          </linearGradient>
+          <linearGradient id="areaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#e96478" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#e96478" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        ${zonesHtml}
+        ${gridHtml}
+        ${xLabels}
+        ${threshHtml}
+        <path d="${areaD}" fill="url(#areaGrad)" style="opacity:0; animation: fadeIn 1s ease 0.5s forwards;"/>
+        <path d="${pathD}" class="temp-line-path" stroke="url(#lineGrad)"/>
+        ${dotsHtml}
+      </svg>
+      <div class="temp-tooltip" id="tempTooltip">
+        <div class="temp-tooltip-temp" id="ttTemp"></div>
+        <div class="temp-tooltip-time" id="ttTime"></div>
+        <div class="temp-tooltip-status" id="ttStatus"></div>
+        <div class="temp-tooltip-note" id="ttNote"></div>
+      </div>
+      <button class="temp-add-btn" type="button" data-act="scroll-temp" title="Добавить замер">+</button>
+    </div>
+  `;
+
+  const wrap = document.getElementById('tempChartWrap');
+  const tooltip = document.getElementById('tempTooltip');
+  
+  wrap.addEventListener('click', e => {
+    const point = e.target.closest('.temp-data-point');
+    if (!point) {
+      tooltip.classList.remove('show');
+      return;
+    }
+    
+    const i = parseInt(point.dataset.i, 10);
+    const t = temps[i];
+    const status = getStatus(t.value);
+    
+    document.getElementById('ttTemp').textContent = fmtT(t.value) + '°C';
+    document.getElementById('ttTemp').style.color = status.color;
+    document.getElementById('ttTime').textContent = t.time;
+    
+    const stEl = document.getElementById('ttStatus');
+    stEl.textContent = status.label;
+    stEl.className = 'temp-tooltip-status ' + status.cls;
+    
+    const noteEl = document.getElementById('ttNote');
+    const medText = t.med ? medLabel(t.med) : '';
+    const helpText = t.helped ? HELP.find(h => h.id === t.helped)?.label : '';
+    const extra = [medText, helpText].filter(Boolean).join(' · ');
+    
+    if (extra) {
+      noteEl.textContent = extra;
+      noteEl.style.display = 'block';
+    } else {
+      noteEl.style.display = 'none';
+    }
+
+    const svgRect = wrap.getBoundingClientRect();
+    const scaleX = svgRect.width / W;
+    const scaleY = svgRect.height / H;
+    
+    // Координаты точки в контейнере
+    const xPos = parseFloat(point.querySelector('circle').getAttribute('cx')) * scaleX;
+    const yPos = parseFloat(point.querySelector('circle').getAttribute('cy')) * scaleY;
+
+    // Позиционируем тултип над точкой
+    tooltip.style.left = xPos + 'px';
+    tooltip.style.top = (yPos - 20) + 'px';
+    tooltip.classList.add('show');
+  });
+
+  const addBtn = wrap.querySelector('[data-act="scroll-temp"]');
+  if (addBtn) {
+    addBtn.onclick = (e) => {
+      e.stopPropagation();
+      // Открываем карточку дня (на мобилке) и скроллим к температуре
+      if (isMobile()) openSheet();
+      setTimeout(() => {
+        const tempSec = panelEl.querySelector('details[data-section="temps"]');
+        if (tempSec) {
+          tempSec.open = true;
+          tempSec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
+    };
+  }
+}
+
+function getStatus(temp) {
+  if (temp < 37.0) return { label: 'Норма', cls: 'normal', color: '#4CAF50' };
+  if (temp < 37.5) return { label: 'Субфебрильная', cls: 'elevated', color: '#FF9800' };
+  return { label: 'Жар', cls: 'high', color: '#e96478' };
 }
 
 /* ============================ ДОЗА ============================ */
@@ -1358,7 +1498,6 @@ function renderCoursesToday(k){
   `;
 }
 
-// (v3.2) Универсальный заголовок сворачиваемого раздела
 function sectionOpen(key, autoDefault){
   return sectionIsOpen(key, autoDefault) ? 'open' : '';
 }
@@ -1384,7 +1523,6 @@ function renderPanel(){
   const nowTime = pad(new Date().getHours()) + ':' + pad(new Date().getMinutes());
   const diags = allDiagnoses();
 
-  // (v3.2) Авто-дефолты для сворачивания
   const uncheckedCourses = countUncheckedCourses(k);
   const autoDiag    = false;
   const autoSyms    = true;
@@ -1536,8 +1674,6 @@ function renderPanel(){
   `;
 }
 
-// (v3.2) Сохранение состояния сворачивания при toggle <details>
-// Используем capture, потому что событие toggle не всплывает
 panelEl.addEventListener('toggle', e => {
   const det = e.target;
   if (!det || det.tagName !== 'DETAILS') return;
@@ -1594,7 +1730,6 @@ panelEl.addEventListener('click', e => {
 
 panelEl.addEventListener('change', e => {
   const act = e.target.dataset.act;
-  // (v3.3) «Был в садике» и «Остался дома» — взаимоисключающие
   if (act === 'garden' && selected){
     const rec = getDay(selected, true);
     rec.garden = e.target.checked;
@@ -1926,7 +2061,6 @@ function shiftSummary(dir){
   d.setDate(d.getDate() + dir);
   summaryKey = keyOf(d);
   renderDaySummary();
-  // (v3.3) обновляем график, если открытый день совпадает с выбранным
   if (summaryKey === selected) renderTempChart();
 }
 document.getElementById('dsPrev').addEventListener('click', () => shiftSummary(-1));
@@ -1939,7 +2073,7 @@ document.getElementById('dsBody').addEventListener('click', e => {
   view = { y: dd.getFullYear(), m: dd.getMonth() };
   if (viewMode === 'month') renderCalendar();
   else renderWeekView();
-  renderTempChart(); // (v3.3)
+  renderTempChart();
   renderPanel();
   if (isMobile()) openSheet();
 });
