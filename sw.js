@@ -2,7 +2,7 @@
 /* Стратегия: network-first с fallback на кэш.
    При обновлении списка файлов — поднимать CACHE_VERSION,
    иначе старый кэш не сбросится. */
-const CACHE_VERSION = 'eog-sad-v4';
+const CACHE_VERSION = 'eog-sad-v5';
 const CACHE_URLS = [
   './',
   './index.html',
