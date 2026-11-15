@@ -363,7 +363,6 @@ function loadSections(){
 function saveSections(){
   try { localStorage.setItem(SECTIONS_KEY, JSON.stringify(sectionsState)); } catch(e){}
 }
-// Возвращает: user preference, если она есть; иначе autoDefault
 function sectionIsOpen(key, autoDefault){
   if (Object.prototype.hasOwnProperty.call(sectionsState, key)) {
     return !!sectionsState[key];
@@ -945,6 +944,7 @@ daysEl.addEventListener('click', e => {
   }
   selected = btn.dataset.key;
   renderCalendar();
+  renderTempChart(); // (v3.3) обновляем график при выборе дня
   renderPanel();
   if (isMobile()) openSheet();
 });
@@ -965,6 +965,7 @@ weekDaysEl.addEventListener('click', e => {
   selected = btn.dataset.key;
   weekAnchor = selected;
   renderWeekView();
+  renderTempChart(); // (v3.3) обновляем график при выборе дня
   renderPanel();
   if (isMobile()) openSheet();
 });
@@ -1144,77 +1145,91 @@ function slideAnim(el, from){
   el.classList.add(from === 'right' ? 'slide-from-right' : 'slide-from-left');
 }
 
-/* ============================ ГРАФИК ТЕМПЕРАТУРЫ ============================ */
+/* ============================ ГРАФИК ТЕМПЕРАТУРЫ (v3.3 ДНЕВНОЙ) ============================ */
 function renderTempChart(){
-  const { y, m } = view;
-  const total = new Date(y, m+1, 0).getDate();
-  chartMonth.textContent = MONTHS[m] + ' ' + y;
-  const points = [];
-  const sickDays = new Set();
-  const days = getActiveChild().days;
-  for (let d = 1; d <= total; d++){
-    const k = `${y}-${pad(m+1)}-${pad(d)}`;
-    const rec = days[k];
-    if (!rec) continue;
-    if (rec.status === 'sick') sickDays.add(d);
-    (rec.temps || []).forEach(t => {
-      const [hh, mm] = t.time.split(':').map(Number);
-      points.push({ day: d, minutes: (d-1)*1440 + hh*60 + mm, value: t.value });
-    });
-  }
-  if (!points.length){
-    chartEl.innerHTML = '<p class="muted small" style="margin:14px 0; text-align:center">Нет замеров температуры за этот месяц</p>';
+  const k = selected;
+  const d = parseK(k);
+  chartMonth.textContent = `${d.getDate()} ${MONTHS_G[d.getMonth()]}`;
+  
+  const rec = getActiveChild().days[k];
+  const temps = (rec && rec.temps) ? rec.temps.slice().sort((a,b) => a.time.localeCompare(b.time)) : [];
+
+  if (!temps.length){
+    chartEl.innerHTML = '<p class="muted small" style="margin:14px 0; text-align:center">Нет замеров температуры за этот день</p>';
     return;
   }
-  const W = 340, H = 180;
-  const padL = 30, padR = 10, padT = 12, padB = 24;
+
+  const W = 340, H = 150;
+  const padL = 26, padR = 16, padT = 24, padB = 20;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
-  const minVal = Math.min(36, ...points.map(p => p.value));
-  const maxVal = Math.max(40, ...points.map(p => p.value));
-  const yMin = Math.floor((minVal - 0.2) * 10) / 10;
-  const yMax = Math.ceil((maxVal + 0.2) * 10) / 10;
-  const xStart = 0, xEnd = total * 1440;
+
+  const minVal = Math.min(36.0, ...temps.map(t => t.value));
+  const maxVal = Math.max(39.0, ...temps.map(t => t.value));
+  const yMin = Math.floor(minVal * 10) / 10 - 0.2;
+  const yMax = Math.ceil(maxVal * 10) / 10 + 0.2;
+
+  // X: от 00:00 до 24:00 (в минутах)
+  const xStart = 0;
+  const xEnd = 24 * 60;
   const px = min => padL + (min - xStart) / (xEnd - xStart) * plotW;
   const py = val => padT + (1 - (val - yMin) / (yMax - yMin)) * plotH;
-  let bands = '';
-  sickDays.forEach(d => {
-    const x1 = padL + ((d-1)/total) * plotW;
-    const x2 = padL + (d/total) * plotW;
-    bands += `<rect x="${x1.toFixed(1)}" y="${padT}" width="${(x2-x1).toFixed(1)}" height="${plotH}" fill="#F2769140"/>`;
-  });
+
   let grid = '';
+  // Сетка по Y (целые значения)
   for (let v = Math.ceil(yMin); v <= yMax; v++){
     const yy = py(v);
     grid += `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="currentColor" stroke-width="0.5" opacity="0.15"/>`;
-    grid += `<text x="${padL-4}" y="${(yy+3).toFixed(1)}" font-size="8" text-anchor="end" fill="currentColor" opacity="0.6">${v}</text>`;
+    grid += `<text x="${padL-6}" y="${(yy+3).toFixed(1)}" font-size="8" text-anchor="end" fill="currentColor" opacity="0.6">${v}</text>`;
   }
+  
+  // Сетка по X (каждые 6 часов)
+  for (let h = 0; h <= 24; h += 6){
+    const xx = px(h * 60);
+    grid += `<line x1="${xx.toFixed(1)}" y1="${padT}" x2="${xx.toFixed(1)}" y2="${H-padB}" stroke="currentColor" stroke-width="0.5" opacity="0.1"/>`;
+    grid += `<text x="${xx.toFixed(1)}" y="${H-padB+12}" font-size="8" text-anchor="middle" fill="currentColor" opacity="0.6">${pad(h)}:00</text>`;
+  }
+
+  // Линия порога 37.5
   let threshold = '';
   if (37.5 >= yMin && 37.5 <= yMax){
     const yy = py(37.5);
     threshold = `<line x1="${padL}" y1="${yy.toFixed(1)}" x2="${W-padR}" y2="${yy.toFixed(1)}" stroke="#DCEB32" stroke-width="1.2" stroke-dasharray="3 3"/>`;
   }
-  let xLabels = '';
-  const step = total > 20 ? 5 : (total > 10 ? 3 : 1);
-  for (let d = 1; d <= total; d += step){
-    const x = padL + ((d-0.5)/total) * plotW;
-    xLabels += `<text x="${x.toFixed(1)}" y="${H-padB+12}" font-size="8" text-anchor="middle" fill="currentColor" opacity="0.6">${d}</text>`;
-  }
-  points.sort((a,b) => a.minutes - b.minutes);
+
+  // Точки и линия
   let pathD = '';
-  points.forEach((p, i) => {
-    const x = px(p.minutes), y = py(p.value);
+  let dots = '';
+  
+  temps.forEach((t, i) => {
+    const [hh, mm] = t.time.split(':').map(Number);
+    const minutes = hh * 60 + mm;
+    const x = px(minutes);
+    const y = py(t.value);
+    
     pathD += (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1) + ' ';
+    
+    const color = t.value >= 37.5 ? '#F27691' : '#687B59';
+    const stroke = t.value >= 37.5 ? '#FBE2E2' : '#f3f8cc';
+    
+    // Интерактивная подсказка
+    const medText = t.med ? ` · ${medLabel(t.med)}` : '';
+    const helpText = t.helped ? ` (${HELP.find(x => x.id === t.helped)?.label})` : '';
+    const tooltip = `${t.time} · ${fmtT(t.value)}°${medText}${helpText}`;
+    
+    dots += `
+      <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${color}" stroke="#fff" stroke-width="1.5">
+        <title>${tooltip}</title>
+      </circle>
+      <text x="${x.toFixed(1)}" y="${(y - 8).toFixed(1)}" font-size="9" text-anchor="middle" fill="${color}" font-weight="700">${fmtT(t.value)}</text>
+      ${i === 0 ? `<text x="${x.toFixed(1)}" y="${(y + 14).toFixed(1)}" font-size="7" text-anchor="middle" fill="currentColor" opacity="0.6">${t.time}</text>` : ''}
+    `;
   });
-  const dots = points.map(p => {
-    const x = px(p.minutes), y = py(p.value);
-    const c = p.value >= 38.5 ? '#F27691' : (p.value >= 37.5 ? '#E8A0B4' : '#687B59');
-    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="${c}" stroke="#fffaf1" stroke-width="0.9"/>`;
-  }).join('');
+
   chartEl.innerHTML = `
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="График температуры">
-      ${bands}${grid}${threshold}${xLabels}
-      <path d="${pathD}" fill="none" stroke="#F27691" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+      ${grid}${threshold}
+      <path d="${pathD}" fill="none" stroke="#F27691" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
       ${dots}
     </svg>`;
 }
@@ -1911,6 +1926,8 @@ function shiftSummary(dir){
   d.setDate(d.getDate() + dir);
   summaryKey = keyOf(d);
   renderDaySummary();
+  // (v3.3) обновляем график, если открытый день совпадает с выбранным
+  if (summaryKey === selected) renderTempChart();
 }
 document.getElementById('dsPrev').addEventListener('click', () => shiftSummary(-1));
 document.getElementById('dsNext').addEventListener('click', () => shiftSummary(1));
@@ -1922,6 +1939,7 @@ document.getElementById('dsBody').addEventListener('click', e => {
   view = { y: dd.getFullYear(), m: dd.getMonth() };
   if (viewMode === 'month') renderCalendar();
   else renderWeekView();
+  renderTempChart(); // (v3.3)
   renderPanel();
   if (isMobile()) openSheet();
 });
@@ -2943,10 +2961,10 @@ function render(){
   if (viewMode === 'month') renderCalendar();
   else renderWeekView();
   renderDoseBar();
+  renderTempChart();
   renderPanel();
   renderStats();
   renderDaySummary();
-  renderTempChart();
   renderAnalytics();
   updateHeroMeta();
 }
