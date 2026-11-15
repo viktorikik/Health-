@@ -1146,8 +1146,6 @@ function slideAnim(el, from){
 }
 
 /* ============================ ГРАФИК ТЕМПЕРАТУРЫ ============================ */
-let activeTooltipData = null;
-
 function renderTempChart(){
   const k = selected;
   const d = parseK(k);
@@ -1157,7 +1155,12 @@ function renderTempChart(){
   const temps = (rec && rec.temps) ? rec.temps.slice().sort((a,b) => a.time.localeCompare(b.time)) : [];
 
   if (!temps.length){
-    chartEl.innerHTML = '<p class="muted small" style="margin:20px 0; text-align:center">Нет замеров температуры за этот день</p>';
+    chartEl.innerHTML = `
+      <div class="temp-empty">
+        <div class="temp-empty-ico">🌡️</div>
+        <div class="temp-empty-txt">В этот день замеров температуры нет</div>
+        <div class="temp-empty-sub">Добавь замер в карточке дня, чтобы увидеть график</div>
+      </div>`;
     return;
   }
 
@@ -1169,7 +1172,6 @@ function renderTempChart(){
   const minItem = temps.find(t => t.value === minV);
   const maxItem = temps.find(t => t.value === maxV);
 
-  // Ограничиваем Y-ось: минимум 36, максимум 39.5 (или шире, если выходит за рамки)
   const yMin = Math.min(36, minV - 0.2);
   const yMax = Math.max(39, maxV + 0.2);
 
@@ -1178,13 +1180,49 @@ function renderTempChart(){
   const chartW = W - padLeft - padRight;
   const chartH = H - padTop - padBottom;
 
+  const getM = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  let minM = Math.min(...temps.map(t => getM(t.time)));
+  let maxM = Math.max(...temps.map(t => getM(t.time)));
+
+  let xMin = minM - 60;
+  let xMax = maxM + 60;
+
+  const MIN_SPAN = 240; // минимум 4 часа
+  if (xMax - xMin < MIN_SPAN) {
+    const mid = (xMin + xMax) / 2;
+    xMin = mid - MIN_SPAN / 2;
+    xMax = mid + MIN_SPAN / 2;
+  }
+
+  xMin = Math.max(0, Math.floor(xMin / 60) * 60);
+  xMax = Math.min(24 * 60, Math.ceil(xMax / 60) * 60);
+
   function tempToY(t) {
     return padTop + chartH - ((t - yMin) / (yMax - yMin)) * chartH;
   }
-  function timeToX(timeStr) {
-    const [h, m] = timeStr.split(':').map(Number);
-    const minutes = h * 60 + m;
-    return padLeft + (minutes / (24 * 60)) * chartW;
+  function timeToX(m) {
+    return padLeft + ((m - xMin) / (xMax - xMin)) * chartW;
+  }
+
+  function getSmoothPath(pts) {
+    if (!pts.length) return '';
+    if (pts.length === 1) return `M ${pts[0].x} ${pts[0].y} L ${pts[0].x} ${pts[0].y}`;
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i - 1] || pts[i];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[i + 2] || p2;
+
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+    }
+    return d;
   }
 
   let zonesHtml = '';
@@ -1212,10 +1250,17 @@ function renderTempChart(){
   }
 
   let xLabels = '';
-  ['00:00', '06:00', '12:00', '18:00', '24:00'].forEach((t, i) => {
-    const x = padLeft + (i / 4) * chartW;
-    xLabels += `<text x="${x}" y="${H - 8}" text-anchor="middle" class="temp-time-label">${t}</text>`;
-  });
+  let span = xMax - xMin;
+  let stepMin = 60;
+  if (span > 8 * 60) stepMin = 120;
+  if (span > 16 * 60) stepMin = 240;
+
+  for (let m = Math.ceil(xMin / stepMin) * stepMin; m <= xMax; m += stepMin) {
+    const x = timeToX(m);
+    const hh = pad(Math.floor(m / 60));
+    const mm = pad(m % 60);
+    xLabels += `<text x="${x}" y="${H - 8}" text-anchor="middle" class="temp-time-label">${hh}:${mm}</text>`;
+  }
 
   let threshHtml = '';
   if (37.5 >= yMin && 37.5 <= yMax) {
@@ -1223,15 +1268,14 @@ function renderTempChart(){
     threshHtml = `<line x1="${padLeft}" y1="${threshY}" x2="${W - padRight}" y2="${threshY}" class="temp-threshold-line"/>`;
   }
 
-  let pathD = '';
-  let areaD = '';
-  let dotsHtml = '';
+  const pts = temps.map(t => ({ x: timeToX(getM(t.time)), y: tempToY(t.value) }));
+  const pathD = getSmoothPath(pts);
+  const areaD = pathD + ` L ${pts[pts.length-1].x} ${padTop + chartH} L ${pts[0].x} ${padTop + chartH} Z`;
 
+  let dotsHtml = '';
   temps.forEach((t, i) => {
-    const x = timeToX(t.time);
-    const y = tempToY(t.value);
-    pathD += (i === 0 ? 'M' : 'L') + ` ${x} ${y}`;
-    areaD += (i === 0 ? 'M' : 'L') + ` ${x} ${y}`;
+    const x = pts[i].x;
+    const y = pts[i].y;
     
     const isHot = t.value >= 37.5;
     const status = getStatus(t.value);
@@ -1251,10 +1295,6 @@ function renderTempChart(){
       </g>
     `;
   });
-
-  const firstX = timeToX(temps[0].time);
-  const lastX = timeToX(temps[temps.length-1].time);
-  areaD += ` L ${lastX} ${padTop + chartH} L ${firstX} ${padTop + chartH} Z`;
 
   chartEl.innerHTML = `
     <div class="temp-stats">
@@ -1345,8 +1385,12 @@ function renderTempChart(){
     const xPos = parseFloat(point.querySelector('circle').getAttribute('cx')) * scaleX;
     const yPos = parseFloat(point.querySelector('circle').getAttribute('cy')) * scaleY;
 
-    // Позиционируем тултип над точкой
-    tooltip.style.left = xPos + 'px';
+    // Позиционируем тултип над точкой и не даем ему улететь за края
+    let tooltipX = xPos;
+    if (tooltipX < 70) tooltipX = 70;
+    if (tooltipX > svgRect.width - 70) tooltipX = svgRect.width - 70;
+
+    tooltip.style.left = tooltipX + 'px';
     tooltip.style.top = (yPos - 20) + 'px';
     tooltip.classList.add('show');
   });
@@ -1498,6 +1542,7 @@ function renderCoursesToday(k){
   `;
 }
 
+// Универсальный заголовок сворачиваемого раздела
 function sectionOpen(key, autoDefault){
   return sectionIsOpen(key, autoDefault) ? 'open' : '';
 }
