@@ -84,7 +84,7 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 .btn.primary{background:var(--ink); color:var(--surface); padding:9px 14px}
 .btn.primary:hover{background:var(--lime); color:#292724; border-color:var(--ink)}
 
-/* (v3.3) Компактная квадратная кнопка "+" — вместо огромной 52px */
+/* (v3.3) Компактная квадратная кнопка "+" */
 .btn-add{
   width: 44px; height: 44px;
   min-width: 44px; min-height: 44px;
@@ -500,7 +500,7 @@ details.day-section > summary::before{
   border-radius: 2px;
   flex: none;
 }
-/* (v3.3) Чёткая SVG-стрелочка вместо мелкого ▸ */
+/* (v3.3) Чёткая SVG-стрелочка */
 details.day-section > summary::after{
   content: '';
   display: block;
