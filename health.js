@@ -82,7 +82,7 @@ function openHealthForm(type) {
   modal.classList.add('show'); syncBodyScroll();
 }
 
-function closeHealthForm() { document.getElementById('healthFormModal').classList.remove('show'); if (!document.getElementById('healthCardView').classList.contains('show')) syncBodyScroll(); }
+function closeHealthForm() { document.getElementById('healthFormModal').classList.remove('show'); syncBodyScroll(); }
 
 document.getElementById('hfSave').addEventListener('click', () => {
   const type = document.getElementById('hfType').value; const date = document.getElementById('hfDate').value;
