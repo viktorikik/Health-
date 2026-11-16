@@ -1,12 +1,14 @@
 /* ============================ SW «Ещё одна галочка» ============================ */
-/* Стратегия: network-first с fallback на кэш.
-   При обновлении списка файлов — поднимать CACHE_VERSION,
-   иначе старый кэш не сбросится. */
-const CACHE_VERSION = 'eog-sad-v5';
+const CACHE_VERSION = 'eog-sad-v8'; // ПОДНЯЛИ ВЕРСИЮ
 const CACHE_URLS = [
   './',
   './index.html',
   './styles.css',
+  './core.js',
+  './calendar.js',
+  './panel.js',
+  './analytics.js',
+  './health.js',
   './app.js',
   './manifest.webmanifest'
 ];
