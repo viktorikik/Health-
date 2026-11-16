@@ -46,36 +46,39 @@ function sanitizeHtml(html) {
   return div.innerHTML;
 }
 
-// Авто-жирный шрифт и отступы для ключевых слов
+// Авто-жирный шрифт, очистка от * и форматирование списков
 function autoBoldKeywords(html) {
   if (!html) return '';
   let result = html;
-  const keywords = ['диагноз', 'лечение', 'рекомендации'];
   
+  // 1. Очистка от звездочек (markdown-выделения)
+  result = result.replace(/\*/g, '');
+  
+  // 2. Нормализация переносов (заменяем блочные теги на br)
+  result = result.replace(/<\/?(div|p|span)>/gi, '<br>');
+  result = result.replace(/(<br>)+/gi, '<br>'); // Убираем дубли переносов
+
+  // 3. Авто-жирный для ключевых слов
+  const keywords = ['диагноз', 'лечение', 'рекомендации'];
   keywords.forEach(kw => {
-    // 1. Убираем старые теги <b> вокруг слов, чтобы не было двойного оборачивания
-    const unboldRegex = new RegExp(`<b>\\s*([${kw[0].toUpperCase()}${kw[0].toLowerCase()}]${kw.slice(1)})(:?)\\s*<\\/b>`, 'gi');
+    // Убираем старое выделение (если есть)
+    const unboldRegex = new RegExp(`<b>\\s*(${kw})\\s*(:?)\\s*<\\/b>`, 'gi');
     result = result.replace(unboldRegex, '$1$2');
     
-    // 2. Ищем слово и заменяем пробелы/переносы перед ним на двойной перенос
-    const regex = new RegExp(`(^|\\s|<br>|<div>|>)([${kw[0].toUpperCase()}${kw[0].toLowerCase()}]${kw.slice(1)})(:?)`, 'gi');
-    result = result.replace(regex, (match, prefix, word, colon) => {
-      // Если слово в самом начале текста — просто делаем жирным
-      if (prefix === '') return `<b>${word}${colon}</b>`;
-      
-      // Если слово после тега <div> или <span> — ставим переносы внутри
-      if (prefix === '<div>' || prefix === '<span>') {
-        return `${prefix}<br><br><b>${word}${colon}</b>`;
-      }
-      
-      // В остальных случаях ставим две пустые строки перед словом
+    // Ищем слово и ставим два переноса перед ним
+    const regex = new RegExp(`(${kw})(:?)`, 'gi');
+    result = result.replace(regex, (match, word, colon) => {
       return `<br><br><b>${word}${colon}</b>`;
     });
   });
   
-  // Убираем лишние переносы в самом начале текста (если они были добавлены)
-  result = result.replace(/(<div>|<p>|<span>)(<br>)+/gi, '$1');
-  result = result.replace(/^(<br>)+/i, '');
+  // 4. Форматирование нумерованных списков (1. , 2. и т.д.)
+  // Ищем цифру с точкой в начале строки или после переноса
+  result = result.replace(/(<br>|^)\s*(\d+\.)\s+/g, '<br><br>$2 ');
+
+  // 5. Чистим лишние переносы
+  result = result.replace(/^(<br>)+/i, ''); // В начале текста
+  result = result.replace(/(<br>){3,}/gi, '<br><br>'); // Максимум 2 переноса подряд
   
   return result;
 }
@@ -120,7 +123,6 @@ function renderHealthCard() {
   const recentListEl = document.getElementById('hcRecentList');
   if (allRecords.length) {
     recentListEl.innerHTML = allRecords.map(r => {
-      // Для осмотров выводим форматированный текст
       let textHtml = esc(r.notes || r.text || '');
       if (r.type === 'visit' && r.notes) textHtml = sanitizeHtml(r.notes);
 
@@ -188,56 +190,82 @@ function renderHealthList() {
     return;
   }
   
+  // Сортируем от новых к старым
   const sorted = arr.slice().sort((a,b) => b.date.localeCompare(a.date));
-  listEl.innerHTML = sorted.map(r => {
-    let title = '';
-    if (type === 'visit') title = r.doctor;
-    else if (type === 'vaccine') title = r.name;
-    else if (type === 'note') title = r.text;
-    else if (type === 'growth') title = `${r.height} см, ${r.weight} кг`;
 
-    // Для осмотров и прививок выводим заметки в скрытый блок
-    let notesHtml = '';
-    if (r.notes && type !== 'note') {
-       notesHtml = type === 'visit' ? sanitizeHtml(r.notes) : esc(r.notes);
-    }
-    
-    // Если есть скрытый текст, добавляем маркер для раскрытия
-    const hasMore = !!notesHtml;
+  // Группируем по датам
+  const groups = {};
+  sorted.forEach(r => {
+    if (!groups[r.date]) groups[r.date] = [];
+    groups[r.date].push(r);
+  });
 
-    return `<div class="hc-list-item">
-      <div class="hc-list-main" ${hasMore ? `data-hl-toggle="true"` : ''}>
-        <div class="hc-list-date">${fmtDateShort(r.date)}</div>
-        <div class="hc-list-title">${esc(title)}</div>
-        ${notesHtml ? `<div class="hc-list-notes">${notesHtml}</div>` : ''}
+  const dateKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+
+  // Рендерим дерево
+  listEl.innerHTML = dateKeys.map(dateKey => {
+    const items = groups[dateKey];
+    // Форматируем дату для заголовка (например, "16 ноября 2026")
+    const d = parseK(dateKey);
+    const months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+    const dateLabel = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+
+    const itemsHtml = items.map(r => {
+      let title = '';
+      if (type === 'visit') title = r.doctor;
+      else if (type === 'vaccine') title = r.name;
+      else if (type === 'note') title = r.text;
+      else if (type === 'growth') title = `${r.height} см, ${r.weight} кг`;
+
+      let notesHtml = '';
+      if (r.notes && type !== 'note') {
+         notesHtml = type === 'visit' ? sanitizeHtml(r.notes) : esc(r.notes);
+      }
+      
+      const hasMore = !!notesHtml;
+
+      return `<div class="hc-list-item">
+        <div class="hc-list-main" ${hasMore ? `data-hl-toggle="true"` : ''}>
+          <div class="hc-list-title">${esc(title)}</div>
+          ${notesHtml ? `<div class="hc-list-notes">${notesHtml}</div>` : ''}
+        </div>
+        <div class="hc-list-actions">
+          <button class="iconbtn tiny" data-hl-edit="${r.id}" type="button" title="Редактировать">✎</button>
+          <button class="iconbtn tiny" data-hl-del="${r.id}" type="button" title="Удалить">×</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<details class="hc-date-group" open>
+      <summary class="hc-date-summary">
+        <span>${dateLabel}</span>
+        <span class="hc-date-badge">${items.length}</span>
+      </summary>
+      <div class="hc-date-items">
+        ${itemsHtml}
       </div>
-      <div class="hc-list-actions">
-        <button class="iconbtn tiny" data-hl-edit="${r.id}" type="button" title="Редактировать">✎</button>
-        <button class="iconbtn tiny" data-hl-del="${r.id}" type="button" title="Удалить">×</button>
-      </div>
-    </div>`;
+    </details>`;
   }).join('');
 }
 
 document.getElementById('hlList').addEventListener('click', e => {
-  // Обработка клика по карточке для раскрытия текста
+  // Раскрытие текста внутри карточки
   const toggleBtn = e.target.closest('[data-hl-toggle]');
   if (toggleBtn) {
     const item = toggleBtn.closest('.hc-list-item');
     item.classList.toggle('expanded');
-    return; // Выходим, чтобы не срабатывали другие клики
+    return; 
   }
 
-  // Обработка кнопки редактирования
+  // Редактирование
   const editBtn = e.target.closest('[data-hl-edit]');
-  const delBtn = e.target.closest('[data-hl-del]');
-  
   if (editBtn) {
     closeHealthList();
     openHealthForm(currentHlType, editBtn.dataset.hlEdit);
   }
   
-  // Обработка кнопки удаления
+  // Удаление
+  const delBtn = e.target.closest('[data-hl-del]');
   if (delBtn) {
     if (!confirm('Удалить эту запись?')) return;
     const hc = ensureHealthCard();
@@ -289,7 +317,6 @@ function openHealthForm(type, editId = null) {
       </div>
     `;
     
-    // Логика редактора
     setTimeout(() => {
       const editor = document.getElementById('hfNotesRich');
       const toolbar = document.querySelector('.rich-toolbar');
@@ -302,11 +329,9 @@ function openHealthForm(type, editId = null) {
         editor.focus();
       });
 
-      // Обработка вставки (авто-жирный и переносы)
       editor.addEventListener('paste', e => {
         e.preventDefault();
         const text = (e.originalEvent || e).clipboardData.getData('text/plain');
-        // Заменяем переносы строк на <br>, чтобы сохранить абзацы
         let html = esc(text).replace(/\n/g, '<br>');
         html = autoBoldKeywords(html);
         document.execCommand('insertHTML', false, html);
@@ -376,7 +401,6 @@ document.getElementById('hfSave').addEventListener('click', () => {
     if (!doctor) { alert('Укажи врача'); return; } 
     record.doctor = doctor;
     const rawNotes = document.getElementById('hfNotesRich').innerHTML;
-    // Очистка и авто-жирный при сохранении
     let clean = sanitizeHtml(rawNotes);
     clean = autoBoldKeywords(clean);
     record.notes = clean;
