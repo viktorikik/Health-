@@ -46,15 +46,37 @@ function sanitizeHtml(html) {
   return div.innerHTML;
 }
 
-// Авто-жирный шрифт для ключевых слов
+// Авто-жирный шрифт и отступы для ключевых слов
 function autoBoldKeywords(html) {
-  const keywords = ['диагноз', 'лечение', 'рекомендации'];
+  if (!html) return '';
   let result = html;
+  const keywords = ['диагноз', 'лечение', 'рекомендации'];
+  
   keywords.forEach(kw => {
-    // Ищем слово в начале строки или после пробела/точки, возможно с двоеточием
-    const regex = new RegExp(`(^|[\\n\\s>])([${kw[0].toUpperCase()}${kw[0].toLowerCase()}]${kw.slice(1)})(:?)(?=[\\s<])`, 'g');
-    result = result.replace(regex, `$1<b>$2$3</b>`);
+    // 1. Убираем старые теги <b> вокруг слов, чтобы не было двойного оборачивания
+    const unboldRegex = new RegExp(`<b>\\s*([${kw[0].toUpperCase()}${kw[0].toLowerCase()}]${kw.slice(1)})(:?)\\s*<\\/b>`, 'gi');
+    result = result.replace(unboldRegex, '$1$2');
+    
+    // 2. Ищем слово и заменяем пробелы/переносы перед ним на двойной перенос
+    const regex = new RegExp(`(^|\\s|<br>|<div>|>)([${kw[0].toUpperCase()}${kw[0].toLowerCase()}]${kw.slice(1)})(:?)`, 'gi');
+    result = result.replace(regex, (match, prefix, word, colon) => {
+      // Если слово в самом начале текста — просто делаем жирным
+      if (prefix === '') return `<b>${word}${colon}</b>`;
+      
+      // Если слово после тега <div> или <span> — ставим переносы внутри
+      if (prefix === '<div>' || prefix === '<span>') {
+        return `${prefix}<br><br><b>${word}${colon}</b>`;
+      }
+      
+      // В остальных случаях ставим две пустые строки перед словом
+      return `<br><br><b>${word}${colon}</b>`;
+    });
   });
+  
+  // Убираем лишние переносы в самом начале текста (если они были добавлены)
+  result = result.replace(/(<div>|<p>|<span>)(<br>)+/gi, '$1');
+  result = result.replace(/^(<br>)+/i, '');
+  
   return result;
 }
 
@@ -174,12 +196,17 @@ function renderHealthList() {
     else if (type === 'note') title = r.text;
     else if (type === 'growth') title = `${r.height} см, ${r.weight} кг`;
 
-    // Для осмотров выводим HTML (очищенный)
+    // Для осмотров и прививок выводим заметки в скрытый блок
     let notesHtml = '';
-    if (r.notes) notesHtml = type === 'visit' ? sanitizeHtml(r.notes) : esc(r.notes);
+    if (r.notes && type !== 'note') {
+       notesHtml = type === 'visit' ? sanitizeHtml(r.notes) : esc(r.notes);
+    }
+    
+    // Если есть скрытый текст, добавляем маркер для раскрытия
+    const hasMore = !!notesHtml;
 
     return `<div class="hc-list-item">
-      <div class="hc-list-main">
+      <div class="hc-list-main" ${hasMore ? `data-hl-toggle="true"` : ''}>
         <div class="hc-list-date">${fmtDateShort(r.date)}</div>
         <div class="hc-list-title">${esc(title)}</div>
         ${notesHtml ? `<div class="hc-list-notes">${notesHtml}</div>` : ''}
@@ -193,6 +220,15 @@ function renderHealthList() {
 }
 
 document.getElementById('hlList').addEventListener('click', e => {
+  // Обработка клика по карточке для раскрытия текста
+  const toggleBtn = e.target.closest('[data-hl-toggle]');
+  if (toggleBtn) {
+    const item = toggleBtn.closest('.hc-list-item');
+    item.classList.toggle('expanded');
+    return; // Выходим, чтобы не срабатывали другие клики
+  }
+
+  // Обработка кнопки редактирования
   const editBtn = e.target.closest('[data-hl-edit]');
   const delBtn = e.target.closest('[data-hl-del]');
   
@@ -201,6 +237,7 @@ document.getElementById('hlList').addEventListener('click', e => {
     openHealthForm(currentHlType, editBtn.dataset.hlEdit);
   }
   
+  // Обработка кнопки удаления
   if (delBtn) {
     if (!confirm('Удалить эту запись?')) return;
     const hc = ensureHealthCard();
@@ -265,7 +302,7 @@ function openHealthForm(type, editId = null) {
         editor.focus();
       });
 
-      // Обработка вставки (авто-жирный)
+      // Обработка вставки (авто-жирный и переносы)
       editor.addEventListener('paste', e => {
         e.preventDefault();
         const text = (e.originalEvent || e).clipboardData.getData('text/plain');
