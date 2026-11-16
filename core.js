@@ -154,6 +154,7 @@ function loadState(){
         activeChildId: s.activeChildId,
         children: (s.children || []).map(c => ({
           ...c,
+          birthDate: c.birthDate || '', // <--- НОВОЕ ПОЛЕ
           courses: (c.courses || []).map(course => ({ ...course, category: course.category || '' })),
           healthCard: c.healthCard || { visits: [], vaccines: [], notes: [], growth: [] }
         }))
@@ -167,6 +168,7 @@ function loadState(){
         version: 3, theme: s2.theme || null, activeChildId: childId,
         children: [{
           id: childId, name: s2.childName || '', days: s2.days || {},
+          birthDate: '', // <--- НОВОЕ ПОЛЕ
           courses: [], copyOptions: s2.copyOptions || null,
           symptomFilter: s2.symptomFilter || 'all', chartMode: s2.chartMode || null,
           chartAnchor: s2.chartAnchor || null,
@@ -182,6 +184,7 @@ function loadState(){
     version: 3, theme: null, activeChildId: childId,
     children: [{
       id: childId, name: '', days: {}, courses: [], copyOptions: null,
+      birthDate: '', // <--- НОВОЕ ПОЛЕ
       symptomFilter: 'all', chartMode: null, chartAnchor: null,
       healthCard: { visits: [], vaccines: [], notes: [], growth: [] }
     }]
@@ -194,13 +197,14 @@ if (!state.theme) state.theme = matchMedia('(prefers-color-scheme: dark)').match
 function getActiveChild() {
   if (!state.children || !state.children.length) {
     const id = 'child_' + uid();
-    state.children = [{ id, name: '', days: {}, courses: [], copyOptions: { ...DEFAULT_COPY_OPTIONS }, symptomFilter: 'all', chartMode: 'month', chartAnchor: keyOf(new Date()), healthCard: { visits: [], vaccines: [], notes: [], growth: [] } }];
+    state.children = [{ id, name: '', days: {}, birthDate: '', courses: [], copyOptions: { ...DEFAULT_COPY_OPTIONS }, symptomFilter: 'all', chartMode: 'month', chartAnchor: keyOf(new Date()), healthCard: { visits: [], vaccines: [], notes: [], growth: [] } }];
     state.activeChildId = id;
   }
   let child = state.children.find(c => c.id === state.activeChildId);
   if (!child) { child = state.children[0]; state.activeChildId = child.id; }
   if (!child.courses) child.courses = [];
   if (!child.healthCard) child.healthCard = { visits: [], vaccines: [], notes: [], growth: [] };
+  if (child.birthDate === undefined) child.birthDate = '';
   return child;
 }
 
@@ -333,6 +337,7 @@ const menuPanel = document.getElementById('menuPanel');
 const menuBackdrop = document.getElementById('menuBackdrop');
 const menuClose = document.getElementById('menuClose');
 const menuNameInput = document.getElementById('menuName');
+const menuBirthDateInput = document.getElementById('menuBirthDate');
 const menuThemeToggle = document.getElementById('menuThemeToggle');
 const menuThemeIcon = document.getElementById('menuThemeIcon');
 const menuThemeLabel = document.getElementById('menuThemeLabel');
@@ -363,6 +368,7 @@ menuChildrenList.addEventListener('click', e => {
     if (state.activeChildId === id) state.activeChildId = state.children[0].id;
     save(); render(); renderMenuChildren();
     menuNameInput.value = getActiveChild().name || '';
+    menuBirthDateInput.value = getActiveChild().birthDate || '';
     return;
   }
   const item = e.target.closest('.menu-child-item');
@@ -370,6 +376,7 @@ menuChildrenList.addEventListener('click', e => {
     state.activeChildId = item.dataset.id;
     save(); render(); renderMenuChildren();
     menuNameInput.value = getActiveChild().name || '';
+    menuBirthDateInput.value = getActiveChild().birthDate || '';
   }
 });
 
@@ -378,13 +385,14 @@ menuAddChildBtn.addEventListener('click', () => {
   if (!name || !name.trim()) return;
   const newId = 'child_' + uid();
   state.children.push({
-    id: newId, name: name.trim(), days: {}, courses: [],
+    id: newId, name: name.trim(), days: {}, birthDate: '', courses: [],
     copyOptions: { ...DEFAULT_COPY_OPTIONS }, symptomFilter: 'all', chartMode: 'month',
     chartAnchor: keyOf(new Date()), healthCard: { visits: [], vaccines: [], notes: [], growth: [] }
   });
   state.activeChildId = newId;
   save(); render(); renderMenuChildren();
   menuNameInput.value = name.trim();
+  menuBirthDateInput.value = '';
 });
 
 function openMenu(){
@@ -394,6 +402,7 @@ function openMenu(){
   menuPanel.style.top = (rect.bottom + 8) + 'px';
   menuPanel.style.left = leftPos + 'px';
   menuNameInput.value = getActiveChild().name || '';
+  menuBirthDateInput.value = getActiveChild().birthDate || '';
   updateMenuThemeLabel(); renderMenuChildren();
   menuPanel.classList.add('show'); menuBackdrop.classList.add('show');
   menuBtn.setAttribute('aria-expanded', 'true'); document.body.classList.add('no-scroll');
@@ -410,6 +419,14 @@ menuNameInput.addEventListener('input', e => {
   getActiveChild().name = e.target.value.trim();
   save(); updateHeaderChild(); renderDaySummary(); renderMenuChildren();
 });
+
+// Сохранение ДР
+menuBirthDateInput.addEventListener('change', e => {
+  getActiveChild().birthDate = e.target.value;
+  save();
+  if (document.getElementById('healthCardView').classList.contains('show')) renderHealthCard();
+});
+
 menuThemeToggle.addEventListener('click', () => {
   state.theme = state.theme === 'dark' ? 'light' : 'dark';
   save(); applyTheme(); updateMenuThemeLabel();
@@ -422,7 +439,7 @@ function switchChild(dir) {
   const nextIdx = (idx + dir + state.children.length) % state.children.length;
   state.activeChildId = state.children[nextIdx].id;
   save(); render();
-  if (menuPanel.classList.contains('show')) { renderMenuChildren(); menuNameInput.value = getActiveChild().name || ''; }
+  if (menuPanel.classList.contains('show')) { renderMenuChildren(); menuNameInput.value = getActiveChild().name || ''; menuBirthDateInput.value = getActiveChild().birthDate || ''; }
   toast(`Профиль: ${getActiveChild().name || 'Без имени'}`);
 }
 
