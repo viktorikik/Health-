@@ -322,7 +322,6 @@ function getEpisodes(daysObj){
 
 /* ============================ ТЕМА И МЕНЮ ============================ */
 function applyTheme(){ document.documentElement.dataset.theme = state.theme; }
-
 function updateHeaderChild() {
   const child = getActiveChild();
   const label = document.getElementById('activeChildLabel');
@@ -405,7 +404,6 @@ function closeMenu(){
 }
 menuBtn.addEventListener('click', () => { if (menuPanel.classList.contains('show')) closeMenu(); else openMenu(); });
 menuClose.addEventListener('click', closeMenu); menuBackdrop.addEventListener('click', closeMenu);
-
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && menuPanel.classList.contains('show')) closeMenu(); });
 
 menuNameInput.addEventListener('input', e => {
@@ -449,5 +447,20 @@ function hideToast(){
 function syncBodyScroll(){
   const anyModal = document.querySelector('.copy-opts-backdrop.show');
   const sheetOpen = document.getElementById('sheet')?.classList.contains('open');
-  document.body.classList.toggle('no-scroll', !!(anyModal || sheetOpen));
+  const healthCardOpen = document.getElementById('healthCardView')?.classList.contains('show');
+  document.body.classList.toggle('no-scroll', !!(anyModal || sheetOpen || healthCardOpen));
 }
+
+/* ============================ ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ============================ */
+const now0 = new Date();
+let view = { y: now0.getFullYear(), m: now0.getMonth() };
+let selected = keyOf(now0);
+let summaryKey = keyOf(now0);
+let viewMode = 'month';
+let weekAnchor = keyOf(now0);
+let chartMode = getActiveChild().chartMode || 'month';
+let copyMode = null;
+let lastCopyUndo = null;
+let suppressClick = false;
+let dragState = null;
+let dragBadgeEl = null;
