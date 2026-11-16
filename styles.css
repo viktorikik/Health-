@@ -59,11 +59,18 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 
 /* Новый стиль для имени ребёнка в шапке */
 .hero-child-name {
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   font-weight: 800;
   color: var(--ink);
-  margin: 0 0 12px 0;
+  margin: 2px 0 12px 0;
   line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hero-child-name::before {
+  content: '👶';
+  font-size: 1.1rem;
 }
 
 .hero-meta{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px}
