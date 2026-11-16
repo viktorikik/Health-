@@ -212,12 +212,26 @@
   </div>
 </div>
 
-<!-- Модалка добавления записи в карточку -->
+<!-- Модалка СПИСКА записей -->
+<div class="copy-opts-backdrop" id="healthListModal">
+  <div class="copy-opts-card">
+    <h3 id="hlTitle">Список</h3>
+    <p class="co-sub">Все записи за всё время</p>
+    <div class="hc-list" id="hlList"></div>
+    <div class="copy-opts-actions" style="margin-top:20px">
+      <button class="btn" id="hlClose" type="button">Закрыть</button>
+      <button class="btn primary" id="hlAddBtn" type="button">➕ Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка ДОБАВЛЕНИЯ/РЕДАКТИРОВАНИЯ записи -->
 <div class="copy-opts-backdrop" id="healthFormModal">
   <div class="copy-opts-card">
     <h3 id="hfTitle">Добавить запись</h3>
-    <p class="co-sub">Данные сохранятся в карточку текущего ребёнка</p>
+    <p class="co-sub" id="hfSub">Данные сохранятся в карточку текущего ребёнка</p>
     <input type="hidden" id="hfType">
+    <input type="hidden" id="hfId">
     
     <div class="section-label" style="margin-top:0">Дата</div>
     <input class="inp" type="date" id="hfDate">
