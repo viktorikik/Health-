@@ -873,7 +873,6 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
   max-width:440px; width:100%; max-height:85vh; overflow-y:auto; overscroll-behavior: contain;
   box-shadow:0 10px 40px rgba(0,0,0,0.35);
   border:1px solid var(--line);
-  display: flex; flex-direction: column;
 }
 .copy-opts-card h3{ font-size:1.08rem; margin-bottom:4px; letter-spacing:-.02em; }
 .copy-opts-card .co-sub{ color:var(--muted); font-size:.82rem; margin:0 0 16px; }
@@ -1108,11 +1107,20 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 #healthListModal { z-index: 1050 !important; }
 
 /* ============================ СПИСОК ЗАПИСЕЙ (ДЕРЕВО) ============================ */
+#healthListModal .copy-opts-card {
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+}
+
 .hc-list { 
   display: flex; 
   flex-direction: column; 
   gap: 8px; 
-  /* Убрали жесткую высоту, пусть растягивается внутри карточки */
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
 }
 
 /* Группа по дате */
