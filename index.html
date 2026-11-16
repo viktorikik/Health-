@@ -204,6 +204,9 @@
       </div>
     </div>
 
+    <!-- Блок для графика роста (скрывается, если нет данных) -->
+    <div class="hc-card" id="hcGrowthChartWrap"></div>
+
     <div class="hc-card">
       <h3 class="hc-recent-title">Последние записи</h3>
       <div class="hc-recent-list" id="hcRecentList"></div>
@@ -370,7 +373,6 @@
 
 <input type="file" id="fileInput" accept="application/json" hidden>
 
-<!-- Подключаем новый файл логики -->
 <script src="./app.js" defer></script>
 <script src="./health.js" defer></script>
 </body>
