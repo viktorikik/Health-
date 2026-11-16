@@ -186,12 +186,18 @@ fileInput.addEventListener('change', () => {
     try {
       const data = JSON.parse(reader.result);
       if (data.version === 3 && data.children) {
-        data.children.forEach(c => { if (!c.courses) c.courses = []; if (!c.healthCard) c.healthCard = { visits: [], vaccines: [], notes: [], growth: [] }; c.courses.forEach(course => { if (course.category === undefined) course.category = ''; }); });
+        data.children.forEach(c => { 
+          if (!c.courses) c.courses = []; 
+          if (!c.healthCard) c.healthCard = { visits: [], vaccines: [], notes: [], growth: [] }; 
+          if (c.birthDate === undefined) c.birthDate = ''; // <-- ВАЖНОЕ ОБНОВЛЕНИЕ ДЛЯ ИМПОРТА
+          c.courses.forEach(course => { if (course.category === undefined) course.category = ''; }); 
+        });
         state = data; if (!state.activeChildId || !state.children.find(c => c.id === state.activeChildId)) state.activeChildId = state.children[0]?.id;
         if (state.theme) applyTheme(); save(); render(); renderMenuChildren(); closeMenu(); alert('Данные импортированы (все профили).');
       } else if (data.days && typeof data.days === 'object') {
         getActiveChild().days = data.days;
         if (data.theme) state.theme = data.theme; if (data.childName) getActiveChild().name = data.childName;
+        if (data.birthDate) getActiveChild().birthDate = data.birthDate; // <-- ОБНОВЛЕНИЕ ДЛЯ СТАРОГО ФОРМАТА
         if (data.copyOptions) getActiveChild().copyOptions = { ...DEFAULT_COPY_OPTIONS, ...data.copyOptions }; if (data.symptomFilter) getActiveChild().symptomFilter = data.symptomFilter;
         if (data.chartMode) { getActiveChild().chartMode = data.chartMode; chartMode = data.chartMode; } if (data.chartAnchor) getActiveChild().chartAnchor = data.chartAnchor;
         save(); render(); renderMenuChildren(); closeMenu(); alert('Данные импортированы в текущий профиль.');
