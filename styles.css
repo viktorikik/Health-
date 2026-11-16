@@ -56,6 +56,16 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 .mark{background:var(--lime); color:#292724; padding:0 .14em; box-decoration-break:clone; -webkit-box-decoration-break:clone}
 .lead{margin:0; font-size:.9rem; color:var(--muted); line-height:1.45}
 .lead b { color: var(--ink); }
+
+/* Новый стиль для имени ребёнка в шапке */
+.hero-child-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0 0 12px 0;
+  line-height: 1.2;
+}
+
 .hero-meta{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px}
 .meta-pill{
   font-size:.78rem; font-weight:700; padding:5px 11px; border-radius:999px;
@@ -84,6 +94,7 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 .btn.primary{background:var(--ink); color:var(--surface); padding:9px 14px}
 .btn.primary:hover{background:var(--lime); color:#292724; border-color:var(--ink)}
 
+/* Компактная квадратная кнопка "+" */
 .btn-add{
   width: 44px; height: 44px;
   min-width: 44px; min-height: 44px;
