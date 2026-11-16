@@ -1105,9 +1105,11 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 .hc-chart-legend span { display: flex; align-items: center; gap: 6px; }
 .hc-chart-legend i { width: 8px; height: 8px; border-radius: 50%; }
 
-
 #healthFormModal {
   z-index: 1100 !important;
+}
+#healthListModal {
+  z-index: 1050 !important;
 }
 
 /* ============================ СПИСОК ЗАПИСЕЙ ЗДОРОВЬЯ ============================ */
@@ -1119,23 +1121,57 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
   overflow-y: auto; 
   padding-right: 4px; 
 }
+
+/* Аккордеон для записей */
 .hc-list-item {
-  display: flex; 
-  justify-content: space-between; 
-  gap: 10px; 
-  align-items: flex-start;
-  padding: 10px 12px; 
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0; 
+  cursor: pointer;
   border-radius: 10px; 
   background: var(--bg); 
   border: 1px solid var(--line);
 }
-.hc-list-main { flex: 1; min-width: 0; }
+.hc-list-main {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
 .hc-list-date { font-size: .72rem; color: var(--muted); font-weight: 700; margin-bottom: 2px; }
-.hc-list-title { font-size: .9rem; font-weight: 800; color: var(--ink); margin-bottom: 2px; word-break: break-word; }
-.hc-list-notes { font-size: .8rem; color: var(--muted); word-break: break-word; }
-.hc-list-actions { display: flex; gap: 4px; flex: none; }
-
-
+.hc-list-title { font-size: .9rem; font-weight: 800; color: var(--ink); margin-bottom: 2px; word-break: break-word; padding-right: 20px; }
+.hc-list-notes { 
+  display: none; 
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  font-size: .85rem; 
+  color: var(--ink); 
+  line-height: 1.5;
+  word-break: break-word; 
+}
+.hc-list-item.expanded .hc-list-notes { display: block; }
+.hc-list-actions { 
+  padding: 0 12px 12px 12px;
+  display: flex; 
+  justify-content: flex-end; 
+  gap: 6px; 
+}
+/* Иконка стрелочки для раскрытия */
+.hc-list-main[data-hl-toggle]::after {
+  content: '▼';
+  font-size: 10px;
+  color: var(--muted);
+  position: absolute;
+  right: 12px;
+  top: 16px;
+  transition: transform 0.2s ease;
+}
+.hc-list-item.expanded .hc-list-main[data-hl-toggle]::after {
+  transform: rotate(180deg);
+}
 
 /* ============================ РЕДАКТОР ТЕКСТА (ОСМОТРЫ) ============================ */
 .rich-editor-wrap {
@@ -1179,55 +1215,3 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 }
 .hc-recent-text b, .hc-list-notes b { font-weight: 800; color: var(--ink); }
 .hc-recent-text u, .hc-list-notes u { text-decoration: underline; }
-
-/* ============================ ФИКС СЛОЁВ (Z-INDEX) ============================ */
-#healthListModal {
-  z-index: 1050 !important;
-}
-/* ============================ АККОРДЕОН В СПИСКЕ ЗАПИСЕЙ ============================ */
-.hc-list-item {
-  flex-direction: column; 
-  align-items: stretch;
-  padding: 0; 
-  cursor: pointer;
-}
-.hc-list-main {
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  position: relative;
-}
-.hc-list-notes {
-  display: none; /* Скрыто по умолчанию */
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--line);
-  font-size: .85rem;
-  color: var(--ink);
-  line-height: 1.5;
-}
-.hc-list-item.expanded .hc-list-notes {
-  display: block; /* Показываем при клике */
-}
-.hc-list-actions {
-  padding: 0 12px 12px 12px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-/* Иконка стрелочки, чтобы было понятно, что можно кликнуть */
-.hc-list-main[data-hl-toggle]::after {
-  content: '▼';
-  font-size: 10px;
-  color: var(--muted);
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  transition: transform 0.2s ease;
-}
-.hc-list-item.expanded .hc-list-main[data-hl-toggle]::after {
-  transform: translateY(-50%) rotate(180deg);
-}
-
