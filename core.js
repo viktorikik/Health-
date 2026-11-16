@@ -329,7 +329,7 @@ function applyTheme(){ document.documentElement.dataset.theme = state.theme; }
 function updateHeaderChild() {
   const child = getActiveChild();
   const label = document.getElementById('activeChildLabel');
-  if (label) label.innerHTML = `Трекер здоровья <b>${esc(child.name || 'Без имени')}</b>`;
+  if (label) label.textContent = child.name || 'Без имени';
 }
 
 const menuBtn = document.getElementById('menuBtn');
