@@ -84,7 +84,6 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 .btn.primary{background:var(--ink); color:var(--surface); padding:9px 14px}
 .btn.primary:hover{background:var(--lime); color:#292724; border-color:var(--ink)}
 
-/* Компактная квадратная кнопка "+" */
 .btn-add{
   width: 44px; height: 44px;
   min-width: 44px; min-height: 44px;
@@ -454,7 +453,6 @@ h1{font-size:clamp(1.5rem, 5.5vw, 2.6rem); margin:6px 0 8px; letter-spacing:-.03
 }
 .temp-add-btn:hover { transform: scale(1.1) rotate(90deg); background: var(--coral); color: #fff; }
 
-/* Заглушка для пустого графика */
 .temp-empty {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 32px 16px; text-align: center; color: var(--muted);
@@ -575,7 +573,6 @@ details.day-section > summary::before{
   border-radius: 2px;
   flex: none;
 }
-/* Чёткая SVG-стрелочка */
 details.day-section > summary::after{
   content: '';
   display: block;
@@ -608,7 +605,6 @@ details.day-section > .section-body{
   to { opacity: 1; }
 }
 
-/* Счётчик в заголовке раздела */
 .section-count{
   display: inline-block;
   min-width: 20px;
@@ -1105,24 +1101,65 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 .hc-chart-legend span { display: flex; align-items: center; gap: 6px; }
 .hc-chart-legend i { width: 8px; height: 8px; border-radius: 50%; }
 
-#healthFormModal {
-  z-index: 1100 !important;
-}
-#healthListModal {
-  z-index: 1050 !important;
-}
+#healthFormModal { z-index: 1100 !important; }
+#healthListModal { z-index: 1050 !important; }
 
-/* ============================ СПИСОК ЗАПИСЕЙ ЗДОРОВЬЯ ============================ */
+/* ============================ СПИСОК ЗАПИСЕЙ (ДЕРЕВО) ============================ */
 .hc-list { 
   display: flex; 
   flex-direction: column; 
-  gap: 8px; 
-  max-height: 50vh; 
+  gap: 10px; 
+  max-height: 60vh; 
   overflow-y: auto; 
   padding-right: 4px; 
 }
 
-/* Аккордеон для записей */
+/* Группа по дате */
+.hc-date-group {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  overflow: hidden;
+}
+.hc-date-group > summary {
+  padding: 12px 14px;
+  font-weight: 800;
+  color: var(--ink);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg);
+  transition: background 0.15s;
+}
+.hc-date-group > summary::-webkit-details-marker { display: none; }
+.hc-date-group > summary:hover { background: var(--line); }
+.hc-date-group > summary::after {
+  content: '▼';
+  font-size: 10px;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+.hc-date-group[open] > summary::after { transform: rotate(180deg); }
+.hc-date-badge {
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  margin-left: auto;
+  margin-right: 10px;
+}
+
+/* Записи внутри даты */
+.hc-date-items {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 .hc-list-item {
   display: flex;
   flex-direction: column;
@@ -1130,22 +1167,22 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
   padding: 0; 
   cursor: pointer;
   border-radius: 10px; 
-  background: var(--bg); 
+  background: var(--surface); 
   border: 1px solid var(--line);
 }
+.hc-list-item:hover { border-color: var(--ink); }
 .hc-list-main {
-  padding: 12px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   position: relative;
 }
-.hc-list-date { font-size: .72rem; color: var(--muted); font-weight: 700; margin-bottom: 2px; }
 .hc-list-title { font-size: .9rem; font-weight: 800; color: var(--ink); margin-bottom: 2px; word-break: break-word; padding-right: 20px; }
 .hc-list-notes { 
   display: none; 
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px dashed var(--line);
   font-size: .85rem; 
   color: var(--ink); 
@@ -1154,19 +1191,18 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 }
 .hc-list-item.expanded .hc-list-notes { display: block; }
 .hc-list-actions { 
-  padding: 0 12px 12px 12px;
+  padding: 0 12px 10px 12px;
   display: flex; 
   justify-content: flex-end; 
   gap: 6px; 
 }
-/* Иконка стрелочки для раскрытия */
 .hc-list-main[data-hl-toggle]::after {
   content: '▼';
   font-size: 10px;
   color: var(--muted);
   position: absolute;
   right: 12px;
-  top: 16px;
+  top: 14px;
   transition: transform 0.2s ease;
 }
 .hc-list-item.expanded .hc-list-main[data-hl-toggle]::after {
