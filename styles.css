@@ -1104,3 +1104,8 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 .hc-chart-legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-top: 10px; justify-content: center; }
 .hc-chart-legend span { display: flex; align-items: center; gap: 6px; }
 .hc-chart-legend i { width: 8px; height: 8px; border-radius: 50%; }
+
+
+#healthFormModal {
+  z-index: 1100 !important;
+}
