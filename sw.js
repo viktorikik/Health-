@@ -1,5 +1,5 @@
 /* ============================ SW «Ещё одна галочка» ============================ */
-const CACHE_VERSION = 'eog-sad-v8'; // ПОДНЯЛИ ВЕРСИЮ
+const CACHE_VERSION = 'eog-sad-v8'; 
 const CACHE_URLS = [
   './',
   './index.html',
