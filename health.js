@@ -53,30 +53,32 @@ function formatMedicalText(html) {
 
   // 1. Нормализуем переносы (заменяем div/p на br)
   text = text.replace(/<\/?(div|p|span)>/gi, '<br>');
-
-  // 2. Конвертируем Markdown-жирный **текст** в <b>текст</b>
-  text = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-
-  // 3. Убираем оставшиеся звездочки (маркеры списков)
+  
+  // 2. Если после цифры с точкой идет перенос строки, убираем его (склеиваем "1." и текст)
+  text = text.replace(/(\d+\.)\s*(<br>)+/gi, '$1 ');
+  
+  // 3. Полностью удаляем все звездочки (markdown-выделение), чтобы не было лишнего жирного
   text = text.replace(/\*/g, '');
+  
+  // 4. Схлопываем множественные переносы в один
+  text = text.replace(/(<br>)+/gi, '<br>');
 
-  // 4. Выделяем ключевые слова и ставим отступы
+  // 5. Выделяем ключевые слова и ставим отступы
   const keywords = ['диагноз', 'лечение', 'рекомендации', 'назначения'];
   keywords.forEach(kw => {
-    const regex = new RegExp(`(^|<br>|\\s)(${kw})(:?)`, 'gi');
+    const regex = new RegExp(`(^|<br>|\\s)(${kw})(\\s*:?)`, 'gi');
     text = text.replace(regex, (match, prefix, word, colon) => {
-      // Если слово в начале или после br, не ставим лишние отступы
+      // Если слово в начале или после br, не ставим лишние отступы перед ним
       const safePrefix = (prefix === '<br>' || prefix.trim() === '') ? '' : '<br><br>';
-      // Принудительно делаем жирным
+      // Принудительно делаем жирным и возвращаем
       return `${safePrefix}<b>${word}${colon}</b>`;
     });
   });
 
-  // 5. Форматируем нумерованные списки (1., 2.) и маркированные (-)
-  text = text.replace(/(<br>|^)\s*(\d+\.)\s+/g, '<br><br>$2 ');
-  text = text.replace(/(<br>|^)\s*-\s+/g, '<br><br>• ');
+  // 6. Форматируем нумерованные списки (добавляем пустую строку перед новым пунктом)
+  text = text.replace(/(<br>)\s*(\d+\.)\s+/g, '<br><br>$2 ');
 
-  // 6. Чистим лишние переносы строк
+  // 7. Чистим лишние переносы строк (не более двух подряд)
   text = text.replace(/(<br>){3,}/gi, '<br><br>');
   text = text.replace(/^(<br>)+/i, '');
 
@@ -125,7 +127,7 @@ function renderHealthCard() {
     recentListEl.innerHTML = allRecords.map(r => {
       let textHtml = esc(r.notes || r.text || '');
       if (r.type === 'visit' && r.notes) {
-        // На лету причесываем старые записи, если в них остались звездочки
+        // На лету причесываем старые записи
         const formatted = formatMedicalText(r.notes);
         textHtml = sanitizeHtml(formatted);
       }
@@ -219,7 +221,6 @@ function renderHealthList() {
 
       let notesHtml = '';
       if (r.notes && type !== 'note') {
-         // Пропускаем старые записи через парсер, чтобы убрать звездочки
          const formatted = formatMedicalText(r.notes);
          notesHtml = type === 'visit' ? sanitizeHtml(formatted) : esc(r.notes);
       }
@@ -304,7 +305,7 @@ function openHealthForm(type, editId = null) {
   
   if (type === 'visit') {
     title.textContent = isEdit ? 'Редактировать осмотр' : 'Добавить осмотр';
-    // При редактировании тоже прогоняем через форматтер, чтобы очистить старые данные от звездочек
+    // При редактировании прогоняем через парсер, чтобы убрать старые звездочки
     const initialNotes = isEdit ? formatMedicalText(record.notes || '') : '';
     fields.innerHTML = `
       <div class="section-label" style="margin-top:0">Врач / Специальность</div>
