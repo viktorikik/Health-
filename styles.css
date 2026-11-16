@@ -1135,3 +1135,48 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 .hc-list-title { font-size: .9rem; font-weight: 800; color: var(--ink); margin-bottom: 2px; word-break: break-word; }
 .hc-list-notes { font-size: .8rem; color: var(--muted); word-break: break-word; }
 .hc-list-actions { display: flex; gap: 4px; flex: none; }
+
+
+
+/* ============================ РЕДАКТОР ТЕКСТА (ОСМОТРЫ) ============================ */
+.rich-editor-wrap {
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+  margin-bottom: 16px;
+}
+.rich-toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.rich-btn {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--ink); font-family: serif; font-size: 1.1rem;
+  transition: all 0.15s;
+}
+.rich-btn:hover { background: var(--lime); border-color: var(--ink); }
+.rich-editor {
+  min-height: 100px;
+  padding: 12px;
+  outline: none;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  border: none !important;
+}
+.rich-editor:empty:before {
+  content: attr(placeholder);
+  color: var(--muted);
+  pointer-events: none;
+  display: block;
+}
+.hc-recent-text b, .hc-list-notes b { font-weight: 800; color: var(--ink); }
+.hc-recent-text u, .hc-list-notes u { text-decoration: underline; }
