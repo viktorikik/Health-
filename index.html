@@ -35,6 +35,14 @@
     <div class="hero-main">
       <div class="eyebrow">Трекер · «Ещё одна галочка»</div>
       <h1>Адаптация к <span class="mark">садику</span></h1>
+      
+      <!-- НОВАЯ ССЫЛКА НА КАРТОЧКУ ЗДОРОВЬЯ -->
+      <button class="health-link" id="openHealthCardBtn" type="button">
+        <span class="health-link-ico">🏥</span>
+        <span class="health-link-txt">Карточка здоровья</span>
+        <span class="health-link-arrow">→</span>
+      </button>
+
       <p class="lead" id="activeChildLabel">Трекер здоровья</p>
       <div class="hero-meta" id="heroMeta"></div>
     </div>
@@ -159,6 +167,69 @@
     </p>
   </footer>
 </main>
+
+<!-- ==================== ЭКРАН КАРТОЧКИ ЗДОРОВЬЯ ==================== -->
+<div class="health-card-view" id="healthCardView">
+  <div class="hc-header">
+    <button class="hc-back" id="hcBackBtn" type="button">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+      Назад
+    </button>
+    <div class="hc-title" id="hcTitle">Карточка здоровья</div>
+  </div>
+
+  <div class="hc-content">
+    <div class="hc-card hc-main-card">
+      <div class="hc-grid">
+        <button class="hc-tile" type="button" data-hc-add="visit">
+          <div class="hc-tile-ico">🩺</div>
+          <div class="hc-tile-label">Осмотры</div>
+          <div class="hc-tile-val" id="hcVisitCount">0 записей</div>
+        </button>
+        <button class="hc-tile" type="button" data-hc-add="vaccine">
+          <div class="hc-tile-ico">💉</div>
+          <div class="hc-tile-label">Прививки</div>
+          <div class="hc-tile-val" id="hcVaccineCount">0 записей</div>
+        </button>
+        <button class="hc-tile" type="button" data-hc-add="note">
+          <div class="hc-tile-ico">📝</div>
+          <div class="hc-tile-label">Заметки</div>
+          <div class="hc-tile-val" id="hcNoteCount">0 записей</div>
+        </button>
+        <button class="hc-tile" type="button" data-hc-add="growth">
+          <div class="hc-tile-ico">📈</div>
+          <div class="hc-tile-label">Рост и вес</div>
+          <div class="hc-tile-val" id="hcGrowthCount">Нет данных</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="hc-card">
+      <h3 class="hc-recent-title">Последние записи</h3>
+      <div class="hc-recent-list" id="hcRecentList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка добавления записи в карточку -->
+<div class="copy-opts-backdrop" id="healthFormModal">
+  <div class="copy-opts-card">
+    <h3 id="hfTitle">Добавить запись</h3>
+    <p class="co-sub">Данные сохранятся в карточку текущего ребёнка</p>
+    <input type="hidden" id="hfType">
+    
+    <div class="section-label" style="margin-top:0">Дата</div>
+    <input class="inp" type="date" id="hfDate">
+
+    <div id="hfFields"></div>
+
+    <div class="copy-opts-actions" style="margin-top:20px">
+      <button class="btn" id="hfCancel" type="button">Отмена</button>
+      <button class="btn primary" id="hfSave" type="button">Сохранить</button>
+    </div>
+  </div>
+</div>
+<!-- ==================== КОНЕЦ КАРТОЧКИ ЗДОРОВЬЯ ==================== -->
 
 <div class="menu-backdrop" id="menuBackdrop"></div>
 <div class="menu-panel" id="menuPanel" role="dialog" aria-modal="true" aria-label="Настройки">
@@ -299,6 +370,8 @@
 
 <input type="file" id="fileInput" accept="application/json" hidden>
 
+<!-- Подключаем новый файл логики -->
 <script src="./app.js" defer></script>
+<script src="./health.js" defer></script>
 </body>
 </html>
