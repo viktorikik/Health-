@@ -10,6 +10,54 @@ function ensureHealthCard() {
   return child.healthCard;
 }
 
+function getAgeString(dobStr) {
+  if (!dobStr) return '';
+  const dob = parseK(dobStr);
+  const now = new Date();
+  let years = now.getFullYear() - dob.getFullYear();
+  let months = now.getMonth() - dob.getMonth();
+  if (months < 0 || (months === 0 && now.getDate() < dob.getDate())) {
+    years--; months += 12;
+  }
+  if (years > 0) return `${years} ${plural(years, 'год', 'года', 'лет')}`;
+  if (months > 0) return `${months} ${plural(months, 'месяц', 'месяца', 'месяцев')}`;
+  return 'Меньше месяца';
+}
+
+// Очистка HTML от опасных тегов (XSS)
+function sanitizeHtml(html) {
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  div.querySelectorAll('script, style, iframe, object, embed').forEach(el => el.remove());
+  const allowed = ['B', 'STRONG', 'I', 'EM', 'U', 'P', 'BR', 'DIV', 'SPAN'];
+  const walk = document.createTreeWalker(div, NodeFilter.SHOW_ELEMENT, null, false);
+  const nodesToRemove = [];
+  let node = walk.nextNode();
+  while (node) {
+    if (!allowed.includes(node.tagName)) nodesToRemove.push(node);
+    else Array.from(node.attributes).forEach(attr => node.removeAttribute(attr.name));
+    node = walk.nextNode();
+  }
+  nodesToRemove.forEach(n => {
+    const parent = n.parentNode;
+    while (n.firstChild) parent.insertBefore(n.firstChild, n);
+    parent.removeChild(n);
+  });
+  return div.innerHTML;
+}
+
+// Авто-жирный шрифт для ключевых слов
+function autoBoldKeywords(html) {
+  const keywords = ['диагноз', 'лечение', 'рекомендации'];
+  let result = html;
+  keywords.forEach(kw => {
+    // Ищем слово в начале строки или после пробела/точки, возможно с двоеточием
+    const regex = new RegExp(`(^|[\\n\\s>])([${kw[0].toUpperCase()}${kw[0].toLowerCase()}]${kw.slice(1)})(:?)(?=[\\s<])`, 'g');
+    result = result.replace(regex, `$1<b>$2$3</b>`);
+  });
+  return result;
+}
+
 function openHealthCard() {
   ensureHealthCard();
   document.getElementById('healthCardView').classList.add('show');
@@ -24,9 +72,16 @@ function closeHealthCard() {
 
 function renderHealthCard() {
   const hc = ensureHealthCard();
-  const childName = getActiveChild().name || 'ребёнка';
+  const child = getActiveChild();
+  const childName = child.name || 'ребёнка';
+  const age = getAgeString(child.birthDate);
 
-  document.getElementById('hcTitle').innerHTML = `Карточка здоровья <br><span style="color:var(--muted); font-size:0.75em; font-weight:600">${esc(childName)}</span>`;
+  document.getElementById('hcTitle').innerHTML = `
+    Карточка здоровья <br>
+    <span style="color:var(--muted); font-size:0.75em; font-weight:600">
+      ${esc(childName)} ${age ? `· ${age}` : ''}
+    </span>
+  `;
 
   document.getElementById('hcVisitCount').textContent = `${hc.visits.length} записей`;
   document.getElementById('hcVaccineCount').textContent = `${hc.vaccines.length} записей`;
@@ -42,12 +97,16 @@ function renderHealthCard() {
 
   const recentListEl = document.getElementById('hcRecentList');
   if (allRecords.length) {
-    recentListEl.innerHTML = allRecords.map(r => `
-      <div class="hc-recent-item">
+    recentListEl.innerHTML = allRecords.map(r => {
+      // Для осмотров выводим форматированный текст
+      let textHtml = esc(r.notes || r.text || '');
+      if (r.type === 'visit' && r.notes) textHtml = sanitizeHtml(r.notes);
+
+      return `<div class="hc-recent-item">
         <div class="hc-recent-dot"></div>
-        <div><div class="hc-recent-date">${fmtDateShort(r.date)} · ${r.label || 'Запись'}</div><div class="hc-recent-text">${esc(r.notes || r.text || '')}</div></div>
-      </div>
-    `).join('');
+        <div><div class="hc-recent-date">${fmtDateShort(r.date)} · ${r.label || 'Запись'}</div><div class="hc-recent-text">${textHtml}</div></div>
+      </div>`;
+    }).join('');
   } else {
     recentListEl.innerHTML = '<p class="muted small">Пока нет записей. Нажми на любую карточку выше, чтобы добавить.</p>';
   }
@@ -59,7 +118,7 @@ function renderGrowthChart(growth) {
   const chartWrap = document.getElementById('hcGrowthChartWrap');
   if (!growth || growth.length < 2) { 
     chartWrap.innerHTML = ''; 
-    chartWrap.style.display = 'none'; // Скрываем пустой блок
+    chartWrap.style.display = 'none';
     return; 
   }
   chartWrap.style.display = 'block';
@@ -115,11 +174,15 @@ function renderHealthList() {
     else if (type === 'note') title = r.text;
     else if (type === 'growth') title = `${r.height} см, ${r.weight} кг`;
 
+    // Для осмотров выводим HTML (очищенный)
+    let notesHtml = '';
+    if (r.notes) notesHtml = type === 'visit' ? sanitizeHtml(r.notes) : esc(r.notes);
+
     return `<div class="hc-list-item">
       <div class="hc-list-main">
         <div class="hc-list-date">${fmtDateShort(r.date)}</div>
         <div class="hc-list-title">${esc(title)}</div>
-        ${r.notes ? `<div class="hc-list-notes">${esc(r.notes)}</div>` : ''}
+        ${notesHtml ? `<div class="hc-list-notes">${notesHtml}</div>` : ''}
       </div>
       <div class="hc-list-actions">
         <button class="iconbtn tiny" data-hl-edit="${r.id}" type="button" title="Редактировать">✎</button>
@@ -174,12 +237,45 @@ function openHealthForm(type, editId = null) {
   
   if (type === 'visit') {
     title.textContent = isEdit ? 'Редактировать осмотр' : 'Добавить осмотр';
+    const initialNotes = isEdit ? (record.notes || '') : '';
     fields.innerHTML = `
       <div class="section-label" style="margin-top:0">Врач / Специальность</div>
       <input class="inp" id="hfDoctor" placeholder="Например, Педиатр" value="${isEdit ? esc(record.doctor) : ''}" required>
-      <div class="section-label">Заметки</div>
-      <textarea class="inp" id="hfNotes" rows="2" placeholder="Что сказал врач">${isEdit ? esc(record.notes || '') : ''}</textarea>
+      
+      <div class="section-label">Заметки (диагноз, лечение)</div>
+      <div class="rich-editor-wrap">
+        <div class="rich-toolbar">
+          <button type="button" class="rich-btn" data-cmd="bold" title="Жирный"><b>Ж</b></button>
+          <button type="button" class="rich-btn" data-cmd="underline" title="Подчеркнутый"><u>Ч</u></button>
+        </div>
+        <div class="rich-editor inp" id="hfNotesRich" contenteditable="true" placeholder="Введите текст...">${initialNotes}</div>
+      </div>
     `;
+    
+    // Логика редактора
+    setTimeout(() => {
+      const editor = document.getElementById('hfNotesRich');
+      const toolbar = document.querySelector('.rich-toolbar');
+      
+      toolbar.addEventListener('click', e => {
+        const btn = e.target.closest('.rich-btn');
+        if (!btn) return;
+        e.preventDefault();
+        document.execCommand(btn.dataset.cmd, false, null);
+        editor.focus();
+      });
+
+      // Обработка вставки (авто-жирный)
+      editor.addEventListener('paste', e => {
+        e.preventDefault();
+        const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+        // Заменяем переносы строк на <br>, чтобы сохранить абзацы
+        let html = esc(text).replace(/\n/g, '<br>');
+        html = autoBoldKeywords(html);
+        document.execCommand('insertHTML', false, html);
+      });
+    }, 50);
+
   } else if (type === 'vaccine') {
     title.textContent = isEdit ? 'Редактировать прививку' : 'Добавить прививку';
     fields.innerHTML = `
@@ -242,7 +338,11 @@ document.getElementById('hfSave').addEventListener('click', () => {
     const doctor = document.getElementById('hfDoctor').value.trim(); 
     if (!doctor) { alert('Укажи врача'); return; } 
     record.doctor = doctor;
-    record.notes = document.getElementById('hfNotes').value.trim(); 
+    const rawNotes = document.getElementById('hfNotesRich').innerHTML;
+    // Очистка и авто-жирный при сохранении
+    let clean = sanitizeHtml(rawNotes);
+    clean = autoBoldKeywords(clean);
+    record.notes = clean;
   } else if (type === 'vaccine') { 
     const name = document.getElementById('hfName').value.trim(); 
     if (!name) { alert('Укажи название'); return; } 
@@ -264,7 +364,6 @@ document.getElementById('hfSave').addEventListener('click', () => {
   closeHealthForm(); 
   renderHealthCard();
   
-  // Если открыт список — обновляем и его
   if (document.getElementById('healthListModal').classList.contains('show')) {
     renderHealthList();
   }
@@ -275,7 +374,6 @@ document.getElementById('hcBackBtn').addEventListener('click', closeHealthCard);
 document.getElementById('hfCancel').addEventListener('click', closeHealthForm);
 document.getElementById('healthFormModal').addEventListener('click', (e) => { if (e.target === document.getElementById('healthFormModal')) closeHealthForm(); });
 
-// Клик по плитке открывает СПИСОК, а не форму
 document.querySelectorAll('[data-hc-add]').forEach(btn => { 
   btn.addEventListener('click', () => openHealthList(btn.dataset.hcAdd)); 
 });
