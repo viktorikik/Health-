@@ -10,19 +10,6 @@ const chartMonth = document.getElementById('chartMonth');
 const chartEl = document.getElementById('tempChart');
 const doseBar = document.getElementById('doseBar');
 
-const now0 = new Date();
-let view = { y: now0.getFullYear(), m: now0.getMonth() };
-let selected = keyOf(now0);
-let summaryKey = keyOf(now0);
-let viewMode = 'month';
-let weekAnchor = keyOf(now0);
-let chartMode = getActiveChild().chartMode || 'month';
-
-let suppressClick = false;
-let dragState = null;
-let dragBadgeEl = null;
-let copyMode = null; // управляется из panel.js, здесь только для чтения
-
 function dayCats(rec){
   const s = new Set();
   (rec.symptoms || []).forEach(id => { const x = SYMPTOMS.find(v => v.id === id); if (x) s.add(x.cat); });
