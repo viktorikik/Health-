@@ -1110,7 +1110,6 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
   z-index: 1100 !important;
 }
 
-
 /* ============================ СПИСОК ЗАПИСЕЙ ЗДОРОВЬЯ ============================ */
 .hc-list { 
   display: flex; 
@@ -1180,3 +1179,8 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 }
 .hc-recent-text b, .hc-list-notes b { font-weight: 800; color: var(--ink); }
 .hc-recent-text u, .hc-list-notes u { text-decoration: underline; }
+
+/* ============================ ФИКС СЛОЁВ (Z-INDEX) ============================ */
+#healthListModal {
+  z-index: 1050 !important;
+}
