@@ -1184,3 +1184,50 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 #healthListModal {
   z-index: 1050 !important;
 }
+/* ============================ АККОРДЕОН В СПИСКЕ ЗАПИСЕЙ ============================ */
+.hc-list-item {
+  flex-direction: column; 
+  align-items: stretch;
+  padding: 0; 
+  cursor: pointer;
+}
+.hc-list-main {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+.hc-list-notes {
+  display: none; /* Скрыто по умолчанию */
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  font-size: .85rem;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.hc-list-item.expanded .hc-list-notes {
+  display: block; /* Показываем при клике */
+}
+.hc-list-actions {
+  padding: 0 12px 12px 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+/* Иконка стрелочки, чтобы было понятно, что можно кликнуть */
+.hc-list-main[data-hl-toggle]::after {
+  content: '▼';
+  font-size: 10px;
+  color: var(--muted);
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: transform 0.2s ease;
+}
+.hc-list-item.expanded .hc-list-main[data-hl-toggle]::after {
+  transform: translateY(-50%) rotate(180deg);
+}
+
