@@ -33,15 +33,21 @@
     </button>
     <div class="hero-main">
       <div class="eyebrow">Трекер · «Ещё одна галочка»</div>
-      <h1>Адаптация к <span class="mark">садику</span></h1>
       
+      <!-- НОВЫЙ ЗАГОЛОВОК -->
+      <h1>Трекер <span class="mark">здоровья</span></h1>
+      
+      <!-- ИМЯ РЕБЁНКА ВЫНЕСЕНО НАВЕРХ -->
+      <p class="hero-child-name" id="activeChildLabel">—</p>
+
+      <!-- КНОПКА КАРТОЧКИ ЗДОРОВЬЯ -->
       <button class="health-link" id="openHealthCardBtn" type="button">
         <span class="health-link-ico">🏥</span>
         <span class="health-link-txt">Карточка здоровья</span>
         <span class="health-link-arrow">→</span>
       </button>
 
-      <p class="lead" id="activeChildLabel">Трекер здоровья</p>
+      <!-- ПЛАШКИ СТАТИСТИКИ -->
       <div class="hero-meta" id="heroMeta"></div>
     </div>
   </header>
@@ -253,7 +259,6 @@
     <input class="inp" type="text" id="menuName" placeholder="Например, Миша" autocomplete="off" maxlength="20">
   </div>
 
-  <!-- НОВОЕ ПОЛЕ: ДАТА РОЖДЕНИЯ -->
   <div class="menu-field">
     <label class="menu-label" for="menuBirthDate">Дата рождения</label>
     <input class="inp" type="date" id="menuBirthDate">
