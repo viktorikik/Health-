@@ -36,7 +36,6 @@
       <div class="eyebrow">Трекер · «Ещё одна галочка»</div>
       <h1>Адаптация к <span class="mark">садику</span></h1>
       
-      <!-- НОВАЯ ССЫЛКА НА КАРТОЧКУ ЗДОРОВЬЯ -->
       <button class="health-link" id="openHealthCardBtn" type="button">
         <span class="health-link-ico">🏥</span>
         <span class="health-link-txt">Карточка здоровья</span>
@@ -168,7 +167,7 @@
   </footer>
 </main>
 
-<!-- ==================== ЭКРАН КАРТОЧКИ ЗДОРОВЬЯ ==================== -->
+<!-- ЭКРАН КАРТОЧКИ ЗДОРОВЬЯ -->
 <div class="health-card-view" id="healthCardView">
   <div class="hc-header">
     <button class="hc-back" id="hcBackBtn" type="button">
@@ -204,7 +203,6 @@
       </div>
     </div>
 
-    <!-- Блок для графика роста (скрывается, если нет данных) -->
     <div class="hc-card" id="hcGrowthChartWrap"></div>
 
     <div class="hc-card">
@@ -232,7 +230,6 @@
     </div>
   </div>
 </div>
-<!-- ==================== КОНЕЦ КАРТОЧКИ ЗДОРОВЬЯ ==================== -->
 
 <div class="menu-backdrop" id="menuBackdrop"></div>
 <div class="menu-panel" id="menuPanel" role="dialog" aria-modal="true" aria-label="Настройки">
@@ -373,7 +370,12 @@
 
 <input type="file" id="fileInput" accept="application/json" hidden>
 
-<script src="./app.js" defer></script>
+<!-- ПОДКЛЮЧЕНИЕ СКРИПТОВ -->
+<script src="./core.js" defer></script>
+<script src="./calendar.js" defer></script>
+<script src="./panel.js" defer></script>
+<script src="./analytics.js" defer></script>
 <script src="./health.js" defer></script>
+<script src="./app.js" defer></script>
 </body>
 </html>
