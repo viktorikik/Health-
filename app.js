@@ -53,6 +53,43 @@ document.getElementById('todayBtn').addEventListener('click', () => {
   save(); render(); switchView('cal'); if (isMobile()) openSheet();
 });
 
+/* ============================ ОБНОВЛЕНИЕ ШАПКИ ============================ */
+function updateHeroMeta() {
+  const el = document.getElementById('heroMeta');
+  if (!el) return;
+  
+  const days = getActiveChild().days || {};
+  let sick = 0, ok = 0, garden = 0;
+  
+  // Считаем дни для ТЕКУЩЕГО выбранного месяца
+  Object.keys(days).forEach(k => {
+    const d = parseK(k);
+    if (d.getFullYear() === view.y && d.getMonth() === view.m) {
+      const r = days[k];
+      if (r.status === 'sick') sick++;
+      if (r.status === 'ok') ok++;
+      if (r.garden) garden++;
+    }
+  });
+  
+  // Форматируем месяц
+  const mStr = MONTHS[view.m] + ' ' + view.y;
+  
+  let html = `<span class="meta-pill">${mStr}</span>`;
+  
+  if (sick > 0) {
+    html += `<span class="meta-pill meta-coral">${sick} ${plural(sick, 'день', 'дня', 'дней')} болезни</span>`;
+  }
+  if (ok > 0) {
+    html += `<span class="meta-pill meta-sage">${ok} ${plural(ok, 'день', 'дня', 'дней')} здоров</span>`;
+  }
+  if (garden > 0) {
+    html += `<span class="meta-pill meta-muted" style="background: var(--ok-bg); color: var(--ink); border-color: var(--ok-line);">${garden} ${plural(garden, 'день', 'дня', 'дней')} в садике</span>`;
+  }
+  
+  el.innerHTML = html;
+}
+
 /* ============================ BOTTOM SHEET ============================ */
 function openSheet(){
   document.getElementById('sheet').classList.add('open');
