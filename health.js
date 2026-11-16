@@ -46,41 +46,41 @@ function sanitizeHtml(html) {
   return div.innerHTML;
 }
 
-// Авто-жирный шрифт, очистка от * и форматирование списков
-function autoBoldKeywords(html) {
+// Умный парсер текста: чистит звездочки, делает списки и выделяет ключевые слова
+function formatMedicalText(html) {
   if (!html) return '';
-  let result = html;
-  
-  // 1. Очистка от звездочек (markdown-выделения)
-  result = result.replace(/\*/g, '');
-  
-  // 2. Нормализация переносов (заменяем блочные теги на br)
-  result = result.replace(/<\/?(div|p|span)>/gi, '<br>');
-  result = result.replace(/(<br>)+/gi, '<br>'); // Убираем дубли переносов
+  let text = html;
 
-  // 3. Авто-жирный для ключевых слов
-  const keywords = ['диагноз', 'лечение', 'рекомендации'];
+  // 1. Нормализуем переносы (заменяем div/p на br)
+  text = text.replace(/<\/?(div|p|span)>/gi, '<br>');
+
+  // 2. Конвертируем Markdown-жирный **текст** в <b>текст</b>
+  text = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+
+  // 3. Убираем оставшиеся звездочки (маркеры списков)
+  text = text.replace(/\*/g, '');
+
+  // 4. Выделяем ключевые слова и ставим отступы
+  const keywords = ['диагноз', 'лечение', 'рекомендации', 'назначения'];
   keywords.forEach(kw => {
-    // Убираем старое выделение (если есть)
-    const unboldRegex = new RegExp(`<b>\\s*(${kw})\\s*(:?)\\s*<\\/b>`, 'gi');
-    result = result.replace(unboldRegex, '$1$2');
-    
-    // Ищем слово и ставим два переноса перед ним
-    const regex = new RegExp(`(${kw})(:?)`, 'gi');
-    result = result.replace(regex, (match, word, colon) => {
-      return `<br><br><b>${word}${colon}</b>`;
+    const regex = new RegExp(`(^|<br>|\\s)(${kw})(:?)`, 'gi');
+    text = text.replace(regex, (match, prefix, word, colon) => {
+      // Если слово в начале или после br, не ставим лишние отступы
+      const safePrefix = (prefix === '<br>' || prefix.trim() === '') ? '' : '<br><br>';
+      // Принудительно делаем жирным
+      return `${safePrefix}<b>${word}${colon}</b>`;
     });
   });
-  
-  // 4. Форматирование нумерованных списков (1. , 2. и т.д.)
-  // Ищем цифру с точкой в начале строки или после переноса
-  result = result.replace(/(<br>|^)\s*(\d+\.)\s+/g, '<br><br>$2 ');
 
-  // 5. Чистим лишние переносы
-  result = result.replace(/^(<br>)+/i, ''); // В начале текста
-  result = result.replace(/(<br>){3,}/gi, '<br><br>'); // Максимум 2 переноса подряд
-  
-  return result;
+  // 5. Форматируем нумерованные списки (1., 2.) и маркированные (-)
+  text = text.replace(/(<br>|^)\s*(\d+\.)\s+/g, '<br><br>$2 ');
+  text = text.replace(/(<br>|^)\s*-\s+/g, '<br><br>• ');
+
+  // 6. Чистим лишние переносы строк
+  text = text.replace(/(<br>){3,}/gi, '<br><br>');
+  text = text.replace(/^(<br>)+/i, '');
+
+  return text;
 }
 
 function openHealthCard() {
@@ -124,7 +124,11 @@ function renderHealthCard() {
   if (allRecords.length) {
     recentListEl.innerHTML = allRecords.map(r => {
       let textHtml = esc(r.notes || r.text || '');
-      if (r.type === 'visit' && r.notes) textHtml = sanitizeHtml(r.notes);
+      if (r.type === 'visit' && r.notes) {
+        // На лету причесываем старые записи, если в них остались звездочки
+        const formatted = formatMedicalText(r.notes);
+        textHtml = sanitizeHtml(formatted);
+      }
 
       return `<div class="hc-recent-item">
         <div class="hc-recent-dot"></div>
@@ -190,10 +194,8 @@ function renderHealthList() {
     return;
   }
   
-  // Сортируем от новых к старым
   const sorted = arr.slice().sort((a,b) => b.date.localeCompare(a.date));
 
-  // Группируем по датам
   const groups = {};
   sorted.forEach(r => {
     if (!groups[r.date]) groups[r.date] = [];
@@ -202,10 +204,8 @@ function renderHealthList() {
 
   const dateKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
 
-  // Рендерим дерево
   listEl.innerHTML = dateKeys.map(dateKey => {
     const items = groups[dateKey];
-    // Форматируем дату для заголовка (например, "16 ноября 2026")
     const d = parseK(dateKey);
     const months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
     const dateLabel = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
@@ -219,7 +219,9 @@ function renderHealthList() {
 
       let notesHtml = '';
       if (r.notes && type !== 'note') {
-         notesHtml = type === 'visit' ? sanitizeHtml(r.notes) : esc(r.notes);
+         // Пропускаем старые записи через парсер, чтобы убрать звездочки
+         const formatted = formatMedicalText(r.notes);
+         notesHtml = type === 'visit' ? sanitizeHtml(formatted) : esc(r.notes);
       }
       
       const hasMore = !!notesHtml;
@@ -302,7 +304,8 @@ function openHealthForm(type, editId = null) {
   
   if (type === 'visit') {
     title.textContent = isEdit ? 'Редактировать осмотр' : 'Добавить осмотр';
-    const initialNotes = isEdit ? (record.notes || '') : '';
+    // При редактировании тоже прогоняем через форматтер, чтобы очистить старые данные от звездочек
+    const initialNotes = isEdit ? formatMedicalText(record.notes || '') : '';
     fields.innerHTML = `
       <div class="section-label" style="margin-top:0">Врач / Специальность</div>
       <input class="inp" id="hfDoctor" placeholder="Например, Педиатр" value="${isEdit ? esc(record.doctor) : ''}" required>
@@ -333,7 +336,7 @@ function openHealthForm(type, editId = null) {
         e.preventDefault();
         const text = (e.originalEvent || e).clipboardData.getData('text/plain');
         let html = esc(text).replace(/\n/g, '<br>');
-        html = autoBoldKeywords(html);
+        html = formatMedicalText(html);
         document.execCommand('insertHTML', false, html);
       });
     }, 50);
@@ -401,8 +404,8 @@ document.getElementById('hfSave').addEventListener('click', () => {
     if (!doctor) { alert('Укажи врача'); return; } 
     record.doctor = doctor;
     const rawNotes = document.getElementById('hfNotesRich').innerHTML;
-    let clean = sanitizeHtml(rawNotes);
-    clean = autoBoldKeywords(clean);
+    let clean = formatMedicalText(rawNotes);
+    clean = sanitizeHtml(clean);
     record.notes = clean;
   } else if (type === 'vaccine') { 
     const name = document.getElementById('hfName').value.trim(); 
