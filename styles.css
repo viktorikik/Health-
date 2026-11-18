@@ -866,16 +866,20 @@ textarea.inp{resize:vertical; min-height:60px; line-height:1.45; font-family:inh
   position:fixed; inset:0; background:#00000080;
   display:none; align-items:center; justify-content:center;
   z-index:200; padding:16px; 
-  touch-action: auto; /* ИСПРАВЛЕНИЕ: Разрешаем прокрутку */
+  touch-action: none; /* Блокирует прокрутку фона */
 }
 .copy-opts-backdrop.show{ display:flex; }
 .copy-opts-card{
   background:var(--surface); border-radius:20px; padding:22px;
-  max-width:440px; width:100%; max-height:85vh; overflow-y:auto; 
+  max-width:440px; width:100%; 
+  max-height: 85vh; 
+  max-height: 85dvh;
+  overflow-y:auto; 
   overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch; /* ИСПРАВЛЕНИЕ: Плавный скролл на iOS */
+  -webkit-overflow-scrolling: touch;
   box-shadow:0 10px 40px rgba(0,0,0,0.35);
   border:1px solid var(--line);
+  touch-action: auto; /* Разрешает прокрутку внутри самой карточки */
 }
 .copy-opts-card h3{ font-size:1.08rem; margin-bottom:4px; letter-spacing:-.02em; }
 .copy-opts-card .co-sub{ color:var(--muted); font-size:.82rem; margin:0 0 16px; }
@@ -1113,7 +1117,12 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
 #healthListModal .copy-opts-card {
   display: flex;
   flex-direction: column;
-  max-height: 85vh;
+  overflow: hidden; /* Скрываем общий скролл карточки, чтобы скроллился только список */
+  padding-bottom: 16px;
+}
+#healthListModal .copy-opts-card h3,
+#healthListModal .copy-opts-card .co-sub {
+  flex: none;
 }
 
 .hc-list { 
@@ -1121,10 +1130,19 @@ footer .foot-actions{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:.86re
   flex-direction: column; 
   gap: 8px; 
   flex: 1;
+  min-height: 0; /* Критично для прокрутки flex-элементов на iOS */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  touch-action: pan-y;
   padding-right: 4px;
+  margin-bottom: 10px;
+}
+
+#healthListModal .copy-opts-actions {
+  flex: none;
+  margin-top: auto;
+  background: var(--surface);
 }
 
 /* Группа по дате */
