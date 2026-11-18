@@ -1,5 +1,5 @@
 /* ============================ SW «Ещё одна галочка» ============================ */
-const CACHE_VERSION = 'eog-sad-v18'; 
+const CACHE_VERSION = 'eog-sad-v19'; 
 const CACHE_URLS = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const CACHE_URLS = [
   './analytics.js',
   './health.js',
   './app.js',
+  './motion.css', './motion.js',
   './manifest.webmanifest'
 ];
 
