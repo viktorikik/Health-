@@ -1,3 +1,12 @@
+/* ============================================================
+   app.js · ИТОГОВЫЙ (Волна 15 «Оживление» встроена прямо сюда)
+   GitHub с телефона: открой app.js → ✏️ Edit → выдели всё →
+   удали → вставь весь этот текст → Commit changes.
+   Все хуки волны 15 теперь живут здесь — отдельный inline-блок
+   в index.html больше не нужен (если он остался — он сам
+   отключится, задвоения не будет).
+   ============================================================ */
+
 /* ============================ ВКЛАДКИ ============================ */
 const viewCalEl = document.getElementById('viewCal');
 const viewStatsEl = document.getElementById('viewStats');
@@ -10,10 +19,13 @@ function switchView(name){
     tabCal.classList.remove('on'); tabStats.classList.add('on');
     if (typeof closeSheet === 'function') closeSheet();
     renderAnalytics();
+    appAnim(viewStatsEl, [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'cubic-bezier(.22,1,.36,1)' });
   } else {
     viewStatsEl.classList.add('hidden'); viewCalEl.classList.remove('hidden');
     tabStats.classList.remove('on'); tabCal.classList.add('on');
+    appAnim(viewCalEl, [{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: 'cubic-bezier(.22,1,.36,1)' });
   }
+  appFx('sfx', 'tap'); appHap(8);
 }
 tabCal.addEventListener('click', () => switchView('cal'));
 tabStats.addEventListener('click', () => switchView('stats'));
@@ -24,6 +36,7 @@ document.querySelectorAll('.period-seg button').forEach(btn => {
     currentPeriod = btn.dataset.period;
     if (currentPeriod === 'month') chartMode = 'month'; else if (currentPeriod === 'year') chartMode = 'year'; else chartMode = 'year';
     getActiveChild().chartMode = chartMode; save(); renderAnalytics();
+    appFx('sfx', 'tap'); appHap(6);
   });
 });
 
@@ -43,14 +56,17 @@ document.querySelectorAll('.view-toggle button').forEach(btn => {
       renderCalendar();
     }
     renderTempChart(); renderStats(); renderAnalytics(); updateHeroMeta();
+    wave15AfterRender();
+    appFx('sfx', 'tap'); appHap(6);
   });
 });
 
-document.getElementById('prevBtn').addEventListener('click', () => shiftPeriod(-1, 'left'));
-document.getElementById('nextBtn').addEventListener('click', () => shiftPeriod(1, 'right'));
+document.getElementById('prevBtn').addEventListener('click', () => { appFx('sfx', 'tap'); appHap(6); shiftPeriod(-1, 'left'); });
+document.getElementById('nextBtn').addEventListener('click', () => { appFx('sfx', 'tap'); appHap(6); shiftPeriod(1, 'right'); });
 document.getElementById('todayBtn').addEventListener('click', () => {
   const n = new Date(); view = { y: n.getFullYear(), m: n.getMonth() }; selected = keyOf(n); weekAnchor = selected; summaryKey = selected; getActiveChild().chartAnchor = selected;
   save(); render(); switchView('cal'); if (isMobile()) openSheet();
+  appFx('sfx', 'ok'); appHap(10);
 });
 
 /* ============================ ОБНОВЛЕНИЕ ШАПКИ ============================ */
@@ -77,14 +93,15 @@ function updateHeroMeta() {
   
   let html = `<span class="meta-pill">${mStr}</span>`;
   
+  // Волна 15: числа обёрнуты в <b data-eog-count> — счётчики оживают после render()
   if (sick > 0) {
-    html += `<span class="meta-pill meta-coral">${sick} ${plural(sick, 'день', 'дня', 'дней')} болезни</span>`;
+    html += `<span class="meta-pill meta-coral"><b data-eog-count="1">${sick}</b> ${plural(sick, 'день', 'дня', 'дней')} болезни</span>`;
   }
   if (ok > 0) {
-    html += `<span class="meta-pill meta-sage">${ok} ${plural(ok, 'день', 'дня', 'дней')} здоров</span>`;
+    html += `<span class="meta-pill meta-sage"><b data-eog-count="1">${ok}</b> ${plural(ok, 'день', 'дня', 'дней')} здоров</span>`;
   }
   if (garden > 0) {
-    html += `<span class="meta-pill meta-muted" style="background: var(--ok-bg); color: var(--ink); border-color: var(--ok-line);">${garden} ${plural(garden, 'день', 'дня', 'дней')} в садике</span>`;
+    html += `<span class="meta-pill meta-muted" style="background: var(--ok-bg); color: var(--ink); border-color: var(--ok-line);"><b data-eog-count="1">${garden}</b> ${plural(garden, 'день', 'дня', 'дней')} в садике</span>`;
   }
   
   el.innerHTML = html;
@@ -96,6 +113,7 @@ function openSheet(){
   document.getElementById('backdrop').classList.add('open');
   syncBodyScroll();
   document.getElementById('sheet').scrollTop = 0;
+  appFx('sfx', 'open'); appHap(8);
 }
 function closeSheet(){
   document.getElementById('sheet').classList.remove('open');
@@ -167,7 +185,7 @@ document.getElementById('courseFormSave').addEventListener('click', () => {
   const name = (document.getElementById('courseName').value || '').trim(); const category = document.getElementById('courseCategory') ? (document.getElementById('courseCategory').value || '') : '';
   const dose = (document.getElementById('courseDose').value || '').trim(); const note = (document.getElementById('courseNote').value || '').trim();
   const startKey = document.getElementById('courseStart').value; const days = Math.max(1, Math.min(365, parseInt(document.getElementById('courseDays').value, 10) || 0)); const times = getCourseTimesFromForm();
-  const err = (msg) => { const e = document.getElementById('courseFormErr'); e.hidden = false; e.textContent = msg; };
+  const err = (msg) => { const e = document.getElementById('courseFormErr'); e.hidden = false; e.textContent = msg; appFx('sfx', 'del'); appHap([25, 40, 25]); };
   if (!name) return err('Введи название курса'); if (!startKey) return err('Укажи дату начала'); if (!days || days < 1) return err('Количество дней — минимум 1');
   if (!times.length) return err('Добавь хотя бы одно время приёма'); if (times.some(t => !/^\d{2}:\d{2}$/.test(t))) return err('Проверь времена приёма');
   document.getElementById('courseFormErr').hidden = true;
@@ -179,14 +197,14 @@ document.getElementById('courseFormSave').addEventListener('click', () => {
     const newCourse = { id: 'course_' + uid(), name, category, dose, note, startKey, endKey, days, times: times.slice().sort(), archived: false, createdAt: new Date().toISOString() };
     getActiveChild().courses = getActiveChild().courses || []; getActiveChild().courses.push(newCourse);
   }
-  save(); closeCourseForm(); renderCoursesList(); render(); toast(isEdit ? 'Курс обновлён' : 'Курс добавлен');
+  save(); closeCourseForm(); renderCoursesList(); render(); appFx('sfx', 'ok'); appHap(12); toast(isEdit ? 'Курс обновлён' : 'Курс добавлен');
 });
 
 function deleteCourse(courseId){
   if (!confirm('Удалить курс? Записи в журнале препаратов останутся как разовые.')) return;
   const child = getActiveChild(); child.courses = (child.courses || []).filter(c => c.id !== courseId);
   Object.values(child.days || {}).forEach(rec => { (rec.meds || []).forEach(m => { if (m.courseId === courseId){ if (m.customName && m.med === 'other' && (!m.note || !m.note.trim())) m.note = m.customName; delete m.courseId; delete m.customName; } }); });
-  save(); renderCoursesList(); render(); toast('Курс удалён');
+  save(); renderCoursesList(); render(); appFx('sfx', 'del'); appHap([20, 40, 20]); toast('Курс удалён');
 }
 
 /* ============================ ОБЩИЙ РЕНДЕР ============================ */
@@ -196,6 +214,70 @@ function render(){
   renderDoseBar(); renderTempChart(); renderPanel(); renderStats(); renderDaySummary(); renderAnalytics(); updateHeroMeta();
 }
 function commit(){ prune(selected); save(); render(); }
+
+/* ============================ ВОЛНА 15: ОЖИВЛЕНИЕ ============================ */
+/* Всё необязательное: без motion.js приложение работает как раньше.
+   Хуки живут прямо в app.js — отдельный inline-блок в index.html не нужен. */
+const appRM = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function appMotion(){ return window.EOGMotion; }
+function appFx(name, arg){ const m = appMotion(); if (m && typeof m[name] === 'function'){ try { m[name](arg); } catch (e) {} } }
+function appHap(p){ const m = appMotion(); if (m && typeof m.haptic === 'function'){ m.haptic(p); return; } try { if (navigator.vibrate) navigator.vibrate(p || 8); } catch (e) {} }
+function appAnim(el, frames, opts){ if (!el || appRM || typeof el.animate !== 'function') return null; try { return el.animate(frames, opts); } catch (e) { return null; } }
+
+function wave15AfterRender(){
+  try {
+    const M = appMotion();
+    if (M && typeof M.countUp === 'function'){
+      // Защищаем .stat-value от авто-обработки motion.js (чтобы текст не обрезался)
+      document.querySelectorAll('#stats .stat-value, #heroMeta .stat-value').forEach(el => {
+        if (!el.hasAttribute('data-eog-count')) el.setAttribute('data-eog-count', '1');
+      });
+      // Оживляем только «чистые» числа-листья в шапке и статистике
+      ['#heroMeta', '#stats'].forEach(sel => {
+        const box = document.querySelector(sel); if (!box) return;
+        box.querySelectorAll('*').forEach(el => {
+          if (el.children.length) return;
+          const t = (el.textContent || '').trim();
+          const m = t.match(/^(-?\d+(?:[.,]\d+)?)\s*([°%]?)$/);
+          if (!m) return;
+          const to = parseFloat(m[1].replace(',', '.'));
+          if (el._eogV === to) return;
+          const dec = /[.,]/.test(m[1]) ? 1 : 0;
+          el.setAttribute('data-eog-count', '1');
+          el._eogDec = dec; el._eogSuf = m[2];
+          M.countUp(el, to, { dec: dec, suf: m[2] });
+        });
+      });
+    }
+    // Блик на прогресс-полосе месяца (если такой класс есть в styles.css)
+    document.querySelectorAll('.progress-fill, .prog-fill, .month-progress-fill, .stat-progress i, .stat-progress span, .stat-bar-fill').forEach(el => el.classList.add('eog-shimmer'));
+  } catch (e) {}
+}
+
+// Оборачиваем render() один раз: после каждой отрисовки оживляем числа и прогресс.
+// Конфетти за выздоровление уже живёт в panel.js — здесь его нет, чтобы не задваивать.
+if (typeof window.render === 'function' && !window.render.__eogWave15){
+  const __origRender = window.render;
+  const __wrappedRender = function(){ const r = __origRender.apply(this, arguments); wave15AfterRender(); return r; };
+  __wrappedRender.__eogWave15 = true;
+  window.render = __wrappedRender;
+}
+window.__eogWave15Inline = true; // отключает старый inline-блок в index.html, если он остался
+
+// После загрузки всех скриптов (motion.js уже готов) — оживляем числа и ставим кнопку звука, если её нет
+document.addEventListener('DOMContentLoaded', () => {
+  wave15AfterRender();
+  if (!document.querySelector('[data-motion-sound]')){
+    const menu = document.getElementById('menuBtn');
+    if (menu && menu.parentNode){
+      const b = document.createElement('button');
+      b.type = 'button'; b.id = 'soundBtn'; b.className = 'menu-btn';
+      b.setAttribute('data-motion-sound', ''); b.setAttribute('aria-label', 'Звук'); b.setAttribute('aria-pressed', 'true');
+      menu.parentNode.insertBefore(b, menu);
+      if (appMotion() && typeof appMotion().refresh === 'function') appMotion().refresh();
+    }
+  }
+});
 
 setInterval(() => {
   renderDoseBar();
@@ -213,6 +295,7 @@ setInterval(() => {
 document.getElementById('exportBtn').addEventListener('click', () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type:'application/json' }); const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = 'galochka-sad-' + keyOf(new Date()) + '.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  appFx('sfx', 'ok'); appHap(10);
 });
 const fileInput = document.getElementById('fileInput');
 document.getElementById('importBtn').addEventListener('click', () => fileInput.click());
@@ -230,21 +313,21 @@ fileInput.addEventListener('change', () => {
           c.courses.forEach(course => { if (course.category === undefined) course.category = ''; }); 
         });
         state = data; if (!state.activeChildId || !state.children.find(c => c.id === state.activeChildId)) state.activeChildId = state.children[0]?.id;
-        if (state.theme) applyTheme(); save(); render(); renderMenuChildren(); closeMenu(); alert('Данные импортированы (все профили).');
+        if (state.theme) applyTheme(); save(); render(); renderMenuChildren(); closeMenu(); appFx('sfx', 'ok'); appHap(12); alert('Данные импортированы (все профили).');
       } else if (data.days && typeof data.days === 'object') {
         getActiveChild().days = data.days;
         if (data.theme) state.theme = data.theme; if (data.childName) getActiveChild().name = data.childName;
         if (data.birthDate) getActiveChild().birthDate = data.birthDate; // <-- ОБНОВЛЕНИЕ ДЛЯ СТАРОГО ФОРМАТА
         if (data.copyOptions) getActiveChild().copyOptions = { ...DEFAULT_COPY_OPTIONS, ...data.copyOptions }; if (data.symptomFilter) getActiveChild().symptomFilter = data.symptomFilter;
         if (data.chartMode) { getActiveChild().chartMode = data.chartMode; chartMode = data.chartMode; } if (data.chartAnchor) getActiveChild().chartAnchor = data.chartAnchor;
-        save(); render(); renderMenuChildren(); closeMenu(); alert('Данные импортированы в текущий профиль.');
+        save(); render(); renderMenuChildren(); closeMenu(); appFx('sfx', 'ok'); appHap(12); alert('Данные импортированы в текущий профиль.');
       } else throw new Error('bad file');
-    } catch(e){ alert('Не получилось прочитать файл.'); }
+    } catch(e){ appFx('sfx', 'del'); appHap([25, 40, 25]); alert('Не получилось прочитать файл.'); }
     fileInput.value = '';
   };
   reader.readAsText(f);
 });
-document.getElementById('resetBtn').addEventListener('click', () => { if (!confirm('Удалить все отметки текущего ребёнка безвозвратно?')) return; getActiveChild().days = {}; save(); render(); });
+document.getElementById('resetBtn').addEventListener('click', () => { if (!confirm('Удалить все отметки текущего ребёнка безвозвратно?')) return; getActiveChild().days = {}; save(); render(); appFx('sfx', 'del'); appHap([20, 40, 20]); });
 
 /* ============================ PWA ============================ */
 if ('serviceWorker' in navigator){ window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => {}); }); }
