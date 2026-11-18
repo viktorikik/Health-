@@ -1,0 +1,82 @@
+/* ===== motion.css · Волна 15 «Оживление» · v1.0 =====
+   Слой поверх styles.css. Ничего не переопределяет жёстко:
+   цвета берутся из переменных проекта с запасными значениями. */
+
+/* Скроллбар в языке бренда */
+* { scrollbar-width: thin; scrollbar-color: var(--lime, #D6F34C) transparent; }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--lime, #D6F34C), var(--rose, #F57E9C));
+  border-radius: 8px;
+  border: 2.5px solid var(--bg, #0F1012);
+}
+::-webkit-scrollbar-thumb:hover { filter: brightness(1.15); }
+::selection { background: var(--lime, #D6F34C); color: #17181A; }
+
+/* Ripple + нажатие (scale не конфликтует с transform проекта) */
+.eog-rip { position: relative; overflow: hidden; }
+.eog-ripple {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  background: currentColor; opacity: .22; transform: scale(0);
+  animation: eogRip .55s ease-out forwards;
+}
+@keyframes eogRip { to { transform: scale(3.2); opacity: 0; } }
+.eog-press { transition: scale .18s cubic-bezier(.34,1.56,.64,1); }
+.eog-press:active { scale: .95; }
+
+/* Появление секций (классы ставит только JS — без JS контент видим) */
+.eog-pre { opacity: 0; transform: translateY(14px); }
+.eog-pre.eog-in {
+  opacity: 1; transform: none;
+  transition: opacity .6s cubic-bezier(.22,1,.36,1), transform .6s cubic-bezier(.22,1,.36,1);
+}
+
+/* Счётчики не «прыгают» по ширине */
+[data-eog-count] { font-variant-numeric: tabular-nums; }
+
+/* Атмосфера: два дрейфующих сияния + зерно (слой под контентом) */
+#eogAtmo { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+#eogAtmo::before {
+  content: ''; position: absolute; inset: -10%;
+  background:
+    radial-gradient(46vw 46vw at -6% -4%, var(--lime, #D6F34C) 0%, transparent 60%),
+    radial-gradient(42vw 42vw at 106% 98%, var(--rose, #F57E9C) 0%, transparent 58%),
+    radial-gradient(26vw 26vw at 94% 6%, var(--sky, #6FC3FF) 0%, transparent 55%);
+  opacity: .14; filter: blur(70px);
+  animation: eogDrift 26s ease-in-out infinite alternate;
+}
+#eogAtmo::after {
+  content: ''; position: absolute; inset: 0; opacity: .05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.6'/%3E%3C/svg%3E");
+}
+@keyframes eogDrift {
+  0% { transform: translate(0,0) scale(1); }
+  50% { transform: translate(2.5%,-2%) scale(1.06); }
+  100% { transform: translate(-2%,2.5%) scale(1.02); }
+}
+
+/* Конфетти */
+#eogConfetti { position: fixed; inset: 0; z-index: 9999; pointer-events: none; overflow: hidden; }
+.eog-cf { position: absolute; border-radius: 2px; will-change: transform, opacity; }
+
+/* Утилита «живой» прогресс-полосы — добавь класс к своему fill */
+.eog-shimmer { position: relative; overflow: hidden; }
+.eog-shimmer::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+  background-size: 200% 100%;
+  animation: eogSheen 2.4s linear infinite;
+}
+@keyframes eogSheen { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* Наклон только там, где есть мышь */
+@media (hover: none) { [data-tilt] { transform: none !important; } }
+
+/* Уважение к системной настройке */
+@media (prefers-reduced-motion: reduce) {
+  .eog-ripple, .eog-cf { display: none !important; }
+  .eog-pre { opacity: 1; transform: none; }
+  #eogAtmo::before, .eog-shimmer::after { animation: none; }
+  .eog-press, .eog-pre.eog-in { transition: none; }
+}
