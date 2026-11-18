@@ -19,7 +19,8 @@
     else if (matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.dataset.theme = 'dark';
   } catch (e) {}
 </script>
-<link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="./styles.css"> 
+  <link rel="stylesheet" href="./motion.css">
 </head>
 <body>
 <main>
@@ -388,5 +389,6 @@
 <script src="./analytics.js" defer></script>
 <script src="./health.js" defer></script>
 <script src="./app.js" defer></script>
+<script nonce="" defer src="./motion.js"></script>
 </body>
 </html>
