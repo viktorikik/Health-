@@ -1,10 +1,13 @@
 /* ============================================================
-   ФАЙЛ 2 из 6 · motion.js · СОЗДАТЬ НОВЫЙ (или заменить целиком)
-   GitHub: Add file → Create new file → имя motion.js → вставить
-   весь этот текст → Commit changes.
+   ФАЙЛ 2 из 2 · motion.js · ЗАМЕНИТЬ ЦЕЛИКОМ  (v1.2)
+   ИСПРАВЛЕНО: «убегающие» крестики и гамбургер.
+   Ripple больше не меняет position у абсолютных/фиксированных
+   кнопок, а у обычных — только на время волны, потом снимается.
+   GitHub: motion.js → ✏️ Edit → выделить всё → вставить → Commit.
+   После деплоя закрой и открой приложение один раз.
    ============================================================ */
 
-/* ===== motion.js · Волна 15 «Оживление» · v1.1 =====
+/* ===== motion.js · Волна 15 «Оживление» · v1.2 =====
    Слой поверх модулей core/calendar/panel/analytics/health/app.
    Подключается с defer ПОСЛЕ app.js. Ничего из state не читает. */
 (function () {
@@ -70,14 +73,23 @@
     try { if (navigator.vibrate) navigator.vibrate(p || 10); } catch (e) {}
   }
 
-  /* ===== RIPPLE + НАЖАТИЕ ===== */
+  /* ===== RIPPLE + НАЖАТИЕ =====
+     v1.2: position НЕ переопределяется у абсолютных/фиксированных
+     кнопок (гамбургер, крестик, «+»), иначе они «убегали» в поток.
+     Обычным (static) кнопкам position:relative даётся временно и
+     снимается сразу после затухания волны. */
   var BTN = 'button, .btn, [data-ripple]';
   document.addEventListener('pointerdown', function (e) {
     var el = e.target.closest ? e.target.closest(BTN) : null;
     if (!el || el.hasAttribute('data-no-ripple') || el.disabled) return;
     if (cfg.press) el.classList.add('eog-press');
     if (!cfg.ripple || RM) return;
+
+    var pos = '';
+    try { pos = getComputedStyle(el).position; } catch (err) {}
+    if (pos === 'static') el.classList.add('eog-rip-static');
     el.classList.add('eog-rip');
+
     var r = el.getBoundingClientRect(), s = Math.max(r.width, r.height);
     var sp = document.createElement('span');
     sp.className = 'eog-ripple'; sp.setAttribute('data-eog', '1');
@@ -85,7 +97,14 @@
     sp.style.left = (e.clientX - r.left - s / 2) + 'px';
     sp.style.top = (e.clientY - r.top - s / 2) + 'px';
     el.appendChild(sp);
-    setTimeout(function () { sp.remove(); }, 620);
+    setTimeout(function () {
+      sp.remove();
+      // снимаем временные классы, когда волн больше не осталось
+      if (!el.querySelector('.eog-ripple')) {
+        el.classList.remove('eog-rip');
+        el.classList.remove('eog-rip-static');
+      }
+    }, 620);
   }, { passive: true });
 
   /* ===== СЧЁТЧИКИ ===== */
@@ -226,7 +245,7 @@
       if (typeof fn !== 'function' || fn._eogWrapped) return;
       var wrapped = function () {
         var res = fn.apply(this, arguments);
-        // если действие уже дало звук/вибро (panel/calendar) — не дублируем
+        // если действие уже дало звук/вибро (panel/calendar/app) — не дублируем
         if (Date.now() - lastSfx > 250) {
           var type = 'ok';
           for (var i = 0; i < arguments.length; i++) {
@@ -356,7 +375,7 @@
 
   /* ===== API + СТАРТ ===== */
   window.EOGMotion = {
-    version: '1.1', cfg: cfg,
+    version: '1.2', cfg: cfg,
     haptic: haptic, sfx: sfx, confetti: confetti, countUp: countUp,
     drawPath: drawPath, set: set, setSound: setSound,
     reset: reset, randomize: randomize, exportCfg: exportCfg,
