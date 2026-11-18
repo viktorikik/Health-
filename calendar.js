@@ -1,3 +1,9 @@
+/* ============================================================
+   ФАЙЛ 4 из 6 · calendar.js · ЗАМЕНИТЬ ЦЕЛИКОМ
+   GitHub: открой calendar.js → ✏️ Edit → выдели всё → удали →
+   вставь весь этот текст → Commit changes.
+   ============================================================ */
+
 /* ============================ КАЛЕНДАРЬ ============================ */
 const daysEl = document.getElementById('days');
 const daysWrap = document.getElementById('daysWrap');
@@ -9,6 +15,49 @@ const monthTitle = document.getElementById('monthTitle');
 const chartMonth = document.getElementById('chartMonth');
 const chartEl = document.getElementById('tempChart');
 const doseBar = document.getElementById('doseBar');
+
+/* ===== Волна 15: оживление календаря и графика ===== */
+/* Все эффекты необязательные: без motion.js календарь работает как раньше. */
+const calReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let calLastMonthKey = null;
+let calLastWeekKey = null;
+let calLastSelected = null;
+let calChartDir = 0;
+let doseLastState = null;
+
+function calMotion(){ return window.EOGMotion; }
+function calFx(name, arg){
+  const m = calMotion();
+  if (m && typeof m[name] === 'function'){ try { m[name](arg); } catch (e) {} }
+}
+function calHap(p){
+  const m = calMotion();
+  if (m && typeof m.haptic === 'function'){ m.haptic(p); return; }
+  try { if (navigator.vibrate) navigator.vibrate(p || 8); } catch (e) {}
+}
+function calAnim(el, frames, opts){
+  if (!el || calReducedMotion || typeof el.animate !== 'function') return null;
+  try { return el.animate(frames, opts); } catch (e) { return null; }
+}
+function calStagger(nodes, frames, step, dur){
+  nodes.forEach((el, i) => {
+    calAnim(el, frames, { duration: dur || 300, delay: Math.min(i, 31) * (step || 12), easing: 'cubic-bezier(.22,1,.36,1)', fill: 'backwards' });
+  });
+}
+function calPopSelected(container, sel){
+  if (calLastSelected === selected) return;
+  calLastSelected = selected;
+  const el = container.querySelector(sel);
+  calAnim(el, [
+    { transform: 'scale(1)' }, { transform: 'scale(1.07)' }, { transform: 'scale(1)' }
+  ], { duration: 260, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+}
+function calCountTemp(el, to){
+  const m = calMotion();
+  if (!el || !m || typeof m.countUp !== 'function' || calReducedMotion) return;
+  el._eogV = Math.max(0, to - 0.6);
+  m.countUp(el, to, { dec: 1 });
+}
 
 function dayCats(rec){
   const s = new Set();
@@ -24,6 +73,9 @@ function renderCalendar(){
   const total = new Date(y, m+1, 0).getDate();
   const todayKey = keyOf(new Date());
   const days = getActiveChild().days;
+  const monthKey = y + '-' + pad(m + 1);
+  const monthChanged = calLastMonthKey !== monthKey;
+  calLastMonthKey = monthKey;
   let html = '';
   for (let i = 0; i < offset; i++) html += '<div class="day blank"></div>';
   for (let d = 1; d <= total; d++){
@@ -49,6 +101,15 @@ function renderCalendar(){
     </button>`;
   }
   daysEl.innerHTML = html;
+
+  /* Волна 15: каскад плиток при смене месяца + мягкий «поп» выбранного дня */
+  if (monthChanged){
+    calStagger([...daysEl.querySelectorAll('.day:not(.blank)')], [
+      { opacity: 0, transform: 'translateY(8px) scale(.96)' },
+      { opacity: 1, transform: 'none' }
+    ], 12, 320);
+  }
+  calPopSelected(daysEl, '.day.sel');
 }
 
 function renderWeekView(){
@@ -60,6 +121,9 @@ function renderWeekView(){
   monthTitle.textContent = `${monday.getDate()} ${MONTHS_G_SHORT[monday.getMonth()]} — ${sunday.getDate()} ${MONTHS_G_SHORT[sunday.getMonth()]} ${sunday.getFullYear()}`;
   const todayKey = keyOf(new Date());
   const days = getActiveChild().days;
+  const weekKey = keyOf(monday);
+  const weekChanged = calLastWeekKey !== weekKey;
+  calLastWeekKey = weekKey;
   let html = '';
   for (let i = 0; i < 7; i++){
     const d = new Date(monday); d.setDate(monday.getDate() + i);
@@ -89,6 +153,15 @@ function renderWeekView(){
     </button>`;
   }
   weekDaysEl.innerHTML = html;
+
+  /* Волна 15: каскад строк недели при смене недели */
+  if (weekChanged){
+    calStagger([...weekDaysEl.querySelectorAll('.week-day')], [
+      { opacity: 0, transform: 'translateX(12px)' },
+      { opacity: 1, transform: 'none' }
+    ], 45, 320);
+  }
+  calPopSelected(weekDaysEl, '.week-day.sel');
 }
 
 /* ============================ КЛИК ПО ДНЮ ============================ */
@@ -102,6 +175,7 @@ daysEl.addEventListener('click', e => {
     return;
   }
   selected = btn.dataset.key;
+  calHap(8); calFx('sfx', 'tap');
   renderCalendar(); renderTempChart(); renderPanel();
   if (isMobile()) openSheet();
 });
@@ -115,6 +189,7 @@ weekDaysEl.addEventListener('click', e => {
     return;
   }
   selected = btn.dataset.key; weekAnchor = selected;
+  calHap(8); calFx('sfx', 'tap');
   renderWeekView(); renderTempChart(); renderPanel();
   if (isMobile()) openSheet();
 });
@@ -138,7 +213,10 @@ function beginDrag(){
   if (daysEl) daysEl.style.touchAction = 'none';
   document.body.classList.add('is-dragging');
   try { dragState.sourceEl.setPointerCapture(dragState.pointerId); } catch(err){}
-  if (navigator.vibrate){ try { navigator.vibrate(20); } catch(e){} }
+  calHap([15, 40, 15]); calFx('sfx', 'open');
+  calAnim(dragState.sourceEl, [
+    { transform: 'scale(1)' }, { transform: 'scale(1.1)' }, { transform: 'scale(1.04)' }
+  ], { duration: 320, easing: 'cubic-bezier(.34,1.56,.64,1)' });
 }
 function onDayPointerMove(e){
   if (!dragState) return;
@@ -154,6 +232,7 @@ function onDayPointerMove(e){
   const newKey = day ? day.dataset.key : null;
   if (newKey === dragState.lastTargetKey) return;
   dragState.lastTargetKey = newKey;
+  if (newKey) calHap(4);
   document.querySelectorAll('.day.drag-over').forEach(el => el.classList.remove('drag-over'));
   if (!newKey){ dragState.rangeKeys = []; if (dragBadgeEl) dragBadgeEl.classList.remove('show'); return; }
   const range = datesBetween(dragState.fromKey, newKey);
@@ -162,8 +241,14 @@ function onDayPointerMove(e){
   const nTargets = range.length - 1;
   if (nTargets > 0){
     const badge = ensureDragBadge();
+    const firstShow = !badge.classList.contains('show');
     badge.textContent = `→ ${nTargets} ${plural(nTargets, 'день', 'дня', 'дней')}`;
     badge.style.left = e.clientX + 'px'; badge.style.top = e.clientY + 'px'; badge.classList.add('show');
+    if (firstShow){
+      calAnim(badge, [
+        { opacity: 0, scale: '0.7' }, { opacity: 1, scale: '1' }
+      ], { duration: 220, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+    }
   } else { if (dragBadgeEl) dragBadgeEl.classList.remove('show'); }
 }
 function onDayPointerUp(e){
@@ -217,6 +302,7 @@ function makeSwipeable(el, onSwipeLeft, onSwipeRight, ignoreSelector){
     if (!track || e.pointerId !== track.id) { track = null; return; }
     const dx = e.clientX - track.x; const dy = e.clientY - track.y;
     if (track.horizontal && Math.abs(dx) > 60){
+      calHap(10);
       if (dx < 0) onSwipeLeft(); else onSwipeRight();
       suppressClick = true; setTimeout(() => { suppressClick = false; }, 300);
     }
@@ -229,10 +315,11 @@ makeSwipeable(daysWrap, () => shiftPeriod(1, 'right'), () => shiftPeriod(-1, 'le
 makeSwipeable(weekDaysWrap, () => shiftPeriod(1, 'right'), () => shiftPeriod(-1, 'left'));
 makeSwipeable(document.querySelector('main'), () => switchChild(1), () => switchChild(-1), '.days-wrap, #weekDaysWrap, .chart-box, .menu-panel, .copy-opts-backdrop, .pdf-custom, .menu-backdrop');
 
-// НОВЫЙ СВАЙП: листает дни на графике температуры
+// Свайп: листает дни на графике температуры
 makeSwipeable(document.querySelector('.chart-box'), () => shiftSelectedDay(1), () => shiftSelectedDay(-1));
 
 function shiftPeriod(dir, slideFrom){
+  calFx('sfx', 'tap'); calHap(8);
   if (viewMode === 'month'){
     view.m += dir; if (view.m > 11){ view.m = 0; view.y++; } if (view.m < 0) { view.m = 11; view.y--; }
     renderCalendar(); slideAnim(daysEl, slideFrom);
@@ -247,6 +334,8 @@ function shiftPeriod(dir, slideFrom){
 
 function shiftSelectedDay(dir) {
   if (!selected) return;
+  calChartDir = dir;
+  calFx('sfx', 'tap'); calHap(8);
   const d = parseK(selected); d.setDate(d.getDate() + dir);
   selected = keyOf(d);
   view = { y: d.getFullYear(), m: d.getMonth() };
@@ -270,6 +359,11 @@ function renderTempChart(){
 
   if (!temps.length){
     chartEl.innerHTML = `<div class="temp-empty"><div class="temp-empty-ico">🌡️</div><div class="temp-empty-txt">В этот день замеров температуры нет</div><div class="temp-empty-sub">Добавь замер в карточке дня, чтобы увидеть график</div></div>`;
+    calAnim(chartEl.querySelector('.temp-empty-ico'), [
+      { opacity: 0, transform: 'translateY(8px) scale(.85)' },
+      { opacity: 1, transform: 'none' }
+    ], { duration: 420, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+    calChartDir = 0;
     return;
   }
 
@@ -385,14 +479,50 @@ function renderTempChart(){
     const yPos = parseFloat(point.querySelector('circle').getAttribute('cy')) * scaleY;
     let tooltipX = xPos; if (tooltipX < 70) tooltipX = 70; if (tooltipX > svgRect.width - 70) tooltipX = svgRect.width - 70;
     tooltip.style.left = tooltipX + 'px'; tooltip.style.top = (yPos - 20) + 'px'; tooltip.classList.add('show');
+    calFx('sfx', 'pop'); calHap(6);
   });
 
   const addBtn = wrap.querySelector('[data-act="scroll-temp"]');
   if (addBtn) {
     addBtn.onclick = (e) => {
-      e.stopPropagation(); if (isMobile()) openSheet();
+      e.stopPropagation(); calFx('sfx', 'open'); calHap(8);
+      if (isMobile()) openSheet();
       setTimeout(() => { const tempSec = document.getElementById('panel').querySelector('details[data-section="temps"]'); if (tempSec) { tempSec.open = true; tempSec.scrollIntoView({ behavior: 'smooth', block: 'center' }); } }, 300);
     };
+  }
+
+  /* Волна 15: прорисовка линии, точки каскадом, счётчики, слайд при свайпе */
+  const linePath = chartEl.querySelector('.temp-line-path');
+  if (linePath && !calReducedMotion){
+    try {
+      const len = linePath.getTotalLength();
+      linePath.style.strokeDasharray = len;
+      const draw = calAnim(linePath, [
+        { strokeDashoffset: len }, { strokeDashoffset: 0 }
+      ], { duration: 900, easing: 'cubic-bezier(.22,1,.36,1)' });
+      if (draw){
+        draw.onfinish = () => { linePath.style.strokeDasharray = ''; };
+        setTimeout(() => { linePath.style.strokeDasharray = ''; }, 1100);
+      } else { linePath.style.strokeDasharray = ''; }
+    } catch (e) {}
+  }
+  [...chartEl.querySelectorAll('.temp-data-point')].forEach((g, i) => {
+    g.style.transformBox = 'fill-box'; g.style.transformOrigin = 'center';
+    calAnim(g, [
+      { opacity: 0, transform: 'scale(.3)' }, { opacity: 1, transform: 'scale(1)' }
+    ], { duration: 380, delay: 250 + i * 70, easing: 'cubic-bezier(.34,1.56,.64,1)', fill: 'backwards' });
+  });
+  calStagger([...chartEl.querySelectorAll('.temp-stat-card')], [
+    { opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }
+  ], 70, 340);
+  const statVals = chartEl.querySelectorAll('.temp-stat-val');
+  calCountTemp(statVals[0], minV); calCountTemp(statVals[1], maxV); calCountTemp(statVals[2], avgV);
+  if (calChartDir){
+    calAnim(wrap, [
+      { opacity: 0, transform: 'translateX(' + (calChartDir * 22) + 'px)' },
+      { opacity: 1, transform: 'none' }
+    ], { duration: 300, easing: 'cubic-bezier(.22,1,.36,1)' });
+    calChartDir = 0;
   }
 }
 
@@ -410,11 +540,25 @@ function todayDoseInfo(){
 }
 function renderDoseBar(){
   const info = todayDoseInfo();
-  if (!info){ doseBar.classList.remove('show','wait','ready'); doseBar.innerHTML=''; return; }
+  if (!info){ doseBar.classList.remove('show','wait','ready'); doseBar.innerHTML=''; doseLastState = null; return; }
   const hhmm = pad(info.next.getHours()) + ':' + pad(info.next.getMinutes());
   let text, cls;
   if (info.diff > 0){ cls = 'wait'; text = `<strong>${info.med.label}</strong> · следующая доза не раньше <strong>${hhmm}</strong> · через <strong>${dur(info.diff)}</strong>`; }
   else { cls = 'ready'; text = `<strong>${info.med.label}</strong> · интервал выдержан, можно давать`; }
+  const prevState = doseLastState; doseLastState = cls;
   doseBar.className = 'dose-bar show ' + cls; doseBar.innerHTML = `<span class="dose-ico">💊</span><span class="dose-text">${text}</span>`;
+  /* Волна 15: появление полосы и мягкий сигнал, когда интервал выдержан */
+  if (prevState === null){
+    calAnim(doseBar, [
+      { opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'none' }
+    ], { duration: 340, easing: 'cubic-bezier(.22,1,.36,1)' });
+  } else if (prevState !== 'ready' && cls === 'ready'){
+    calFx('sfx', 'ok'); calHap([10, 50, 10]);
+    calAnim(doseBar, [
+      { boxShadow: '0 0 0 0 rgba(220,235,50,.5)' },
+      { boxShadow: '0 0 0 14px rgba(220,235,50,0)' }
+    ], { duration: 900, easing: 'ease-out' });
+  }
 }
-doseBar.addEventListener('click', () => { selected = keyOf(new Date()); weekAnchor = selected; render(); if (isMobile()) openSheet(); });
+doseBar.addEventListener('click', () => { calFx('sfx', 'open'); calHap(8); selected = keyOf(new Date()); weekAnchor = selected; render(); if (isMobile()) openSheet(); });
+doseBar.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); doseBar.click(); } });
