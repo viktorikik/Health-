@@ -1,6 +1,96 @@
+/* ============================================================
+   ФАЙЛ 3 из 6 · panel.js · ЗАМЕНИТЬ ЦЕЛИКОМ
+   GitHub: открой panel.js → ✏️ Edit → выдели всё → удали →
+   вставь весь этот текст → Commit changes.
+   ============================================================ */
+
 /* ============================ ПАНЕЛЬ ДНЯ ============================ */
 const panelEl = document.getElementById('panel');
 let symptomsExpanded = false;
+
+/* ===== Волна 15: оживление интерфейса ===== */
+/* Все эффекты необязательные: без motion.js панель работает как раньше. */
+const panelReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let panelLastKey = null;
+let summaryLastKey = null;
+let symptomsStagger = false;
+let lastAddedTempId = null;
+let lastAddedMedId = null;
+
+function fx(name, arg){
+  const m = window.EOGMotion;
+  if (m && typeof m[name] === 'function'){ try { m[name](arg); } catch (e) {} }
+}
+function hap(pattern){
+  const m = window.EOGMotion;
+  if (m && typeof m.haptic === 'function'){ m.haptic(pattern); return; }
+  try { if (navigator.vibrate) navigator.vibrate(pattern || 10); } catch (e) {}
+}
+function animateEl(el, frames, opts){
+  if (!el || panelReducedMotion || typeof el.animate !== 'function') return null;
+  try { return el.animate(frames, opts); } catch (e) { return null; }
+}
+function shakeEl(el){
+  animateEl(el, [
+    { transform: 'translateX(0)' }, { transform: 'translateX(-6px)' },
+    { transform: 'translateX(6px)' }, { transform: 'translateX(-4px)' },
+    { transform: 'translateX(4px)' }, { transform: 'translateX(0)' }
+  ], { duration: 320, easing: 'ease-in-out' });
+}
+function showFieldError(errEl, msg, focusEl){
+  if (errEl){ errEl.hidden = false; errEl.textContent = msg; shakeEl(errEl); }
+  shakeEl(focusEl);
+  hap([25, 40, 25]); fx('sfx', 'del');
+  if (focusEl) focusEl.focus();
+}
+function highlightNewRows(){
+  if (lastAddedTempId){
+    const btn = panelEl.querySelector('[data-act="deltemp"][data-id="' + lastAddedTempId + '"]');
+    animateEl(btn && btn.closest('.trow'), [
+      { opacity: 0, transform: 'translateX(-14px)', backgroundColor: 'rgba(220,235,50,.3)' },
+      { opacity: 1, transform: 'translateX(0)', backgroundColor: 'rgba(220,235,50,.3)', offset: 0.6 },
+      { opacity: 1, transform: 'translateX(0)', backgroundColor: 'transparent' }
+    ], { duration: 650, easing: 'cubic-bezier(.22,1,.36,1)' });
+    lastAddedTempId = null;
+  }
+  if (lastAddedMedId){
+    const btn = panelEl.querySelector('[data-act="delmed"][data-id="' + lastAddedMedId + '"]');
+    animateEl(btn && btn.closest('.mrow'), [
+      { opacity: 0, transform: 'translateX(-14px)', backgroundColor: 'rgba(220,235,50,.3)' },
+      { opacity: 1, transform: 'translateX(0)', backgroundColor: 'rgba(220,235,50,.3)', offset: 0.6 },
+      { opacity: 1, transform: 'translateX(0)', backgroundColor: 'transparent' }
+    ], { duration: 650, easing: 'cubic-bezier(.22,1,.36,1)' });
+    lastAddedMedId = null;
+  }
+  if (symptomsStagger){
+    symptomsStagger = false;
+    panelEl.querySelectorAll('.chips .chip').forEach((chip, i) => {
+      animateEl(chip, [
+        { opacity: 0, transform: 'translateY(6px) scale(.92)' },
+        { opacity: 1, transform: 'none' }
+      ], { duration: 260, delay: Math.min(i, 14) * 22, easing: 'cubic-bezier(.22,1,.36,1)', fill: 'backwards' });
+    });
+  }
+}
+function removeRowAnimated(btn, done){
+  const row = btn.closest('.trow, .mrow');
+  if (!row || panelReducedMotion || typeof row.animate !== 'function'){ done(); return; }
+  if (row.dataset.removing) return;
+  row.dataset.removing = '1';
+  hap([15, 30, 15]); fx('sfx', 'del');
+  let finished = false;
+  const finish = () => { if (finished) return; finished = true; done(); };
+  const anim = animateEl(row, [
+    { opacity: 1, transform: 'translateX(0)' },
+    { opacity: 0, transform: 'translateX(48px)' }
+  ], { duration: 220, easing: 'ease-in', fill: 'forwards' });
+  if (anim){ anim.onfinish = finish; setTimeout(finish, 320); } else finish();
+}
+function celebrateRecovery(x, y){
+  const m = window.EOGMotion;
+  if (m && typeof m.confetti === 'function') m.confetti(x, y);
+  hap([12, 40, 12]); fx('sfx', 'ok');
+}
 
 function nextDoseHtml(temps, key){
   const list = temps.filter(t => medInterval(t.med) > 0); if (!list.length) return '';
@@ -46,7 +136,7 @@ function sectionHeadHtml(key, label, count){
 }
 
 function renderPanel(){
-  if (!selected){ panelEl.innerHTML = `<h3>Выбери день</h3><p class="muted small">Нажми на любую дату в календаре.</p>`; return; }
+  if (!selected){ panelEl.innerHTML = `<h3>Выбери день</h3><p class="muted small">Нажми на любую дату в календаре.</p>`; panelLastKey = null; return; }
   const k = selected; const d = parseK(k); const days = getActiveChild().days; const rec = days[k] || {};
   const status = rec.status || ''; const syms = rec.symptoms || [];
   const temps = (rec.temps || []).slice().sort((a,b) => a.time.localeCompare(b.time));
@@ -67,6 +157,7 @@ function renderPanel(){
   else if (hiddenCount > 0) toggleBtn = `<button type="button" class="chip-more" data-act="sym-more">Другие симптомы (${hiddenCount}) →</button>`;
 
   const medOptions = MEDS.slice(1).map(x => `<option value="${x.id}">${x.label}</option>`).join('');
+  const prevKey = panelLastKey; panelLastKey = k;
 
   panelEl.innerHTML = `
     <div class="panel-head"><div><div class="eyebrow">${WD_FULL[d.getDay()]}</div><div class="panel-date">${d.getDate()} ${MONTHS_G[d.getMonth()]}</div></div><div class="panel-head-right">${isToday ? '<span class="tag lime">сегодня</span>' : ''}</div></div>
@@ -121,6 +212,16 @@ function renderPanel(){
 
     <div class="panel-footer"><div style="display:flex; gap:8px; flex-wrap:wrap"><button class="btn" type="button" data-act="copyto">📋 Скопировать</button><button class="btn" type="button" data-act="print">🖨 Печать</button></div><button class="link danger" type="button" data-act="clear">Очистить</button></div>
   `;
+
+  /* Волна 15: подъезжающая шапка при смене дня + подсветка новых строк */
+  if (prevKey && prevKey !== k){
+    const dir = k > prevKey ? 1 : -1;
+    animateEl(panelEl.querySelector('.panel-head'), [
+      { opacity: 0, transform: 'translateX(' + (dir * 16) + 'px)' },
+      { opacity: 1, transform: 'none' }
+    ], { duration: 280, easing: 'cubic-bezier(.22,1,.36,1)' });
+  }
+  highlightNewRows();
 }
 
 panelEl.addEventListener('toggle', e => {
@@ -132,28 +233,43 @@ panelEl.addEventListener('toggle', e => {
 panelEl.addEventListener('click', e => {
   const btn = e.target.closest('[data-act]'); if (!btn || !selected) return;
   const act = btn.dataset.act;
-  if (act === 'sym-more'){ symptomsExpanded = true; renderPanel(); return; }
-  if (act === 'sym-less'){ symptomsExpanded = false; renderPanel(); return; }
-  if (act === 'open-courses'){ openCoursesModal(); return; }
-  if (act === 'status'){ const rec = getDay(selected, true); const v = btn.dataset.v; rec.status = rec.status === v ? null : v; commit(); }
+  if (act === 'sym-more'){ symptomsExpanded = true; symptomsStagger = true; hap(8); fx('sfx', 'open'); renderPanel(); return; }
+  if (act === 'sym-less'){ symptomsExpanded = false; symptomsStagger = true; hap(8); fx('sfx', 'tap'); renderPanel(); return; }
+  if (act === 'open-courses'){ fx('sfx', 'open'); openCoursesModal(); return; }
+  if (act === 'status'){
+    const rec = getDay(selected, true); const v = btn.dataset.v;
+    const wasSick = rec.status === 'sick';
+    const r = btn.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    rec.status = rec.status === v ? null : v;
+    const recovered = wasSick && rec.status === 'ok';
+    commit();
+    if (recovered) celebrateRecovery(cx, cy); else { hap(8); fx('sfx', 'tap'); }
+  }
   if (act === 'sym'){
     const rec = getDay(selected, true); const id = btn.dataset.id; const i = rec.symptoms.indexOf(id);
     if (i >= 0) rec.symptoms.splice(i, 1); else rec.symptoms.push(id);
-    if (rec.symptoms.length && !rec.status) rec.status = 'sick'; commit();
+    if (rec.symptoms.length && !rec.status) rec.status = 'sick';
+    hap(8); fx('sfx', i >= 0 ? 'tap' : 'pop');
+    commit();
   }
   if (act === 'addtemp') addTemp();
-  if (act === 'deltemp'){ const rec = getDay(selected, true); rec.temps = rec.temps.filter(t => t.id !== btn.dataset.id); commit(); }
+  if (act === 'deltemp'){ removeRowAnimated(btn, () => { const rec = getDay(selected, true); rec.temps = rec.temps.filter(t => t.id !== btn.dataset.id); commit(); }); }
   if (act === 'addmed') addMed();
-  if (act === 'delmed'){ const rec = getDay(selected, true); rec.meds = rec.meds.filter(m => m.id !== btn.dataset.id); commit(); }
-  if (act === 'clear'){ if (confirm('Очистить все отметки за этот день?')){ delete getActiveChild().days[selected]; commit(); } }
-  if (act === 'copyto') showCopyOptionsDialog(selected);
-  if (act === 'print') printDayCard(selected);
+  if (act === 'delmed'){ removeRowAnimated(btn, () => { const rec = getDay(selected, true); rec.meds = rec.meds.filter(m => m.id !== btn.dataset.id); commit(); }); }
+  if (act === 'clear'){
+    const days = getActiveChild().days;
+    if (!hasAnyData(days[selected])){ toast('В этом дне нет отметок'); fx('sfx', 'pop'); return; }
+    if (confirm('Очистить все отметки за этот день?')){ delete days[selected]; commit(); hap([20, 40, 20]); fx('sfx', 'del'); toast('День очищен'); }
+  }
+  if (act === 'copyto'){ fx('sfx', 'open'); showCopyOptionsDialog(selected); }
+  if (act === 'print'){ fx('sfx', 'tap'); printDayCard(selected); }
 });
 
 panelEl.addEventListener('change', e => {
   const act = e.target.dataset.act;
-  if (act === 'garden' && selected){ const rec = getDay(selected, true); rec.garden = e.target.checked; if (rec.garden) rec.home = false; commit(); }
-  if (act === 'home' && selected){ const rec = getDay(selected, true); rec.home = e.target.checked; if (rec.home) rec.garden = false; commit(); }
+  if (act === 'garden' && selected){ const rec = getDay(selected, true); rec.garden = e.target.checked; if (rec.garden) rec.home = false; hap(8); fx('sfx', 'pop'); commit(); }
+  if (act === 'home' && selected){ const rec = getDay(selected, true); rec.home = e.target.checked; if (rec.home) rec.garden = false; hap(8); fx('sfx', 'pop'); commit(); }
   if (act === 'course-check' && selected){
     const courseId = e.target.dataset.courseId; const time = e.target.dataset.time; const checked = e.target.checked;
     const rec = getDay(selected, true);
@@ -162,11 +278,17 @@ panelEl.addEventListener('change', e => {
       if (course){
         const exists = rec.meds.some(m => m.courseId === courseId && m.time === time);
         if (!exists){
-          rec.meds.push({ id: uid(), time: time, med: 'other', dose: course.dose || '', note: course.note || '', courseId: course.id, customName: course.name });
+          const intake = { id: uid(), time: time, med: 'other', dose: course.dose || '', note: course.note || '', courseId: course.id, customName: course.name };
+          lastAddedMedId = intake.id;
+          rec.meds.push(intake);
           rec.meds.sort((a,b) => a.time.localeCompare(b.time)); if (!rec.status) rec.status = 'sick';
         }
       }
-    } else { rec.meds = rec.meds.filter(m => !(m.courseId === courseId && m.time === time)); }
+      hap(12); fx('sfx', 'ok');
+    } else {
+      rec.meds = rec.meds.filter(m => !(m.courseId === courseId && m.time === time));
+      hap(8); fx('sfx', 'del');
+    }
     commit();
   }
 });
@@ -182,20 +304,27 @@ function addTemp(){
   const medEl = document.getElementById('tMed'); const helpEl = document.getElementById('tHelp'); const errEl = document.getElementById('tErr');
   if (!timeEl || !valEl) return;
   const raw = (valEl.value || '').replace(',', '.').trim(); const val = parseFloat(raw);
-  if (!raw || isNaN(val) || val < 30 || val > 43){ errEl.hidden = false; errEl.textContent = 'Введи температуру числом от 30 до 43, например 38,5'; valEl.focus(); return; }
+  if (!raw || isNaN(val) || val < 30 || val > 43){ showFieldError(errEl, 'Введи температуру числом от 30 до 43, например 38,5', valEl); return; }
   const rec = getDay(selected, true);
-  rec.temps.push({ id: uid(), time: timeEl.value || (pad(new Date().getHours()) + ':' + pad(new Date().getMinutes())), value: Math.round(val * 10) / 10, med: medEl ? medEl.value : '', helped: helpEl ? helpEl.value : '' });
+  const temp = { id: uid(), time: timeEl.value || (pad(new Date().getHours()) + ':' + pad(new Date().getMinutes())), value: Math.round(val * 10) / 10, med: medEl ? medEl.value : '', helped: helpEl ? helpEl.value : '' };
+  lastAddedTempId = temp.id;
+  rec.temps.push(temp);
   rec.temps.sort((a,b) => a.time.localeCompare(b.time));
   if (val >= 37.5){ if (!rec.status) rec.status = 'sick'; if (!rec.symptoms.includes('fever')) rec.symptoms.push('fever'); }
   commit();
+  hap(12); fx('sfx', 'ok');
 }
 
 function addMed(){
   const timeEl = document.getElementById('mTime'); const medEl = document.getElementById('mMed'); const doseEl = document.getElementById('mDose'); const noteEl = document.getElementById('mNote'); const errEl = document.getElementById('mErr');
-  if (!medEl || !medEl.value){ if (errEl){ errEl.hidden = false; errEl.textContent = 'Выбери препарат'; } return; }
+  if (!medEl || !medEl.value){ showFieldError(errEl, 'Выбери препарат', medEl); return; }
   const rec = getDay(selected, true);
-  rec.meds.push({ id: uid(), time: timeEl && timeEl.value ? timeEl.value : (pad(new Date().getHours()) + ':' + pad(new Date().getMinutes())), med: medEl.value, dose: doseEl ? doseEl.value.trim() : '', note: noteEl ? noteEl.value.trim() : '' });
-  rec.meds.sort((a,b) => a.time.localeCompare(b.time)); if (!rec.status) rec.status = 'sick'; commit();
+  const entry = { id: uid(), time: timeEl && timeEl.value ? timeEl.value : (pad(new Date().getHours()) + ':' + pad(new Date().getMinutes())), med: medEl.value, dose: doseEl ? doseEl.value.trim() : '', note: noteEl ? noteEl.value.trim() : '' };
+  lastAddedMedId = entry.id;
+  rec.meds.push(entry);
+  rec.meds.sort((a,b) => a.time.localeCompare(b.time)); if (!rec.status) rec.status = 'sick';
+  commit();
+  hap(12); fx('sfx', 'ok');
 }
 
 /* ============================ ПЕЧАТЬ ДНЯ ============================ */
@@ -253,9 +382,10 @@ function renderDaySummary(){
   const titleEl = document.getElementById('dsTitle'); const bodyEl = document.getElementById('dsBody');
   if (!titleEl || !bodyEl) return;
   const d = parseK(summaryKey); const todayKey = keyOf(new Date()); const isToday = summaryKey === todayKey;
+  const prevSummaryKey = summaryLastKey; summaryLastKey = summaryKey;
   titleEl.innerHTML = `${isToday ? '<span class="ds-today">сегодня</span>' : ''}${WD_FULL[d.getDay()]}, ${d.getDate()} ${MONTHS_G[d.getMonth()]}`;
   const rec = getActiveChild().days[summaryKey];
-  if (!rec || !hasAnyData(rec)){ bodyEl.innerHTML = `<div class="ds-empty">Нет отметок за этот день</div><button class="btn primary ds-open" type="button" data-ds-open>Открыть день →</button>`; return; }
+  if (!rec || !hasAnyData(rec)){ bodyEl.innerHTML = `<div class="ds-empty">Нет отметок за этот день</div><button class="btn primary ds-open" type="button" data-ds-open>Открыть день →</button>`; animateSummaryChange(prevSummaryKey, bodyEl); return; }
   const name = getActiveChild().name ? `<b>${esc(getActiveChild().name)}</b>` : 'ребёнок'; let datePrefix = isToday ? 'Сегодня' : fmtDate(summaryKey);
   const statusLabel = rec.status === 'sick' ? 'болеет' : rec.status === 'ok' ? 'здоров' : '';
   let locParts = []; if (rec.garden) locParts.push('в садике'); if (rec.home) locParts.push('дома'); let locStr = locParts.join(' и ');
@@ -267,12 +397,22 @@ function renderDaySummary(){
   if (rec.meds && rec.meds.length){ const medsStr = rec.meds.map(m => `${esc(medDisplayName(m))}${m.dose ? ' ' + m.dose : ''} (${m.time})`).join(', '); detailsHtml += `<div><b>Препараты:</b> ${medsStr}.</div>`; }
   if (rec.diagnosis && rec.diagnosis.trim()) detailsHtml += `<div><b>Диагноз:</b> ${esc(rec.diagnosis)}.</div>`;
   bodyEl.innerHTML = `<div class="ds-narrative"><p class="ds-sentence">${sentence}</p>${detailsHtml ? `<div class="ds-details">${detailsHtml}</div>` : ''}</div><button class="btn primary ds-open" type="button" data-ds-open>Открыть день →</button>`;
+  animateSummaryChange(prevSummaryKey, bodyEl);
 }
-function shiftSummary(dir){ const d = parseK(summaryKey); d.setDate(d.getDate() + dir); summaryKey = keyOf(d); renderDaySummary(); if (summaryKey === selected) renderTempChart(); }
+function animateSummaryChange(prevKey, bodyEl){
+  if (!prevKey || prevKey === summaryKey) return;
+  const dir = summaryKey > prevKey ? 1 : -1;
+  animateEl(bodyEl, [
+    { opacity: 0, transform: 'translateX(' + (dir * 18) + 'px)' },
+    { opacity: 1, transform: 'none' }
+  ], { duration: 280, easing: 'cubic-bezier(.22,1,.36,1)' });
+}
+function shiftSummary(dir){ const d = parseK(summaryKey); d.setDate(d.getDate() + dir); summaryKey = keyOf(d); hap(8); fx('sfx', 'tap'); renderDaySummary(); if (summaryKey === selected) renderTempChart(); }
 document.getElementById('dsPrev').addEventListener('click', () => shiftSummary(-1));
 document.getElementById('dsNext').addEventListener('click', () => shiftSummary(1));
 document.getElementById('dsBody').addEventListener('click', e => {
   if (!e.target.closest('[data-ds-open]')) return;
+  hap(8); fx('sfx', 'open');
   selected = summaryKey; weekAnchor = selected; const dd = parseK(selected); view = { y: dd.getFullYear(), m: dd.getMonth() };
   if (viewMode === 'month') renderCalendar(); else renderWeekView();
   renderTempChart(); renderPanel(); if (isMobile()) openSheet();
@@ -288,6 +428,10 @@ function showCopyOptionsDialog(fromKey){
   const opts = getActiveChild().copyOptions || defaultCopyOptions();
   document.querySelectorAll('#copyOpts input[data-key]').forEach(cb => { cb.checked = !!opts[cb.dataset.key]; });
   document.getElementById('copyOpts').classList.add('show'); syncBodyScroll();
+  animateEl(document.querySelector('#copyOpts .copy-opts-card'), [
+    { opacity: 0, transform: 'translateY(14px) scale(.97)' },
+    { opacity: 1, transform: 'none' }
+  ], { duration: 320, easing: 'cubic-bezier(.34,1.56,.64,1)' });
 }
 function hideCopyOptionsDialog(){ document.getElementById('copyOpts').classList.remove('show'); syncBodyScroll(); copyOptsSourceKey = null; }
 document.getElementById('copyOptsCancel').addEventListener('click', hideCopyOptionsDialog);
@@ -297,9 +441,10 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.g
 document.getElementById('copyOptsNext').addEventListener('click', () => {
   const fromKey = copyOptsSourceKey; if (!fromKey) return;
   const opts = {}; document.querySelectorAll('#copyOpts input[data-key]').forEach(cb => { opts[cb.dataset.key] = cb.checked; });
-  if (!Object.values(opts).some(v => v)){ toast('Выбери хотя бы один параметр'); return; }
+  if (!Object.values(opts).some(v => v)){ toast('Выбери хотя бы один параметр'); hap([25, 40, 25]); fx('sfx', 'del'); return; }
   getActiveChild().copyOptions = { ...DEFAULT_COPY_OPTIONS, ...opts }; save(); hideCopyOptionsDialog(); closeSheet();
   copyMode = { fromKey, options: opts }; updateCopyBanner(); renderCalendar(); if (viewMode === 'week') renderWeekView(); toast('Тапни целевой день');
+  hap(10); fx('sfx', 'open');
 });
 
 function defaultCopyOptions(){ return { ...DEFAULT_COPY_OPTIONS }; }
@@ -347,6 +492,7 @@ function copyDayDataToKeys(fromKey, targetKeys, options){
   lastCopyUndo = { prevStates }; save(); render();
   const label = targets.length === 1 ? fmtDateShort(targets[0]) : `${targets.length} ${plural(targets.length, 'день', 'дня', 'дней')}`;
   toast(`Скопировано ${fmtDateShort(fromKey)} → ${label}`, () => undoLastCopy());
+  hap(12); fx('sfx', 'ok');
 }
 function copyDayData(fromKey, toKey, options){ copyDayDataToKeys(fromKey, [toKey], options); }
 function undoLastCopy(){
@@ -354,6 +500,7 @@ function undoLastCopy(){
   const days = getActiveChild().days;
   if (lastCopyUndo.prevStates){ lastCopyUndo.prevStates.forEach(({ key, data }) => { if (data === null) delete days[key]; else days[key] = data; }); }
   lastCopyUndo = null; save(); render(); toast('Копирование отменено');
+  hap(8); fx('sfx', 'tap');
 }
 function conflictFields(dst, options){
   if (!dst) return []; const c = [];
