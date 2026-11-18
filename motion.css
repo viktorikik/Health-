@@ -1,12 +1,14 @@
 /* ============================================================
-   ФАЙЛ 1 из 6 · motion.css · СОЗДАТЬ НОВЫЙ (или заменить целиком)
-   Все 6 файлов готовы ЦЕЛИКОМ. Ничего искать и вставлять внутрь
-   не нужно — каждый файл просто заменяется полностью. Порядок 1→6.
-   GitHub с телефона: Add file → Create new file → имя motion.css
-   → вставить весь этот текст → Commit changes.
+   ФАЙЛ 1 из 2 · motion.css · ЗАМЕНИТЬ ЦЕЛИКОМ  (v1.2)
+   ИСПРАВЛЕНО: «убегающие» крестики и гамбургер.
+   Причина: старый .eog-ripforcing position:relative перебивал
+   position:absolute у .menu-btn / .sheet-close, и кнопка падала
+   в обычный поток. Теперь position НЕ трогается у абсолютных
+   кнопок, а у обычных — только временно, на время волны.
+   GitHub: motion.css → ✏️ Edit → выделить всё → вставить → Commit.
    ============================================================ */
 
-/* ===== motion.css · Волна 15 «Оживление» · v1.1 =====
+/* ===== motion.css · Волна 15 «Оживление» · v1.2 =====
    Слой поверх styles.css. Цвета берутся из переменных проекта
    с запасными значениями — обе темы работают без правок. */
 
@@ -22,8 +24,13 @@
 ::-webkit-scrollbar-thumb:hover { filter: brightness(1.15); }
 ::selection { background: var(--lime, #D6F34C); color: #17181A; }
 
-/* Ripple + нажатие (scale не конфликтует с transform проекта) */
-.eog-rip { position: relative; overflow: hidden; }
+/* Ripple + нажатие.
+   ВАЖНО: .eog-rip НЕ задаёт position — иначе абсолютные кнопки
+   (гамбургер, крестик закрытия, «+» на графике) «убегали» в поток.
+   position:relative добавляется только обычным (static) кнопкам
+   и только классом .eog-rip-static, который снимается после волны. */
+.eog-rip { overflow: hidden; }
+.eog-rip-static { position: relative; }
 .eog-ripple {
   position: absolute; border-radius: 50%; pointer-events: none;
   background: currentColor; opacity: .22; transform: scale(0);
