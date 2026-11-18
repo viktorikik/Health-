@@ -7,7 +7,7 @@
    ============================================================ */
 
 /* ===== sw.js · «Ещё одна галочка» · eog-sad-v9 ===== */
-const CACHE_VERSION = 'eog-sad-v9';
+const CACHE_VERSION = 'eog-sad-v10';
 const FILES = [
   './',
   './index.html',
