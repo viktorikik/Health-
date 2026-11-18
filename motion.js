@@ -1,6 +1,12 @@
-/* ===== motion.js · Волна 15 «Оживление» · v1.0 =====
+/* ============================================================
+   ФАЙЛ 2 из 6 · motion.js · СОЗДАТЬ НОВЫЙ (или заменить целиком)
+   GitHub: Add file → Create new file → имя motion.js → вставить
+   весь этот текст → Commit changes.
+   ============================================================ */
+
+/* ===== motion.js · Волна 15 «Оживление» · v1.1 =====
    Слой поверх модулей core/calendar/panel/analytics/health/app.
-   Подключать с defer ПОСЛЕ app.js. Ничего из state не читает. */
+   Подключается с defer ПОСЛЕ app.js. Ничего из state не читает. */
 (function () {
   'use strict';
   if (window.EOGMotion) return; // защита от двойной загрузки
@@ -15,6 +21,7 @@
     countDur: 750, confettiCount: 34, tiltMax: 6
   };
   var cfg = Object.assign({}, DEFAULTS);
+  var lastSfx = 0;
   try {
     var saved = JSON.parse(localStorage.getItem(LS) || '{}');
     Object.keys(saved).forEach(function (k) { if (k in cfg) cfg[k] = saved[k]; });
@@ -44,6 +51,7 @@
   function sfx(name) {
     if (!cfg.sound || RM) return;
     ensureAudio(); if (!AC) return;
+    lastSfx = Date.now();
     try {
       if (name === 'tap') tone(920, 0.05, 'sine', 0.035);
       else if (name === 'ok') { tone(660, 0.07, 'sine', 0.045); tone(990, 0.09, 'sine', 0.04, 0.07); }
@@ -62,7 +70,7 @@
     try { if (navigator.vibrate) navigator.vibrate(p || 10); } catch (e) {}
   }
 
-  /* ===== RIPPLE + НАЖАТИЕ (делегирование, оптимум для render()) ===== */
+  /* ===== RIPPLE + НАЖАТИЕ ===== */
   var BTN = 'button, .btn, [data-ripple]';
   document.addEventListener('pointerdown', function (e) {
     var el = e.target.closest ? e.target.closest(BTN) : null;
@@ -144,7 +152,7 @@
       p.getBoundingClientRect();
       p.style.transition = 'stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1)';
       p.style.strokeDashoffset = '0';
-      setTimeout(function () { // чистим, чтобы твои перерисовки не наследовали стили
+      setTimeout(function () {
         p.style.strokeDasharray = p.style.strokeDashoffset = p.style.transition = '';
       }, 1250);
     } catch (e) {}
@@ -174,8 +182,8 @@
       cfHost.id = 'eogConfetti'; cfHost.setAttribute('data-eog', '1');
       document.body.appendChild(cfHost);
     }
-    var cx = x == null ? innerWidth / 2 : x;
-    var cy = y == null ? innerHeight * 0.32 : y;
+    var cx = (x == null || x === 0) ? innerWidth / 2 : x;
+    var cy = (y == null || y === 0) ? innerHeight * 0.32 : y;
     var cols = ['#D6F34C', '#F57E9C', '#6FC3FF', '#FFB454', '#8FD97A', '#B78CFF'];
     var n = Math.round(cfg.confettiCount);
     for (var i = 0; i < n; i++) {
@@ -218,13 +226,16 @@
       if (typeof fn !== 'function' || fn._eogWrapped) return;
       var wrapped = function () {
         var res = fn.apply(this, arguments);
-        var type = 'ok';
-        for (var i = 0; i < arguments.length; i++) {
-          var a = String(arguments[i]).toLowerCase();
-          if (a === 'err' || a === 'error' || a === 'danger') type = 'del';
-          else if (a === 'info' || a === 'warn' || a === 'warning') type = 'pop';
+        // если действие уже дало звук/вибро (panel/calendar) — не дублируем
+        if (Date.now() - lastSfx > 250) {
+          var type = 'ok';
+          for (var i = 0; i < arguments.length; i++) {
+            var a = String(arguments[i]).toLowerCase();
+            if (a === 'err' || a === 'error' || a === 'danger') type = 'del';
+            else if (a === 'info' || a === 'warn' || a === 'warning') type = 'pop';
+          }
+          sfx(type); haptic(type === 'del' ? [25, 40, 25] : 12);
         }
-        sfx(type); haptic(type === 'del' ? [25, 40, 25] : 12);
         return res;
       };
       wrapped._eogWrapped = true;
@@ -304,7 +315,7 @@
     else if (a === 'export') exportCfg();
   });
 
-  /* ===== СКАНЕР + НАБЛЮДАТЕЛЬ (дружит с твоим render()) ===== */
+  /* ===== СКАНЕР + НАБЛЮДАТЕЛЬ (дружит с render()) ===== */
   function scan(root) {
     if (!root || root.nodeType !== 1) return;
     if (root.hasAttribute && root.hasAttribute('data-eog')) return;
@@ -345,7 +356,7 @@
 
   /* ===== API + СТАРТ ===== */
   window.EOGMotion = {
-    version: '1.0', cfg: cfg,
+    version: '1.1', cfg: cfg,
     haptic: haptic, sfx: sfx, confetti: confetti, countUp: countUp,
     drawPath: drawPath, set: set, setSound: setSound,
     reset: reset, randomize: randomize, exportCfg: exportCfg,
