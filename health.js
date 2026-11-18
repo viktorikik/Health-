@@ -54,10 +54,10 @@ function formatMedicalText(html) {
   // 1. Нормализуем переносы (заменяем div/p на br)
   text = text.replace(/<\/?(div|p|span)>/gi, '<br>');
   
-  // 2. Если после цифры с точкой идет перенос строки, убираем его (склеиваем "1." и текст)
+  // 2. Если после цифры с точкой идет перенос строки, убираем его
   text = text.replace(/(\d+\.)\s*(<br>)+/gi, '$1 ');
   
-  // 3. Полностью удаляем все звездочки (markdown-выделение), чтобы не было лишнего жирного
+  // 3. Полностью удаляем все звездочки (markdown-выделение)
   text = text.replace(/\*/g, '');
   
   // 4. Схлопываем множественные переносы в один
@@ -68,21 +68,33 @@ function formatMedicalText(html) {
   keywords.forEach(kw => {
     const regex = new RegExp(`(^|<br>|\\s)(${kw})(\\s*:?)`, 'gi');
     text = text.replace(regex, (match, prefix, word, colon) => {
-      // Если слово в начале или после br, не ставим лишние отступы перед ним
       const safePrefix = (prefix === '<br>' || prefix.trim() === '') ? '' : '<br><br>';
-      // Принудительно делаем жирным и возвращаем
       return `${safePrefix}<b>${word}${colon}</b>`;
     });
   });
 
-  // 6. Форматируем нумерованные списки (добавляем пустую строку перед новым пунктом)
+  // 6. Форматируем нумерованные списки
   text = text.replace(/(<br>)\s*(\d+\.)\s+/g, '<br><br>$2 ');
 
-  // 7. Чистим лишние переносы строк (не более двух подряд)
+  // 7. Чистим лишние переносы строк
   text = text.replace(/(<br>){3,}/gi, '<br><br>');
   text = text.replace(/^(<br>)+/i, '');
 
   return text;
+}
+
+// Извлечение диагноза для календаря
+function extractDiagnosisFromNotes(html) {
+  if (!html) return '';
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  const text = div.textContent || div.innerText || '';
+  // Ищем "диагноз" и берем текст до "лечение" или "рекомендации"
+  const match = text.match(/диагноз\s*:?\s*([^]*?)(?=лечение|рекомендации|назначения|$)/i);
+  if (match && match[1]) {
+    return match[1].trim().substring(0, 100); // Ограничение в 100 символов для календаря
+  }
+  return text.trim().substring(0, 100);
 }
 
 function openHealthCard() {
@@ -127,7 +139,6 @@ function renderHealthCard() {
     recentListEl.innerHTML = allRecords.map(r => {
       let textHtml = esc(r.notes || r.text || '');
       if (r.type === 'visit' && r.notes) {
-        // На лету причесываем старые записи
         const formatted = formatMedicalText(r.notes);
         textHtml = sanitizeHtml(formatted);
       }
@@ -227,10 +238,16 @@ function renderHealthList() {
       
       const hasMore = !!notesHtml;
 
+      // Кнопка добавления в календарь (только для осмотров)
+      let toCalBtn = '';
+      if (type === 'visit') {
+        toCalBtn = `<button class="btn-to-cal" data-hl-to-cal="${r.id}">📅 Добавить диагноз в календарь</button>`;
+      }
+
       return `<div class="hc-list-item">
         <div class="hc-list-main" ${hasMore ? `data-hl-toggle="true"` : ''}>
           <div class="hc-list-title">${esc(title)}</div>
-          ${notesHtml ? `<div class="hc-list-notes">${notesHtml}</div>` : ''}
+          ${notesHtml ? `<div class="hc-list-notes">${notesHtml} ${toCalBtn}</div>` : ''}
         </div>
         <div class="hc-list-actions">
           <button class="iconbtn tiny" data-hl-edit="${r.id}" type="button" title="Редактировать">✎</button>
@@ -252,7 +269,37 @@ function renderHealthList() {
 }
 
 document.getElementById('hlList').addEventListener('click', e => {
-  // Раскрытие текста внутри карточки
+  // 1. Обработка кнопки "Добавить в календарь"
+  const toCalBtn = e.target.closest('[data-hl-to-cal]');
+  if (toCalBtn) {
+    e.stopPropagation(); // Предотвращаем закрытие аккордеона
+    const hc = ensureHealthCard();
+    const record = hc.visits.find(x => x.id === toCalBtn.dataset.hlToCal);
+    if (record) {
+      const diag = extractDiagnosisFromNotes(record.notes);
+      const day = getDay(record.date, true);
+      day.diagnosis = diag;
+      save();
+
+      closeHealthList();
+      closeHealthCard();
+
+      // Навигация календаря на нужный день
+      const d = parseK(record.date);
+      view = { y: d.getFullYear(), m: d.getMonth() };
+      selected = record.date;
+      weekAnchor = record.date;
+      summaryKey = record.date;
+
+      render();
+      switchView('cal');
+      if (isMobile()) openSheet();
+      toast('Диагноз добавлен в календарь');
+    }
+    return;
+  }
+
+  // 2. Раскрытие текста внутри карточки
   const toggleBtn = e.target.closest('[data-hl-toggle]');
   if (toggleBtn) {
     const item = toggleBtn.closest('.hc-list-item');
@@ -260,14 +307,14 @@ document.getElementById('hlList').addEventListener('click', e => {
     return; 
   }
 
-  // Редактирование
+  // 3. Редактирование
   const editBtn = e.target.closest('[data-hl-edit]');
   if (editBtn) {
     closeHealthList();
     openHealthForm(currentHlType, editBtn.dataset.hlEdit);
   }
   
-  // Удаление
+  // 4. Удаление
   const delBtn = e.target.closest('[data-hl-del]');
   if (delBtn) {
     if (!confirm('Удалить эту запись?')) return;
@@ -305,7 +352,6 @@ function openHealthForm(type, editId = null) {
   
   if (type === 'visit') {
     title.textContent = isEdit ? 'Редактировать осмотр' : 'Добавить осмотр';
-    // При редактировании прогоняем через парсер, чтобы убрать старые звездочки
     const initialNotes = isEdit ? formatMedicalText(record.notes || '') : '';
     fields.innerHTML = `
       <div class="section-label" style="margin-top:0">Врач / Специальность</div>
