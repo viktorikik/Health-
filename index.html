@@ -1,3 +1,9 @@
+<!-- ============================================================
+     ФАЙЛ 5 из 6 · index.html · ЗАМЕНИТЬ ЦЕЛИКОМ
+     GitHub: открой index.html → ✏️ Edit → выдели всё → удали →
+     вставь весь этот текст → Commit changes.
+     Важно: файлы 1 и 2 (motion.css, motion.js) должны быть созданы.
+     ============================================================ -->
 <!doctype html>
 <html lang="ru" data-theme="light">
 <head>
@@ -19,12 +25,20 @@
     else if (matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.dataset.theme = 'dark';
   } catch (e) {}
 </script>
-<link rel="stylesheet" href="./styles.css"> 
-  <link rel="stylesheet" href="./motion.css">
+<link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="./motion.css">
+<style>
+  /* ===== Волна 15: кнопка звука слева от кнопки меню ===== */
+  .hero { position: relative; }
+  #soundBtn { position: absolute; top: 14px; right: 62px; z-index: 6; display: grid; place-items: center; }
+  #soundBtn[aria-pressed="false"] { opacity: .55; }
+</style>
 </head>
 <body>
 <main>
   <header class="hero">
+    <!-- Волна 15: кнопка звука (иконку рисует motion.js) -->
+    <button class="menu-btn" id="soundBtn" type="button" data-motion-sound aria-label="Звук" aria-pressed="true"></button>
     <button class="menu-btn" id="menuBtn" type="button" aria-label="Настройки" aria-expanded="false" aria-controls="menuPanel">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <line x1="2" y1="5" x2="16" y2="5"/>
@@ -34,21 +48,15 @@
     </button>
     <div class="hero-main">
       <div class="eyebrow">Трекер · «Ещё одна галочка»</div>
-      
-      <!-- НОВЫЙ ЗАГОЛОВОК -->
       <h1>Трекер <span class="mark">здоровья</span></h1>
-      
-      <!-- ИМЯ РЕБЁНКА ВЫНЕСЕНО НАВЕРХ -->
       <div class="hero-child-name" id="activeChildLabel">Загрузка...</div>
 
-      <!-- КНОПКА КАРТОЧКИ ЗДОРОВЬЯ -->
       <button class="health-link" id="openHealthCardBtn" type="button">
         <span class="health-link-ico">🏥</span>
         <span class="health-link-txt">Карточка здоровья</span>
         <span class="health-link-arrow">→</span>
       </button>
 
-      <!-- ПЛАШКИ СТАТИСТИКИ -->
       <div class="hero-meta" id="heroMeta"></div>
     </div>
   </header>
@@ -122,7 +130,8 @@
       </aside>
     </div>
 
-    <section class="card day-summary-card">
+    <!-- Волна 15: лёгкий 3D-наклон сводки на десктопе -->
+    <section class="card day-summary-card" data-tilt>
       <div class="ds-head">
         <button class="navbtn" id="dsPrev" type="button" aria-label="Предыдущий день">←</button>
         <div class="ds-title" id="dsTitle">—</div>
@@ -382,13 +391,60 @@
 
 <input type="file" id="fileInput" accept="application/json" hidden>
 
-<!-- ПОДКЛЮЧЕНИЕ СКРИПТОВ -->
+<!-- ПОДКЛЮЧЕНИЕ СКРИПТОВ (порядок важен: motion.js — после app.js) -->
 <script src="./core.js" defer></script>
 <script src="./calendar.js" defer></script>
 <script src="./panel.js" defer></script>
 <script src="./analytics.js" defer></script>
 <script src="./health.js" defer></script>
 <script src="./app.js" defer></script>
-<script nonce="" defer src="./motion.js"></script>
+<script src="./motion.js" defer></script>
+
+<!-- ===== Волна 15: авто-хуки (счётчики шапки/статистики, блик прогресса) =====
+     Конфетти за выздоровление уже живёт в panel.js — здесь его нет. -->
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.__eogWave15Inline) return;
+    window.__eogWave15Inline = true;
+    var NUM_CONTAINERS = ['#heroMeta', '#stats'];
+    var PROG_SEL = '.progress-fill, .prog-fill, .month-progress-fill, .stat-progress i, .stat-progress span';
+    function motion(){ return window.EOGMotion; }
+    function markNumbers(){
+      var M = motion(); if (!M || typeof M.countUp !== 'function') return;
+      NUM_CONTAINERS.forEach(function (sel) {
+        var box = document.querySelector(sel); if (!box) return;
+        box.querySelectorAll('*').forEach(function (el) {
+          if (el.children.length) return;
+          var t = (el.textContent || '').trim();
+          var m = t.match(/^(-?\d+(?:[.,]\d+)?)\s*([°%]?)$/);
+          if (!m) return;
+          var to = parseFloat(m[1].replace(',', '.'));
+          if (el._eogV === to) return;
+          var dec = m[1].indexOf(',') > -1 || m[1].indexOf('.') > -1 ? 1 : 0;
+          el.setAttribute('data-eog-count', '1');
+          el._eogDec = dec; el._eogSuf = m[2];
+          M.countUp(el, to, { dec: dec, suf: m[2] });
+        });
+      });
+    }
+    function markProgress(){
+      document.querySelectorAll(PROG_SEL).forEach(function (el) { el.classList.add('eog-shimmer'); });
+    }
+    function afterRender(){
+      try {
+        markNumbers(); markProgress();
+        if (!motion()){ var b = document.getElementById('soundBtn'); if (b) b.style.display = 'none'; }
+      } catch (e) {}
+    }
+    if (typeof window.render === 'function' && !window.render.__eogInline){
+      var origRender = window.render;
+      var wrapped = function(){ var r = origRender.apply(this, arguments); afterRender(); return r; };
+      wrapped.__eogInline = true;
+      window.render = wrapped;
+    }
+    afterRender();
+    window.addEventListener('load', afterRender);
+  });
+</script>
 </body>
 </html>
