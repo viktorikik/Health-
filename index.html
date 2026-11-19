@@ -1,8 +1,18 @@
 <!-- ============================================================
-     ФАЙЛ 5 из 6 · index.html · ЗАМЕНИТЬ ЦЕЛИКОМ
-     GitHub: открой index.html → ✏️ Edit → выдели всё → удали →
-     вставь весь этот текст → Commit changes.
-     Важно: файлы 1 и 2 (motion.css, motion.js) должны быть созданы.
+     index.html · ГОТОВЫЙ ФАЙЛ · ЗАМЕНИТЬ ЦЕЛИКОМ
+     Волна 16: подключён модуль «Рост и вес» + фикс прокрутки осмотров.
+
+     ИЗМЕНЕНО РОВНО ТРИ МЕСТА (помечены «+ НОВОЕ»):
+     1. <link rel="stylesheet" href="./growth.css"> — после motion.css
+     2. data-growth-open на #hcGrowthChartWrap — мини-график открывает большой экран
+     3. <script src="./growth.js" defer> — после motion.js
+
+     НЕ ЗАБУДЬ: в sw.js поднять CACHE_VERSION до 'eog-sad-v10'
+     и добавить './growth.css', './growth.js' в список FILES.
+     После деплоя полностью закрой приложение и открой заново.
+
+     GitHub с телефона: index.html → ✏️ Edit → выделить всё →
+     удалить → вставить этот текст → Commit changes.
      ============================================================ -->
 <!doctype html>
 <html lang="ru" data-theme="light">
@@ -27,11 +37,17 @@
 </script>
 <link rel="stylesheet" href="./styles.css">
 <link rel="stylesheet" href="./motion.css">
+<!-- + НОВОЕ: стили модуля «Рост и вес» и фикс прокрутки списков осмотров -->
+<link rel="stylesheet" href="./growth.css">
 <style>
   /* ===== Волна 15: кнопка звука слева от кнопки меню ===== */
   .hero { position: relative; }
   #soundBtn { position: absolute; top: 14px; right: 62px; z-index: 6; display: grid; place-items: center; }
   #soundBtn[aria-pressed="false"] { opacity: .55; }
+
+  /* ===== Волна 16: мини-график роста кликабелен ===== */
+  #hcGrowthChartWrap[data-growth-open] { cursor: pointer; }
+  #hcGrowthChartWrap[data-growth-open]:hover { border-color: var(--lime, #DCEB32); }
 </style>
 </head>
 <body>
@@ -206,7 +222,8 @@
       </div>
     </div>
 
-    <div class="hc-card" id="hcGrowthChartWrap"></div>
+    <!-- + НОВОЕ: тап по мини-графику открывает большой экран с таблицей -->
+    <div class="hc-card" id="hcGrowthChartWrap" data-growth-open title="Открыть подробные графики и таблицу замеров"></div>
 
     <div class="hc-card">
       <h3 class="hc-recent-title">Последние записи</h3>
@@ -391,7 +408,7 @@
 
 <input type="file" id="fileInput" accept="application/json" hidden>
 
-<!-- ПОДКЛЮЧЕНИЕ СКРИПТОВ (порядок важен: motion.js — после app.js) -->
+<!-- ПОДКЛЮЧЕНИЕ СКРИПТОВ (порядок важен: motion.js — после app.js, growth.js — последний) -->
 <script src="./core.js" defer></script>
 <script src="./calendar.js" defer></script>
 <script src="./panel.js" defer></script>
@@ -399,9 +416,12 @@
 <script src="./health.js" defer></script>
 <script src="./app.js" defer></script>
 <script src="./motion.js" defer></script>
+<!-- + НОВОЕ: модуль «Рост и вес» — таблица, графики, история; чинит прокрутку осмотров -->
+<script src="./growth.js" defer></script>
 
 <!-- ===== Волна 15: авто-хуки (счётчики шапки/статистики, блик прогресса) =====
-     Конфетти за выздоровление уже живёт в panel.js — здесь его нет. -->
+     Конфетти за выздоровление уже живёт в panel.js — здесь его нет.
+     Если app.js обновлён до версии с волной 15, этот блок сам отключится. -->
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     if (window.__eogWave15Inline) return;
@@ -434,6 +454,7 @@
       try {
         markNumbers(); markProgress();
         if (!motion()){ var b = document.getElementById('soundBtn'); if (b) b.style.display = 'none'; }
+        if (window.EOGGrowth && typeof EOGGrowth.refresh === 'function') EOGGrowth.refresh();
       } catch (e) {}
     }
     if (typeof window.render === 'function' && !window.render.__eogInline){
