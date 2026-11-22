@@ -1,25 +1,35 @@
 /* ============================================================
-   ФАЙЛ 2 из 3 · growth.js · СОЗДАТЬ НОВЫЙ
-   GitHub → Add file → Create new file → имя growth.js →
-   вставить весь текст → Commit changes.
+   growth.js · v1.4 ФИНАЛЬНЫЙ · ЗАМЕНИТЬ ЦЕЛИКОМ
+   (старое содержимое удалить полностью, вставить это)
 
-   ЧТО ДЕЛАЕТ:
-   • Перехватывает плитку «Рост и вес» и открывает свой экран:
-     сводка, три графика, спарклайны, полная таблица истории,
-     добавление / правка / удаление с отменой, экспорт CSV.
-   • Читает и пишет те же данные: getActiveChild().healthCard.growth
-     Схема { id, date, height, weight } не меняется.
-   • Чинит прокрутку списков карточки здоровья (страховка к CSS).
-
-   ПОДКЛЮЧАТЬ ПОСЛЕ health.js и app.js.
+   СВЕРКА СО СТАРЫМ ФАЙЛОМ v1.0:
+   СОХРАНЕНО БЕЗ ИЗМЕНЕНИЙ: утилиты (esc, pad, uid, keyOf, parseK,
+   num, fmt, plural, fmtDate, fmtShort, ageAt, hap, sfx), доступ к
+   данным (child, ensure, raw, persist, rows), состояние экрана,
+   filtered, build, toast с отменой, open/close, renderAll,
+   emptyHtml с диагностикой, metricsHtml, ctrlHtml, seriesFor,
+   niceStep, buildChart с градиентной заливкой области, drawMain с
+   тултипом и прорисовкой линии, drawSparks, tableHtml, renderTable,
+   placeSeg/placeSegs/bindSegs, onViewClick, форма замера целиком
+   (openSheet…saveForm с защитой от дублей по дате, removeRow с
+   отменой), tableText, exportCSV с BOM, copyTable, watchModals,
+   intercept.
+   ДОБАВЛЕНО: renderMiniChart + hookMiniChart (мини-график на двух
+   шкалах, вес виден всегда), запасные цвета var(--g-sky,#2C74B3),
+   уникальные id градиентов, aria-pressed, EOGGrowth.features.
+   ИСПРАВЛЕНО: fitModals — форма «Редактировать осмотр» скроллится
+   целиком (в v1.0 текст редактора вылезал поверх кнопок).
+   ПОДКЛЮЧЕНИЕ: строго ПОСЛЕ health.js и app.js.
+   ДАННЫЕ: getActiveChild().healthCard.growth, схема не менялась.
    ============================================================ */
 (function () {
   'use strict';
   if (window.EOGGrowth) return;
-
   var RM = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var C_SKY = 'var(--g-sky,#2C74B3)', C_CORAL = 'var(--g-coral,#E05A78)', C_VIOLET = 'var(--g-violet,#6F4CB8)',
+      C_AMBER = 'var(--g-amber,#B8760E)', C_LINE = 'var(--g-line,#DFD4C0)', C_MUT2 = 'var(--g-mut2,#9A917E)',
+      C_CARD = 'var(--g-card,#FBF6EC)';
 
-  /* ===== УТИЛИТЫ (работают и без core.js) ===== */
   function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function pad(n){ return String(n).padStart(2,'0'); }
   function uid(){ return 'g_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -47,7 +57,6 @@
   function $(s, r){ return (r || document).querySelector(s); }
   function $$(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
 
-  /* ===== ДОСТУП К ДАННЫМ ===== */
   function child(){
     try { if (typeof getActiveChild === 'function') return getActiveChild(); } catch(e){}
     try { if (window.state && window.state.children) return window.state.children.find(function(c){ return c.id === window.state.activeChildId; }) || window.state.children[0]; } catch(e){}
@@ -83,12 +92,11 @@
     return list;
   }
 
-  /* ===== СОСТОЯНИЕ ЭКРАНА ===== */
   var S = { metric:'height', period:'all', grid:true, dots:true, labels:true, trend:false, sort:'new', open:false };
   var METRICS = {
-    height:{ key:'height', label:'Рост', unit:'см', dec:1, color:'--g-sky', delta:'dH', icon:'📏' },
-    weight:{ key:'weight', label:'Вес', unit:'кг', dec:1, color:'--g-coral', delta:'dW', icon:'⚖️' },
-    bmi:{ key:'bmi', label:'ИМТ', unit:'', dec:1, color:'--g-violet', delta:'dB', icon:'📐' }
+    height:{ key:'height', label:'Рост', unit:'см', dec:1, color:C_SKY, delta:'dH', icon:'📏' },
+    weight:{ key:'weight', label:'Вес', unit:'кг', dec:1, color:C_CORAL, delta:'dW', icon:'⚖️' },
+    bmi:{ key:'bmi', label:'ИМТ', unit:'', dec:1, color:C_VIOLET, delta:'dB', icon:'📐' }
   };
   var PERIODS = { all:'Всё время', y:'Год', m6:'6 мес', m3:'3 мес' };
 
@@ -103,7 +111,6 @@
     return out.length ? out : list.slice(-1);
   }
 
-  /* ===== ПОСТРОЕНИЕ DOM ===== */
   var view, sheet, toasts;
   function build(){
     if (view) return;
@@ -120,18 +127,15 @@
       '<div class="g-body"><div class="g-wrap" id="gWrap"></div></div>' +
       '<button class="g-fab" data-g="add" aria-label="Добавить замер"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>';
     document.body.appendChild(view);
-
     sheet = document.createElement('div');
     sheet.id = 'eogGrowthSheet';
     sheet.setAttribute('role','dialog');
     sheet.setAttribute('aria-modal','true');
     sheet.innerHTML = '<div class="g-sheet"><div class="g-grip"></div><div class="g-sheet-body" id="gSheetBody"></div></div>';
     document.body.appendChild(sheet);
-
     toasts = document.createElement('div');
     toasts.id = 'eogGrowthToasts';
     document.body.appendChild(toasts);
-
     view.addEventListener('click', onViewClick);
     sheet.addEventListener('click', onSheetClick);
     sheet.addEventListener('input', onSheetInput);
@@ -151,7 +155,6 @@
     if (window.visualViewport) window.visualViewport.addEventListener('resize', fitModals);
   }
 
-  /* ===== ТОСТЫ ===== */
   function toast(msg, type, undo){
     build();
     while (toasts.children.length >= 3) toasts.firstChild.remove();
@@ -173,7 +176,6 @@
     sfx(type === 'err' ? 'del' : 'ok'); hap(type === 'err' ? [25,40,25] : 10);
   }
 
-  /* ===== ОТКРЫТИЕ / ЗАКРЫТИЕ ===== */
   var prevOverflow = '';
   function open(){
     build();
@@ -197,7 +199,6 @@
     sfx('tap'); hap(6);
   }
 
-  /* ===== РЕНДЕР ===== */
   function renderAll(){
     var c = ensure();
     var all = rows();
@@ -205,10 +206,8 @@
     var name = c && c.name ? c.name : 'Ребёнок';
     var age = c && c.birthDate && last ? ageAt(c.birthDate, last.date) : (c && c.birthDate ? ageAt(c.birthDate, keyOf(new Date())) : '');
     $('#gSub', view).textContent = name + (age ? ' · ' + age : '') + ' · ' + all.length + ' ' + plural(all.length,'замер','замера','замеров');
-
     var wrap = $('#gWrap', view);
     if (!all.length){ wrap.innerHTML = emptyHtml(c); bindSegs(); return; }
-
     wrap.innerHTML =
       metricsHtml(all) +
       ctrlHtml() +
@@ -219,7 +218,6 @@
         '<button class="g-btn g-btn-out" data-g="csv">⬇ Экспорт CSV</button>' +
         '<button class="g-btn g-btn-out" data-g="copy">Скопировать таблицу</button>' +
       '</div><div class="g-note" style="margin-top:12px"><b>Важно.</b> ИМТ у детей оценивается по центильным таблицам с учётом возраста и пола — это делает врач. Трекер показывает только динамику и не ставит диагнозов.</div></div>';
-
     bindSegs();
     drawMain();
     drawSparks(all);
@@ -227,11 +225,7 @@
   }
 
   function emptyHtml(c){
-    var counts = c && c.healthCard ? {
-      v: (c.healthCard.visits||[]).length,
-      p: (c.healthCard.vaccines||[]).length,
-      n: (c.healthCard.notes||[]).length
-    } : { v:0, p:0, n:0 };
+    var counts = c && c.healthCard ? { v:(c.healthCard.visits||[]).length, p:(c.healthCard.vaccines||[]).length, n:(c.healthCard.notes||[]).length } : { v:0, p:0, n:0 };
     var others = counts.v + counts.p + counts.n;
     return '<div class="g-card acc"><div class="g-empty">' +
       '<div class="em">📈</div><h4>Замеров роста и веса пока нет</h4>' +
@@ -270,19 +264,18 @@
   function ctrlHtml(){
     return '<div class="g-card"><div class="g-h"><span class="t">Настройки графиков</span></div><div class="g-ctrl">' +
       '<div class="g-seg" id="gSegMetric"><span class="g-seg-ind"></span>' +
-        Object.keys(METRICS).map(function(k){ return '<button data-g="metric" data-m="' + k + '" class="' + (S.metric === k ? 'on' : '') + '">' + METRICS[k].label + '</button>'; }).join('') +
+        Object.keys(METRICS).map(function(k){ return '<button data-g="metric" data-m="' + k + '" class="' + (S.metric === k ? 'on' : '') + '" aria-pressed="' + (S.metric === k) + '">' + METRICS[k].label + '</button>'; }).join('') +
       '</div>' +
       '<div class="g-seg sm" id="gSegPeriod"><span class="g-seg-ind"></span>' +
-        Object.keys(PERIODS).map(function(k){ return '<button data-g="period" data-p="' + k + '" class="' + (S.period === k ? 'on' : '') + '">' + PERIODS[k] + '</button>'; }).join('') +
+        Object.keys(PERIODS).map(function(k){ return '<button data-g="period" data-p="' + k + '" class="' + (S.period === k ? 'on' : '') + '" aria-pressed="' + (S.period === k) + '">' + PERIODS[k] + '</button>'; }).join('') +
       '</div>' +
       '<div class="g-toggles">' +
         tg('grid','Сетка') + tg('dots','Точки') + tg('labels','Значения') + tg('trend','Линия тренда') +
       '</div>' +
     '</div></div>';
   }
-  function tg(k, label){ return '<button class="g-tg' + (S[k] ? ' on' : '') + '" data-g="toggle" data-k="' + k + '"><span class="dot"></span>' + label + '</button>'; }
+  function tg(k, label){ return '<button class="g-tg' + (S[k] ? ' on' : '') + '" data-g="toggle" data-k="' + k + '" aria-pressed="' + (!!S[k]) + '"><span class="dot"></span>' + label + '</button>'; }
 
-  /* ===== ГРАФИКИ ===== */
   function seriesFor(list, key){
     return list.filter(function(r){ return isFinite(r[key]); }).map(function(r){ return { x: parseK(r.date).getTime(), y: r[key], r: r }; });
   }
@@ -290,9 +283,9 @@
     var raw = range / Math.max(1, target);
     var mag = Math.pow(10, Math.floor(Math.log10(raw || 1)));
     var norm = raw / mag;
-    var step = norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10;
-    return step * mag;
+    return (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
   }
+  var gradSeq = 0;
   function buildChart(list, key, opts){
     var M = METRICS[key], pts = seriesFor(list, key);
     var W = 640, H = opts.mini ? 120 : 300;
@@ -307,22 +300,19 @@
     if (maxX === minX){ minX -= 86400000 * 15; maxX += 86400000 * 15; }
     var X = function(v){ return pL + (v - minX) / (maxX - minX) * (W - pL - pR); };
     var Y = function(v){ return pT + (y1 - v) / (y1 - y0) * (H - pT - pB); };
-
     var body = '';
     if (!opts.mini && S.grid){
       var step = niceStep(y1 - y0, 4);
       for (var v = Math.ceil(y0/step)*step; v <= y1; v += step){
-        body += '<line x1="'+pL+'" y1="'+Y(v).toFixed(1)+'" x2="'+(W-pR)+'" y2="'+Y(v).toFixed(1)+'" stroke="var(--g-line)" stroke-width="1" stroke-dasharray="2 5"/>' +
-                '<text x="'+(pL-8)+'" y="'+(Y(v)+4).toFixed(1)+'" text-anchor="end" font-size="10.5" font-weight="700" fill="var(--g-mut2)">'+fmt(v, step < 1 ? 1 : 0)+'</text>';
+        body += '<line x1="'+pL+'" y1="'+Y(v).toFixed(1)+'" x2="'+(W-pR)+'" y2="'+Y(v).toFixed(1)+'" stroke="'+C_LINE+'" stroke-width="1" stroke-dasharray="2 5"/>' +
+                '<text x="'+(pL-8)+'" y="'+(Y(v)+4).toFixed(1)+'" text-anchor="end" font-size="10.5" font-weight="700" fill="'+C_MUT2+'">'+fmt(v, step < 1 ? 1 : 0)+'</text>';
       }
       var nT = Math.min(pts.length, 6);
       for (var i = 0; i < nT; i++){
         var idx = Math.round(i * (pts.length - 1) / Math.max(1, nT - 1));
-        var px = X(pts[idx].x);
-        body += '<text x="'+px.toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle" font-size="9.5" font-weight="700" fill="var(--g-mut2)">'+fmtShort(pts[idx].r.date)+'</text>';
+        body += '<text x="'+X(pts[idx].x).toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle" font-size="9.5" font-weight="700" fill="'+C_MUT2+'">'+fmtShort(pts[idx].r.date)+'</text>';
       }
     }
-
     var line = '';
     if (pts.length > 1){
       var d = 'M' + X(pts[0].x).toFixed(1) + ',' + Y(pts[0].y).toFixed(1);
@@ -334,11 +324,14 @@
       }
       line = d;
       if (!opts.mini){
-        body += '<path d="'+d+' L'+X(pts[pts.length-1].x).toFixed(1)+','+(H-pB)+' L'+X(pts[0].x).toFixed(1)+','+(H-pB)+' Z" fill="url(#gArea_'+key+')" opacity=".9"/>';
+        var gid = 'gArea_' + key + '_' + (++gradSeq);
+        body += '<defs><linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1">' +
+                '<stop offset="0" stop-color="'+M.color+'" stop-opacity=".22"/>' +
+                '<stop offset="1" stop-color="'+M.color+'" stop-opacity="0"/></linearGradient></defs>';
+        body += '<path d="'+d+' L'+X(pts[pts.length-1].x).toFixed(1)+','+(H-pB)+' L'+X(pts[0].x).toFixed(1)+','+(H-pB)+' Z" fill="url(#'+gid+')" opacity=".9"/>';
       }
-      body += '<path class="g-line" d="'+d+'" fill="none" stroke="var('+M.color+')" stroke-width="'+(opts.mini?2:3)+'" stroke-linecap="round" stroke-linejoin="round"/>';
+      body += '<path class="g-line" d="'+d+'" fill="none" stroke="'+M.color+'" stroke-width="'+(opts.mini?2.4:3)+'" stroke-linecap="round" stroke-linejoin="round"/>';
     }
-
     if (!opts.mini && S.trend && pts.length > 2){
       var n = pts.length, sx = 0, sy = 0, sxy = 0, sxx = 0;
       pts.forEach(function(p){ var t = (p.x - minX)/86400000; sx += t; sy += p.y; sxy += t*p.y; sxx += t*t; });
@@ -346,35 +339,27 @@
       if (Math.abs(den) > 1e-6){
         var a = (n*sxy - sx*sy)/den, b = (sy - a*sx)/n;
         var t0 = (pts[0].x - minX)/86400000, t1 = (pts[n-1].x - minX)/86400000;
-        body += '<line x1="'+X(pts[0].x).toFixed(1)+'" y1="'+Y(a*t0+b).toFixed(1)+'" x2="'+X(pts[n-1].x).toFixed(1)+'" y2="'+Y(a*t1+b).toFixed(1)+'" stroke="var(--g-amber)" stroke-width="2" stroke-dasharray="7 5" opacity=".85"/>';
+        body += '<line x1="'+X(pts[0].x).toFixed(1)+'" y1="'+Y(a*t0+b).toFixed(1)+'" x2="'+X(pts[n-1].x).toFixed(1)+'" y2="'+Y(a*t1+b).toFixed(1)+'" stroke="'+C_AMBER+'" stroke-width="2" stroke-dasharray="7 5" opacity=".9"/>';
       }
     }
-
     if (opts.mini || S.dots){
       pts.forEach(function(p, i){
         var cx = X(p.x).toFixed(1), cy = Y(p.y).toFixed(1);
         if (opts.mini){
-          body += '<circle cx="'+cx+'" cy="'+cy+'" r="2.6" fill="var('+M.color+')"/>';
+          body += '<circle cx="'+cx+'" cy="'+cy+'" r="2.8" fill="'+M.color+'"/>';
         } else {
           body += '<g class="g-pt" data-i="'+i+'" style="cursor:pointer">' +
-            '<circle cx="'+cx+'" cy="'+cy+'" r="13" fill="var('+M.color+')" opacity=".14"/>' +
-            '<circle cx="'+cx+'" cy="'+cy+'" r="6.5" fill="var(--g-card)" stroke="var('+M.color+')" stroke-width="2.6"/>' +
-            '<circle cx="'+cx+'" cy="'+cy+'" r="3" fill="var('+M.color+')"/>' +
-            (S.labels ? '<text x="'+cx+'" y="'+(Y(p.y)-15).toFixed(1)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="var('+M.color+')">'+fmt(p.y, M.dec)+'</text>' : '') +
+            '<circle cx="'+cx+'" cy="'+cy+'" r="13" fill="'+M.color+'" opacity=".16"/>' +
+            '<circle cx="'+cx+'" cy="'+cy+'" r="6.5" fill="'+C_CARD+'" stroke="'+M.color+'" stroke-width="2.6"/>' +
+            '<circle cx="'+cx+'" cy="'+cy+'" r="3" fill="'+M.color+'"/>' +
+            (S.labels ? '<text x="'+cx+'" y="'+(Y(p.y)-15).toFixed(1)+'" text-anchor="middle" font-size="10.5" font-weight="800" fill="'+M.color+'">'+fmt(p.y, M.dec)+'</text>' : '') +
           '</g>';
         }
       });
     }
-
-    var defs = '<defs><linearGradient id="gArea_'+key+'" x1="0" y1="0" x2="0" y2="1">' +
-      '<stop offset="0" stop-color="var('+M.color+')" stop-opacity=".22"/>' +
-      '<stop offset="1" stop-color="var('+M.color+')" stop-opacity="0"/></linearGradient></defs>';
-
-    var html = '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+M.label+'">' + defs + body + '</svg>';
-    return { html: html, pts: pts, W: W, H: H, X: X, Y: Y };
+    return { html:'<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" role="img" aria-label="'+M.label+'">' + body + '</svg>', pts: pts, W: W, H: H, X: X, Y: Y };
   }
 
-  var mainChart = null;
   function drawMain(){
     var host = $('#gChartHost', view); if (!host) return;
     var list = filtered(), M = METRICS[S.metric];
@@ -383,15 +368,14 @@
     $('#gChartMeta', view).textContent = pts.length + ' ' + plural(pts.length,'точка','точки','точек') + ' · ' + PERIODS[S.period].toLowerCase();
     if (!pts.length){
       host.innerHTML = '<div class="g-chartbox"><div class="g-empty-chart"><div class="em">📉</div><p>Нет данных для этой метрики в выбранном периоде.</p></div></div>';
-      mainChart = null; return;
+      return;
     }
     var ch = buildChart(list, S.metric, { mini:false });
-    mainChart = ch;
     host.innerHTML = '<div class="g-chartbox" id="gBox">' + ch.html + '<div class="g-tip" id="gTip"></div></div>' +
       '<div class="g-legend">' +
-        '<span><i style="background:var('+M.color+')"></i>' + M.label.toLowerCase() + (M.unit ? ', ' + M.unit : '') + '</span>' +
-        (S.trend ? '<span><i style="background:repeating-linear-gradient(90deg,var(--g-amber) 0 5px,transparent 5px 9px)"></i>тренд</span>' : '') +
-        '<span style="margin-left:auto;color:var(--g-mut2)">нажми на точку — подробности</span>' +
+        '<span><i style="background:'+M.color+'"></i>' + M.label.toLowerCase() + (M.unit ? ', ' + M.unit : '') + '</span>' +
+        (S.trend ? '<span><i style="background:repeating-linear-gradient(90deg,'+C_AMBER+' 0 5px,transparent 5px 9px)"></i>тренд</span>' : '') +
+        '<span style="margin-left:auto;color:'+C_MUT2+'">нажми на точку — подробности</span>' +
       '</div>';
     var box = $('#gBox', host);
     box.addEventListener('click', function(e){
@@ -442,11 +426,75 @@
       var pts = seriesFor(all, k);
       var v = pts.length ? pts[pts.length-1].y : NaN;
       return '<div class="g-sparkcard"><div class="lb">' + M.label + (isFinite(v) ? ' · ' + fmt(v, M.dec) + (M.unit ? ' ' + M.unit : '') : '') + '</div>' +
-        (ch.html || '<div style="height:38px;display:grid;place-items:center;color:var(--g-mut2);font-size:12px">нет данных</div>') + '</div>';
+        (ch.html || '<div style="height:38px;display:grid;place-items:center;color:'+C_MUT2+';font-size:12px">нет данных</div>') + '</div>';
     }).join('');
   }
 
-  /* ===== ТАБЛИЦА ===== */
+  var miniSuppress = 0;
+  function renderMiniChart(){
+    var wrap = document.getElementById('hcGrowthChartWrap'); if (!wrap) return;
+    var all = rows();
+    miniSuppress = Date.now() + 120;
+    if (all.length < 2){ wrap.innerHTML = '<div class="g-mini-empty">Недостаточно замеров для графика динамики.</div>'; return; }
+    var W = 640, H = 220, pL = 34, pR = 34, pT = 18, pB = 28;
+    var hs = seriesFor(all, 'height'), ws = seriesFor(all, 'weight');
+    var tMin = parseK(all[0].date).getTime(), tMax = parseK(all[all.length-1].date).getTime();
+    if (tMax === tMin){ tMin -= 86400000 * 30; tMax += 86400000 * 30; }
+    var X = function(t){ return pL + (t - tMin) / (tMax - tMin) * (W - pL - pR); };
+    function mkScale(pts){
+      if (!pts.length) return null;
+      var ys = pts.map(function(p){ return p.y; });
+      var mn = Math.min.apply(null, ys), mx = Math.max.apply(null, ys);
+      var p = (mx - mn) * 0.18 || Math.max(0.5, mx * 0.05);
+      return { mn: mn - p, mx: mx + p };
+    }
+    var sh = mkScale(hs), sw = mkScale(ws);
+    var Yh = function(v){ return pT + (sh.mx - v) / (sh.mx - sh.mn) * (H - pT - pB); };
+    var Yw = function(v){ return pT + (sw.mx - v) / (sw.mx - sw.mn) * (H - pT - pB); };
+    var body = '';
+    [0.25,0.5,0.75].forEach(function(f){
+      var y = pT + (H - pT - pB) * f;
+      body += '<line x1="'+pL+'" y1="'+y.toFixed(1)+'" x2="'+(W-pR)+'" y2="'+y.toFixed(1)+'" stroke="'+C_LINE+'" stroke-width="1" stroke-dasharray="2 5"/>';
+    });
+    function poly(pts, Y, color){
+      if (pts.length < 2) return '';
+      return '<path d="' + pts.map(function(p, i){ return (i ? 'L' : 'M') + X(p.x).toFixed(1) + ',' + Y(p.y).toFixed(1); }).join(' ') + '" fill="none" stroke="' + color + '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>';
+    }
+    function dots(pts, Y, color){
+      return pts.map(function(p){ return '<circle cx="'+X(p.x).toFixed(1)+'" cy="'+Y(p.y).toFixed(1)+'" r="3.6" fill="'+color+'"/>'; }).join('');
+    }
+    if (sh && hs.length){
+      body += poly(hs, Yh, C_SKY) + dots(hs, Yh, C_SKY);
+      var lh = hs[hs.length-1];
+      body += '<text x="'+Math.min(X(lh.x)+9, W-44).toFixed(1)+'" y="'+(Yh(lh.y)+4).toFixed(1)+'" font-size="12" font-weight="800" fill="'+C_SKY+'">'+fmt(lh.y,1)+'</text>';
+    }
+    if (sw && ws.length){
+      body += poly(ws, Yw, C_CORAL) + dots(ws, Yw, C_CORAL);
+      var lw = ws[ws.length-1];
+      body += '<text x="'+Math.min(X(lw.x)+9, W-44).toFixed(1)+'" y="'+(Yw(lw.y)-7).toFixed(1)+'" font-size="12" font-weight="800" fill="'+C_CORAL+'">'+fmt(lw.y,1)+'</text>';
+    }
+    body += '<text x="'+pL+'" y="'+(H-8)+'" font-size="10" font-weight="700" fill="'+C_MUT2+'">'+fmtShort(all[0].date)+'</text>' +
+            '<text x="'+(W-pR)+'" y="'+(H-8)+'" text-anchor="end" font-size="10" font-weight="700" fill="'+C_MUT2+'">'+fmtShort(all[all.length-1].date)+'</text>';
+    var lastH = hs.length ? hs[hs.length-1].y : NaN, lastW = ws.length ? ws[ws.length-1].y : NaN;
+    wrap.innerHTML = '<div class="g-mini"><div class="g-mini-t">Динамика роста и веса</div>' +
+      '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Динамика роста и веса">' + body + '</svg>' +
+      '<div class="g-legend"><span><i style="background:'+C_SKY+'"></i>рост' + (isFinite(lastH) ? ' · ' + fmt(lastH,1) + ' см' : '') + '</span>' +
+      '<span><i style="background:'+C_CORAL+'"></i>вес' + (isFinite(lastW) ? ' · ' + fmt(lastW,1) + ' кг' : '') + '</span></div></div>';
+  }
+  function hookMiniChart(){
+    var wrap = document.getElementById('hcGrowthChartWrap');
+    if (!wrap || wrap._eogMiniHooked) return;
+    wrap._eogMiniHooked = true;
+    if ('MutationObserver' in window){
+      var mo = new MutationObserver(function(){
+        if (Date.now() < miniSuppress) return;
+        setTimeout(renderMiniChart, 0);
+      });
+      mo.observe(wrap, { childList:true, subtree:true });
+    }
+    renderMiniChart();
+  }
+
   function tableHtml(all){
     return '<div class="g-card"><div class="g-h"><span class="t">История замеров</span>' +
       '<button class="g-btn g-btn-out g-btn-sm" data-g="sort" style="margin-left:auto">' + (S.sort === 'new' ? '↓ Сначала новые' : '↑ Сначала старые') + '</button></div>' +
@@ -459,19 +507,19 @@
     var list = all.slice();
     if (S.sort === 'new') list.reverse();
     var dob = (child()||{}).birthDate;
-    function delta(v, dec, unit){
+    function delta(v){
       if (v === null || !isFinite(v)) return '<span class="d-eq">—</span>';
       var c = v > 0.049 ? 'd-up' : v < -0.049 ? 'd-dn' : 'd-eq';
-      return '<span class="'+c+'">' + (v > 0 ? '+' : '') + fmt(v, dec) + '</span>';
+      return '<span class="'+c+'">' + (v > 0 ? '+' : '') + fmt(v,1) + '</span>';
     }
     tb.innerHTML = list.map(function(r){
       return '<tr>' +
         '<td class="date" data-l="Дата">' + fmtDate(r.date) + '</td>' +
         '<td data-l="Возраст">' + esc(ageAt(dob, r.date) || '—') + '</td>' +
         '<td class="num" data-l="Рост">' + (isFinite(r.height) ? fmt(r.height,1) : '—') + '</td>' +
-        '<td data-l="Δ рост">' + delta(r.dH,1) + '</td>' +
+        '<td data-l="Δ рост">' + delta(r.dH) + '</td>' +
         '<td class="num" data-l="Вес">' + (isFinite(r.weight) ? fmt(r.weight,1) : '—') + '</td>' +
-        '<td data-l="Δ вес">' + delta(r.dW,1) + '</td>' +
+        '<td data-l="Δ вес">' + delta(r.dW) + '</td>' +
         '<td class="num" data-l="ИМТ">' + (isFinite(r.bmi) ? fmt(r.bmi,1) : '—') + '</td>' +
         '<td class="acts-cell"><div class="acts">' +
           '<button class="g-ibtn" data-g="edit" data-id="'+esc(r.id)+'" aria-label="Изменить"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 113 3L7 19l-4 1 1-4z"/></svg></button>' +
@@ -481,7 +529,6 @@
     }).join('');
   }
 
-  /* ===== СЕГМЕНТЫ ===== */
   function placeSeg(el){
     if (!el || !el.offsetParent) return;
     var on = el.querySelector('button.on'), ind = el.querySelector('.g-seg-ind');
@@ -490,7 +537,6 @@
   function placeSegs(){ placeSeg($('#gSegMetric', view)); placeSeg($('#gSegPeriod', view)); }
   function bindSegs(){ requestAnimationFrame(placeSegs); if (document.fonts && document.fonts.ready) document.fonts.ready.then(placeSegs); }
 
-  /* ===== ОБРАБОТЧИКИ ЭКРАНА ===== */
   function onViewClick(e){
     var b = e.target.closest('[data-g]'); if (!b) return;
     var a = b.dataset.g;
@@ -506,7 +552,6 @@
     if (a === 'copy') return copyTable();
   }
 
-  /* ===== ФОРМА ===== */
   var editId = null;
   function openSheet(id){
     build();
@@ -529,7 +574,7 @@
       '</div>';
     sheet.classList.add('open');
     updateLive();
-    setTimeout(function(){ var f = $('#gFDate', sheet); if (f && !rec) { var h = $('#gFH', sheet); if (h) h.focus({ preventScroll:true }); } }, 260);
+    setTimeout(function(){ var h = $('#gFH', sheet); if (h && !rec) h.focus({ preventScroll:true }); }, 260);
     sfx('open'); hap(8);
   }
   function closeSheet(){ if (sheet) sheet.classList.remove('open'); editId = null; }
@@ -547,10 +592,8 @@
     var v = $('#gLiveV', sheet), t = $('#gLiveH', sheet);
     if (!v) return;
     if (h > 0 && w > 0){
-      var bmi = w / Math.pow(h/100, 2);
-      v.textContent = fmt(bmi, 1);
-      var d = ($('#gFDate', sheet)||{}).value;
-      var age = ageAt((child()||{}).birthDate, d);
+      v.textContent = fmt(w / Math.pow(h/100, 2), 1);
+      var age = ageAt((child()||{}).birthDate, ($('#gFDate', sheet)||{}).value);
       t.textContent = (age ? age + ' · ' : '') + 'оценку по центилям делает врач';
     } else { v.textContent = '—'; t.textContent = 'Введи рост и вес'; }
   }
@@ -569,6 +612,7 @@
     if (isFinite(h) && (h < 30 || h > 220)) return showErr('Рост должен быть от 30 до 220 см');
     if (isFinite(w) && (w < 1 || w > 150)) return showErr('Вес должен быть от 1 до 150 кг');
     var arr = c.healthCard.growth;
+    var wasEdit = !!editId;
     if (editId){
       var r = arr.find(function(x){ return x.id === editId; });
       if (!r) return showErr('Запись не найдена');
@@ -581,7 +625,6 @@
         dup.date = date;
         if (isFinite(h)) dup.height = Math.round(h*10)/10;
         if (isFinite(w)) dup.weight = Math.round(w*10)/10;
-        toast('Замер за эту дату обновлён ✓', 'info');
       } else {
         var rec = { id: uid(), date: date };
         if (isFinite(h)) rec.height = Math.round(h*10)/10;
@@ -589,9 +632,8 @@
         arr.push(rec);
       }
     }
-    persist(); closeSheet(); renderAll();
-    if (!editId) toast('Замер добавлен ✓'); else toast('Замер обновлён ✓');
-    try { if (window.EOGMotion && EOGMotion.confetti && !editId) EOGMotion.confetti(); } catch(e){}
+    persist(); closeSheet(); renderAll(); renderMiniChart();
+    toast(wasEdit ? 'Замер обновлён ✓' : 'Замер добавлен ✓');
   }
   function removeRow(id){
     var c = ensure(); if (!c) return;
@@ -601,19 +643,18 @@
     var snap = arr[i], pos = i;
     if (!confirm('Удалить замер от ' + fmtDate(snap.date) + '?')) return;
     arr.splice(i, 1);
-    persist(); renderAll();
+    persist(); renderAll(); renderMiniChart();
     toast('Замер удалён', 'info', function(){
       var cc = ensure(); if (!cc) return;
       cc.healthCard.growth.splice(Math.min(pos, cc.healthCard.growth.length), 0, snap);
-      persist(); renderAll(); toast('Замер возвращён ✓');
+      persist(); renderAll(); renderMiniChart();
+      toast('Замер возвращён ✓');
     });
   }
 
-  /* ===== ЭКСПОРТ ===== */
   function tableText(){
     var all = rows(), dob = (child()||{}).birthDate;
-    var head = ['Дата','Возраст','Рост, см','Вес, кг','ИМТ','Δ рост','Δ вес'];
-    var lines = [head.join('\t')];
+    var lines = [['Дата','Возраст','Рост, см','Вес, кг','ИМТ','Δ рост','Δ вес'].join('\t')];
     all.forEach(function(r){
       lines.push([
         fmtDate(r.date),
@@ -654,9 +695,6 @@
     var txt = tableText();
     function ok(){ toast('Таблица скопирована ✓'); }
     function fail(){ toast('Не вышло скопировать', 'err'); }
-    if (navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(txt).then(ok).catch(function(){ fb() ? ok() : fail(); });
-    } else { fb() ? ok() : fail(); }
     function fb(){
       try {
         var ta = document.createElement('textarea');
@@ -665,9 +703,11 @@
         var r = document.execCommand('copy'); ta.remove(); return r;
       } catch(e){ return false; }
     }
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(ok).catch(function(){ fb() ? ok() : fail(); });
+    } else { fb() ? ok() : fail(); }
   }
 
-  /* ===== ФИКС ПРОКРУТКИ СПИСКОВ ЗДОРОВЬЯ (страховка к CSS) ===== */
   function fitModals(){
     var vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
     ['#healthListModal','#healthFormModal'].forEach(function(sel){
@@ -676,21 +716,24 @@
       var card = m.querySelector('.copy-opts-card');
       if (card){
         card.style.maxHeight = Math.round(vh * 0.88) + 'px';
-        card.style.display = 'flex';
-        card.style.flexDirection = 'column';
-        card.style.overflow = 'hidden';
-      }
-      var list = m.querySelector('.hc-list') || m.querySelector('#hlList');
-      if (list){
-        list.style.flex = '1 1 auto';
-        list.style.minHeight = '0';
-        list.style.overflowY = 'auto';
-        list.style.webkitOverflowScrolling = 'touch';
-        list.style.touchAction = 'pan-y';
+        card.style.minHeight = '0';
+        if (sel === '#healthListModal'){
+          card.style.display = 'flex'; card.style.flexDirection = 'column'; card.style.overflow = 'hidden';
+          var list = m.querySelector('.hc-list') || m.querySelector('#hlList');
+          if (list){
+            list.style.flex = '1 1 auto'; list.style.minHeight = '0';
+            list.style.overflowY = 'auto'; list.style.webkitOverflowScrolling = 'touch'; list.style.touchAction = 'pan-y';
+          }
+        } else {
+          card.style.display = 'block';
+          card.style.overflowY = 'auto'; card.style.overflowX = 'hidden';
+          card.style.webkitOverflowScrolling = 'touch'; card.style.touchAction = 'pan-y';
+        }
       }
     });
   }
   function watchModals(){
+    if (!('MutationObserver' in window)) return;
     var mo = new MutationObserver(function(muts){
       var need = false;
       muts.forEach(function(m){
@@ -714,7 +757,6 @@
     }, true);
   }
 
-  /* ===== ПЕРЕХВАТ ПЛИТКИ «РОСТ И ВЕС» ===== */
   function intercept(){
     document.addEventListener('click', function(e){
       var tile = e.target.closest && e.target.closest('[data-hc-add="growth"], [data-hc-type="growth"], [data-growth-open]');
@@ -726,21 +768,29 @@
     }, true);
   }
 
-  /* ===== СТАРТ ===== */
   function init(){
     build();
     intercept();
     watchModals();
+    hookMiniChart();
     fitModals();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
   window.EOGGrowth = {
-    version: '1.0',
+    version: '1.4',
+    features: [
+      'экран роста/веса', 'три метрики с дельтами', 'график с тултипами',
+      'спарклайны', 'мини-график с двумя шкалами', 'таблица истории',
+      'сортировка', 'периоды', 'тумблеры сетка/точки/значения/тренд',
+      'форма с живым ИМТ', 'защита от дублей по дате', 'удаление с отменой',
+      'CSV с BOM', 'копирование таблицы', 'фикс скролла формы',
+      'фикс скролла списка осмотров', 'перехват плитки', 'диагностика пустого профиля'
+    ],
     open: open,
     close: close,
-    refresh: function(){ if (S.open) renderAll(); fitModals(); },
+    refresh: function(){ if (S.open) renderAll(); fitModals(); renderMiniChart(); },
     exportCSV: exportCSV,
     count: function(){ return rows().length; }
   };
