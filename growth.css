@@ -1,8 +1,8 @@
 /* ============================================================
    growth.css · v1.4 · ЗАМЕНИТЬ ЦЕЛИКОМ (или создать, если файла нет)
    Слой поверх styles.css: экран «Рост и вес» + фикс прокрутки модалок.
-   v1.4: контрастная плашка сегментов в обеих темах; переменные
-   модуля распространены на #hcGrowthChartWrap (мини-график цветной).
+   v1.4: контрастная плашка сегментов в обеих темах (лайм в тёмной);
+   переменные модуля распространены на #hcGrowthChartWrap.
    ============================================================ */
 #eogGrowthView, #eogGrowthSheet, #eogGrowthToasts, #hcGrowthChartWrap{
   --g-bg:var(--bg,#F4EBDD); --g-bg2:var(--bg2,#EDE3D2); --g-card:var(--paper,var(--card,#FBF6EC)); --g-card2:var(--paper2,var(--card2,#F3EDE0));
@@ -180,4 +180,6 @@
 #healthListModal .copy-opts-actions,#healthFormModal .copy-opts-actions{flex-shrink:0}
 #healthListModal h3,#healthListModal .co-sub,#healthFormModal h3,#healthFormModal .co-sub{flex-shrink:0}
 #healthListModal .hc-list table{max-width:100%;display:block;overflow-x:auto}
+.g-btn-ink{background:#292724;color:#F7F2E6}
+[data-theme="dark"] .g-btn-ink{background:#F2EDE1;color:#1A1917}
 @media(prefers-reduced-motion:reduce){#eogGrowthView *,#eogGrowthSheet *,#eogGrowthToasts *{animation-duration:.01ms!important;transition-duration:.01ms!important}}
