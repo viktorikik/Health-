@@ -1,18 +1,15 @@
 /* ============================================================
-   ФАЙЛ 6 из 6 · sw.js · ЗАМЕНИТЬ ЦЕЛИКОМ
-   Версия кэша уже поднята до eog-sad-v9, motion.css и motion.js
-   добавлены в кэш. После деплоя закрой и открой приложение один раз.
-   Делает ровно то, что описано в документации: network-first
-   с fallback на кэш, очистка старых версий.
+   sw.js · eog-sad-v11 · ЗАМЕНИТЬ ЦЕЛИКОМ
+   Версия поднята после замены growth.css (v1.4) и growth.js (v1.4).
+   Стратегия: network-first с fallback на кэш.
    ============================================================ */
-
-/* ===== sw.js · «Ещё одна галочка» · eog-sad-v9 ===== */
-const CACHE_VERSION = 'eog-sad-v12';
+const CACHE_VERSION = 'eog-sad-v11';
 const FILES = [
   './',
   './index.html',
   './styles.css',
   './motion.css',
+  './growth.css',
   './core.js',
   './calendar.js',
   './panel.js',
@@ -20,13 +17,10 @@ const FILES = [
   './health.js',
   './app.js',
   './motion.js',
-  './growth.css',
   './growth.js',
   './manifest.webmanifest'
 ];
 
-/* Установка: кэшируем оболочку. Каждый файл отдельно —
-   если какого-то нет, установка всё равно не падает. */
 self.addEventListener('install', e => {
   self.skipWaiting();
   e.waitUntil(
@@ -36,7 +30,6 @@ self.addEventListener('install', e => {
   );
 });
 
-/* Активация: удаляем старые кэши и забираем открытые вкладки */
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
@@ -45,7 +38,6 @@ self.addEventListener('activate', e => {
   );
 });
 
-/* Запросы: сначала сеть (свежие файлы), при офлайне — кэш */
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
