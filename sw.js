@@ -1,23 +1,15 @@
 /* ============================================================
-   sw.js · eog-sad-v11 · ЗАМЕНИТЬ ЦЕЛИКОМ
-   Версия поднята после замены growth.css (v1.4) и growth.js (v1.4).
+   sw.js · eog-sad-v12 · ЗАМЕНИТЬ ЦЕЛИКОМ
+   Версия поднята после добавления meds.css и meds.js (волна 17).
    Стратегия: network-first с fallback на кэш.
    ============================================================ */
-const CACHE_VERSION = 'eog-sad-v11';
+const CACHE_VERSION = 'eog-sad-v12';
 const FILES = [
-  './',
-  './index.html',
-  './styles.css',
-  './motion.css',
-  './growth.css',
-  './core.js',
-  './calendar.js',
-  './panel.js',
-  './analytics.js',
-  './health.js',
-  './app.js',
-  './motion.js',
-  './growth.js',
+  './', './index.html',
+  './styles.css', './motion.css', './growth.css', './meds.css',
+  './core.js', './calendar.js', './panel.js',
+  './analytics.js', './health.js', './app.js',
+  './motion.js', './growth.js', './meds.js',
   './manifest.webmanifest'
 ];
 
