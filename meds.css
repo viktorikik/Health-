@@ -1,0 +1,166 @@
+/* ============================================================
+   meds.css · v1.0 · СОЗДАТЬ НОВЫЙ (или заменить целиком)
+   Волна 17: назначения из осмотра, база препаратов, «отметить все»,
+   «+» на пустом графике температуры.
+   Слой поверх styles.css. Все переменные с запасными значениями.
+   ============================================================ */
+#eogMedsView,#eogMedsSheet,#eogMedsToasts,#eogSelBar{
+  --m-bg:var(--bg,#F4EBDD);--m-bg2:var(--bg2,#EDE3D2);--m-card:var(--paper,#FBF6EC);--m-card2:var(--paper2,#F3EDE0);
+  --m-line:var(--line,#DFD4C0);--m-line2:var(--line2,#C9BCA2);--m-text:var(--ink,#292724);--m-mut:var(--muted,#6E6759);--m-mut2:#9A917E;
+  --m-lime:var(--lime,#DCEB32);--m-lime2:#B6C41F;--m-lime-s:rgba(182,196,31,.16);
+  --m-coral:var(--coral,#E05A78);--m-coral2:#C4405C;--m-coral-s:rgba(224,90,120,.12);
+  --m-sage:var(--sage,#4E8A46);--m-sage-s:rgba(78,138,70,.13);--m-amber:#B8760E;--m-amber-s:rgba(184,118,14,.14);
+  --m-sky:#2C74B3;--m-sky-s:rgba(44,116,179,.12);--m-violet:#6F4CB8;--m-violet-s:rgba(111,76,184,.12);--m-teal:#17807A;
+  --m-btn-bg:#292724;--m-btn-fg:#F7F2E6;
+  --m-shadow:0 14px 34px rgba(96,80,32,.14);--m-shadow-s:0 4px 14px rgba(96,80,32,.09);
+  --m-spring:cubic-bezier(.34,1.56,.64,1);--m-ease:cubic-bezier(.22,1,.36,1);
+}
+[data-theme="dark"] #eogMedsView,[data-theme="dark"] #eogMedsSheet,[data-theme="dark"] #eogMedsToasts,[data-theme="dark"] #eogSelBar{
+  --m-bg:#141311;--m-bg2:#1A1917;--m-card:#201F1C;--m-card2:#272521;--m-line:#33312C;--m-line2:#443F37;
+  --m-text:#F2EDE1;--m-mut:#A79E8C;--m-mut2:#7A7263;--m-lime:#DCEB32;--m-lime2:#B6C41F;--m-lime-s:rgba(220,235,50,.13);
+  --m-coral:#F27691;--m-coral2:#E05A78;--m-coral-s:rgba(242,118,145,.13);--m-sage:#8FCB7E;--m-sage-s:rgba(143,203,126,.12);
+  --m-amber:#F0AE4A;--m-amber-s:rgba(240,174,74,.12);--m-sky:#6BB6EE;--m-sky-s:rgba(107,182,238,.12);--m-violet:#AE8AEE;--m-violet-s:rgba(174,138,238,.12);--m-teal:#4FC7BF;
+  --m-btn-bg:#F2EDE1;--m-btn-fg:#1A1917;--m-shadow:0 16px 40px rgba(0,0,0,.46);--m-shadow-s:0 5px 16px rgba(0,0,0,.3);
+}
+#eogMedsView *,#eogMedsSheet *{scrollbar-width:thin;scrollbar-color:var(--m-lime2) transparent}
+#eogMedsView ::-webkit-scrollbar,#eogMedsSheet ::-webkit-scrollbar{width:10px;height:10px}
+#eogMedsView ::-webkit-scrollbar-track,#eogMedsSheet ::-webkit-scrollbar-track{background:transparent}
+#eogMedsView ::-webkit-scrollbar-thumb,#eogMedsSheet ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,var(--m-lime2),var(--m-coral2));border-radius:8px;border:3px solid var(--m-bg)}
+
+/* ===== плавающая кнопка по выделению текста ===== */
+#eogSelBar{position:fixed;z-index:9997;display:none;align-items:center;gap:7px;background:var(--m-btn-bg);color:var(--m-btn-fg);border-radius:14px;padding:7px 8px 7px 12px;box-shadow:0 10px 30px rgba(0,0,0,.32);font-family:inherit;max-width:min(94vw,420px)}
+#eogSelBar.show{display:flex;animation:mPop .22s var(--m-spring)}
+@keyframes mPop{from{opacity:0;transform:translateY(6px) scale(.94)}to{opacity:1;transform:none}}
+#eogSelBar .sb-name{font-size:12.5px;font-weight:800;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.85}
+#eogSelBar .sb-add{display:inline-flex;align-items:center;gap:6px;background:var(--m-lime);color:#292724;border:1.5px solid #292724;border-radius:10px;padding:7px 11px;font-size:12.5px;font-weight:800;white-space:nowrap}
+#eogSelBar .sb-add:active{scale:.94}
+#eogSelBar input[type=date]{width:auto;background:rgba(127,127,127,.22);border:1px solid rgba(127,127,127,.35);color:inherit;border-radius:9px;padding:6px 8px;font-size:11.5px;font-family:inherit}
+#eogSelBar .sb-x{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;opacity:.6;font-size:15px}
+#eogSelBar .sb-x:hover{opacity:1}
+
+/* ===== кнопка «+» на пустом графике ===== */
+.m-add-temp{display:inline-flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;background:var(--lime,#DCEB32);color:#292724;border:1.5px solid #292724;border-radius:13px;padding:11px 18px;font-weight:800;font-size:13.5px;font-family:inherit;transition:.22s var(--m-spring);position:relative;overflow:hidden}
+.m-add-temp:hover{transform:translateY(-2px)}
+.m-add-temp:active{scale:.95}
+
+/* ===== панель «отметить все» в курсах ===== */
+.m-course-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;margin-bottom:10px;border:1.5px dashed var(--line2,#C9BCA2);border-radius:13px;background:var(--lime-s,rgba(182,196,31,.16));font-family:inherit}
+.m-course-bar .cb-count{font-size:12px;font-weight:800;color:var(--muted,#6E6759)}
+.m-course-bar .cb-count b{color:var(--ink,#292724)}
+.m-course-bar .cb-btns{display:flex;gap:7px;margin-left:auto;flex-wrap:wrap}
+.m-cb{display:inline-flex;align-items:center;gap:6px;border-radius:10px;padding:8px 12px;font-size:12px;font-weight:800;font-family:inherit;border:1.5px solid #292724;background:var(--lime,#DCEB32);color:#292724;transition:.2s var(--m-spring);position:relative;overflow:hidden}
+.m-cb.ghost{background:transparent;border-color:var(--line2,#C9BCA2);color:var(--ink,#292724)}
+.m-cb:active{scale:.94}
+.m-cb:disabled{opacity:.4;cursor:not-allowed}
+
+/* ===== плитка «препаратов» становится кнопкой ===== */
+.m-stat-open{cursor:pointer;position:relative;transition:.22s var(--m-spring)}
+.m-stat-open:hover{transform:translateY(-2px);border-color:var(--lime2,#B6C41F)!important;box-shadow:0 6px 18px rgba(182,196,31,.22)}
+.m-stat-open:active{scale:.97}
+.m-stat-open::after{content:'база →';position:absolute;right:10px;top:9px;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--lime2,#B6C41F);opacity:.9}
+.m-rip{position:absolute;border-radius:50%;background:currentColor;opacity:.22;transform:scale(0);animation:mRip .55s ease-out forwards;pointer-events:none}
+@keyframes mRip{to{transform:scale(3.2);opacity:0}}
+
+/* ===== экран базы препаратов ===== */
+#eogMedsView{position:fixed;inset:0;z-index:9990;display:none;flex-direction:column;background:var(--m-bg);color:var(--m-text);font-family:inherit;font-size:15px;line-height:1.55}
+#eogMedsView.open{display:flex;animation:mIn .32s var(--m-ease)}
+@keyframes mIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+#eogMedsView::before{content:'';position:absolute;inset:-10%;z-index:0;pointer-events:none;background:radial-gradient(40vw 40vw at -8% -6%,var(--m-violet) 0%,transparent 62%),radial-gradient(38vw 38vw at 108% 100%,var(--m-lime) 0%,transparent 60%),radial-gradient(26vw 26vw at 96% 0%,var(--m-sky) 0%,transparent 58%);opacity:.14;filter:blur(70px)}
+#eogMedsView *{box-sizing:border-box}
+#eogMedsView button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+#eogMedsView input,#eogMedsView select{font:inherit;font-size:14px;color:var(--m-text);background:var(--m-card2);border:1.5px solid var(--m-line);border-radius:12px;padding:10px 12px;width:100%;outline:none}
+#eogMedsView input:focus,#eogMedsView select:focus{border-color:var(--m-lime2);box-shadow:0 0 0 3px var(--m-lime-s)}
+.mv-head{position:relative;z-index:2;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top)) max(14px,calc(50vw - 560px)) 12px;background:color-mix(in srgb,var(--m-bg) 88%,transparent);backdrop-filter:blur(14px);border-bottom:1.5px solid var(--m-line)}
+.mv-back{display:inline-flex;align-items:center;gap:7px;padding:9px 15px;border-radius:13px;border:1.5px solid var(--m-line2);font-weight:800;font-size:14px;background:var(--m-card)}
+.mv-htitle{margin-left:auto;text-align:right;min-width:0}
+.mv-htitle .t{font-weight:800;font-size:16px}
+.mv-htitle .s{font-size:12px;color:var(--m-mut);margin-top:1px}
+.mv-body{position:relative;z-index:1;flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding:16px max(14px,calc(50vw - 560px)) calc(40px + env(safe-area-inset-bottom))}
+.mv-wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:13px}
+.mv-card{background:var(--m-card);border:1.5px solid var(--m-line);border-radius:20px;padding:15px;box-shadow:var(--m-shadow-s)}
+.mv-tools{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.mv-tools input{flex:1;min-width:150px}
+.mv-tools select{width:auto;min-width:140px}
+.mv-chip{padding:7px 13px;border-radius:16px;border:1.5px solid var(--m-line);font-size:12px;font-weight:800;color:var(--m-mut);background:var(--m-card2);transition:.2s var(--m-spring)}
+.mv-chip.on{background:var(--m-btn-bg);color:var(--m-btn-fg);border-color:transparent}
+.mv-merge{display:none;border:1.5px solid var(--m-violet);background:var(--m-violet-s);border-radius:16px;padding:13px}
+.mv-merge.show{display:block;animation:mIn .26s var(--m-ease)}
+.mv-merge .t{font-weight:800;font-size:13.5px;color:var(--m-violet);margin-bottom:8px}
+.mv-merge .r{display:flex;gap:9px;flex-wrap:wrap}
+.mv-merge .r input{flex:1;min-width:160px}
+.mv-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+@media(max-width:520px){.mv-sum{grid-template-columns:1fr}}
+.mv-sum .c{background:var(--m-card2);border:1.5px solid var(--m-line);border-radius:14px;padding:12px;text-align:center}
+.mv-sum .v{font-family:'Unbounded',inherit;font-weight:800;font-size:22px;line-height:1.1}
+.mv-sum .l{font-size:11px;color:var(--m-mut);margin-top:3px}
+.mv-sum .c.a .v{color:var(--m-violet)}.mv-sum .c.b .v{color:var(--m-sky)}.mv-sum .c.c2 .v{color:var(--m-coral)}
+.mg{border:1.5px solid var(--m-line);border-radius:16px;background:var(--m-card2);margin-bottom:9px;overflow:hidden;transition:.2s}
+.mg:hover{border-color:var(--m-line2)}
+.mg.sel{border-color:var(--m-violet);box-shadow:0 0 0 1px var(--m-violet)}
+.mg-h{display:flex;align-items:center;gap:11px;padding:12px 13px;width:100%;text-align:left}
+.mg-cb{width:22px;height:22px;border-radius:7px;border:2px solid var(--m-line2);flex-shrink:0;display:grid;place-items:center;color:transparent;font-size:13px;font-weight:800;background:var(--m-card);transition:.2s var(--m-spring)}
+.mg.sel .mg-cb{background:var(--m-violet);border-color:var(--m-violet);color:#fff}
+.mg-n{flex:1;min-width:0}
+.mg-n .nm{font-weight:800;font-size:14.5px;word-break:break-word}
+.mg-n .mt{font-size:11.5px;color:var(--m-mut);margin-top:2px}
+.mg-badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.mg-b{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:8px;border:1px solid}
+.mg-b.dup{color:var(--m-amber);border-color:var(--m-amber);background:var(--m-amber-s)}
+.mg-b.course{color:var(--m-sage);border-color:var(--m-sage);background:var(--m-sage-s)}
+.mg-b.dict{color:var(--m-sky);border-color:var(--m-sky);background:var(--m-sky-s)}
+.mg-cnt{font-family:'Unbounded',inherit;font-weight:600;font-size:16px;color:var(--m-lime2);flex-shrink:0}
+.mg-chev{color:var(--m-mut2);transition:transform .3s var(--m-spring);flex-shrink:0}
+.mg.open .mg-chev{transform:rotate(180deg)}
+.mg-body{display:none;padding:0 13px 13px;border-top:1px dashed var(--m-line)}
+.mg.open .mg-body{display:block;animation:mIn .26s var(--m-ease)}
+.mg-acts{display:flex;gap:7px;flex-wrap:wrap;padding:11px 0 9px}
+.mg-e{display:flex;gap:9px;align-items:baseline;padding:7px 0;border-bottom:1px dashed var(--m-line);font-size:12.5px}
+.mg-e:last-child{border:none}
+.mg-e .d{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11.5px;font-weight:700;flex-shrink:0;min-width:76px}
+.mg-e .i{flex:1;color:var(--m-mut);min-width:0;word-break:break-word}
+.mg-e .i b{color:var(--m-text)}
+.mg-e .x{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--m-line);display:grid;place-items:center;color:var(--m-mut);flex-shrink:0}
+.mg-e .x:hover{color:var(--m-coral2);border-color:var(--m-coral2)}
+.mv-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:11px 16px;border-radius:13px;font-weight:800;font-size:13.5px;border:1.5px solid transparent;transition:.22s var(--m-spring);position:relative;overflow:hidden}
+.mv-btn:active{scale:.95}
+.mv-btn:disabled{opacity:.4;cursor:not-allowed}
+.mv-btn.lime{background:var(--m-lime);color:#292724;border-color:#292724}
+.mv-btn.violet{background:var(--m-violet);color:#fff;border-color:var(--m-violet)}
+.mv-btn.ink{background:var(--m-btn-bg);color:var(--m-btn-fg)}
+.mv-btn.out{border-color:var(--m-line2);background:var(--m-card2);color:var(--m-text)}
+.mv-btn.sm{padding:7px 12px;font-size:12px;border-radius:10px}
+.mv-empty{padding:30px 16px;text-align:center;color:var(--m-mut)}
+.mv-empty .em{font-size:38px;margin-bottom:9px}
+.mv-note{font-size:12.5px;color:var(--m-mut);padding:11px 13px;border-left:4px solid var(--m-amber);background:var(--m-amber-s);border-radius:0 12px 12px 0}
+.mv-note b{color:var(--m-amber)}
+
+/* ===== шторка быстрого ввода ===== */
+#eogMedsSheet{position:fixed;inset:0;z-index:9995;display:none;align-items:flex-end;justify-content:center;background:rgba(20,16,8,.5);backdrop-filter:blur(5px);font-family:inherit;color:var(--m-text)}
+#eogMedsSheet.open{display:flex}
+#eogMedsSheet *{box-sizing:border-box}
+#eogMedsSheet button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+#eogMedsSheet input,#eogMedsSheet select{font:inherit;font-size:16px;color:var(--m-text);background:var(--m-card2);border:1.5px solid var(--m-line);border-radius:12px;padding:12px;width:100%;outline:none}
+.ms-sheet{width:min(560px,100vw);max-height:92dvh;background:var(--m-bg);border:1.5px solid var(--m-line);border-bottom:none;border-radius:24px 24px 0 0;display:flex;flex-direction:column;box-shadow:0 -18px 60px rgba(0,0,0,.4);animation:mUp .4s var(--m-spring)}
+@keyframes mUp{from{transform:translateY(100%)}to{transform:none}}
+.ms-grip{padding:10px 0 4px;display:grid;place-items:center;flex-shrink:0}
+.ms-grip::after{content:'';width:44px;height:4.5px;border-radius:3px;background:var(--m-line2)}
+.ms-body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;padding:6px 20px calc(20px + env(safe-area-inset-bottom))}
+.ms-body h3{font-size:18px;font-weight:800;margin-bottom:4px}
+.ms-body .sub{font-size:12.5px;color:var(--m-mut);margin-bottom:15px}
+.ms-f{margin-bottom:12px}
+.ms-f label{display:block;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--m-mut2);margin-bottom:6px}
+.ms-two{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.ms-err{display:none;border:1.5px solid var(--m-coral2);background:var(--m-coral-s);color:var(--m-coral2);border-radius:12px;padding:10px 13px;font-size:13px;font-weight:700;margin-bottom:12px}
+.ms-err.show{display:block}
+.ms-foot{display:flex;gap:10px;padding-top:6px}
+.ms-foot .mv-btn{flex:1}
+
+/* ===== тосты ===== */
+#eogMedsToasts{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:9998;display:flex;flex-direction:column;align-items:center;gap:8px;width:min(440px,92vw);pointer-events:none;font-family:inherit}
+.m-toast{pointer-events:auto;display:flex;align-items:center;gap:11px;background:var(--m-btn-bg);color:var(--m-btn-fg);padding:12px 18px;border-radius:16px;font-size:13.5px;font-weight:800;box-shadow:var(--m-shadow);max-width:100%;opacity:0;transform:translateY(16px) scale(.95);transition:.32s var(--m-spring)}
+.m-toast.show{opacity:1;transform:none}
+.m-toast .d{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--m-lime)}
+.m-toast.err .d{background:var(--m-coral)}
+.m-toast.info .d{background:var(--m-sky)}
+.m-toast .u{margin-left:4px;flex-shrink:0;font-weight:800;font-size:12.5px;padding:6px 12px;border-radius:11px;background:rgba(127,127,127,.25)}
+@media(prefers-reduced-motion:reduce){#eogMedsView *,#eogMedsSheet *,#eogMedsToasts *,#eogSelBar *{animation-duration:.01ms!important;transition-duration:.01ms!important}}
