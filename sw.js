@@ -1,9 +1,9 @@
 /* ============================================================
-   sw.js · eog-sad-v12 · ЗАМЕНИТЬ ЦЕЛИКОМ
-   Версия поднята после добавления meds.css и meds.js (волна 17).
+   sw.js · eog-sad-v14 · ЗАМЕНИТЬ ЦЕЛИКОМ
+   Версия поднята после замены meds.css на v1.2.
    Стратегия: network-first с fallback на кэш.
    ============================================================ */
-const CACHE_VERSION = 'eog-sad-v12';
+const CACHE_VERSION = 'eog-sad-v14';
 const FILES = [
   './', './index.html',
   './styles.css', './motion.css', './growth.css', './meds.css',
